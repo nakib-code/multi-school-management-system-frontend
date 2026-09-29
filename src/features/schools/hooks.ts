@@ -25,3 +25,14 @@ export const useVerifyAdminEmail = () => {
       verifyAdminEmail(payload),
   });
 };
+
+
+import { useQuery } from "@tanstack/react-query";
+
+import { getSchools, type GetSchoolsParams } from "./api";
+
+export const useSchools = (params: GetSchoolsParams = {}) =>
+  useQuery({
+    queryKey: ["schools", "list", params],
+    queryFn: () => getSchools(params),
+  });

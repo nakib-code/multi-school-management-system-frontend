@@ -29,7 +29,6 @@ return ( <div className="space-y-6"> <PageHeader
      description="Overview of your school's students, teachers, classes, and activities."
    />
 
-```
   {isError && (
     <div className="flex flex-col gap-3 rounded-xl border border-destructive/30 bg-destructive/5 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
       <div>

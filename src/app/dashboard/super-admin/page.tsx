@@ -61,8 +61,6 @@ return ( <div className="space-y-6"> <PageHeader
      title="Super Admin Dashboard"
      description="Overview of schools and platform activity."
    />
-
-```
   {dashboardError && (
     <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-5 py-4">
       <p className="text-sm font-medium text-destructive">
