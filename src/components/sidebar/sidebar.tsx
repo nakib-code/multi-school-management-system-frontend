@@ -17,6 +17,7 @@ import {
   UserRound,
   UserRoundCog,
   X,
+  type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -33,7 +34,7 @@ interface SidebarProps {
 interface NavigationItem {
   label: string;
   href: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: LucideIcon;
 }
 
 const navigationByRole: Record<string, NavigationItem[]> = {

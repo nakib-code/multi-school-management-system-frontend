@@ -1,119 +1,128 @@
-import { School, SchoolListResponse } from "@/types/school";
-import { SchoolStatus } from "./types";
+import { api } from "@/lib/api";
+import type { ApiResponse } from "@/types/api";
 
+import type {
+  CreateSchoolPayload,
+  CreateSchoolResponse,
+  VerifyAdminEmailPayload,
+  VerifyAdminEmailResponse,
+} from "./types";
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001/api/v1";
+import type { School } from "@/types/school";
 
-interface GetSchoolsParams {
+// ============================================
+// Public School Registration
+// ============================================
+
+export const createSchool = async (
+  payload: CreateSchoolPayload,
+): Promise<CreateSchoolResponse> => {
+  const response = await api.post<
+    ApiResponse<CreateSchoolResponse>
+  >("/schools/register", payload);
+
+  return response.data.data;
+};
+
+export const verifyAdminEmail = async (
+  payload: VerifyAdminEmailPayload,
+): Promise<VerifyAdminEmailResponse> => {
+  const response = await api.post<
+    ApiResponse<VerifyAdminEmailResponse>
+  >("/schools/verify-admin-email", payload);
+
+  return response.data.data;
+};
+
+// ============================================
+// Super Admin - School Management
+// ============================================
+
+export interface GetSchoolsParams {
   page?: number;
   limit?: number;
   search?: string;
-  status?: SchoolStatus;
+  status?: School["status"];
 }
 
-async function apiRequest<T>(
-  endpoint: string,
-  options?: RequestInit,
-): Promise<T> {
-  const response = await fetch(`${API_URL}${endpoint}`, {
-    ...options,
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...options?.headers,
-    },
+export interface SchoolListResponse {
+  schools: School[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export const getSchools = async (
+  params: GetSchoolsParams = {},
+): Promise<SchoolListResponse> => {
+  const response = await api.get<
+    ApiResponse<SchoolListResponse>
+  >("/schools", {
+    params,
   });
 
-  const result = await response.json();
+  return response.data.data;
+};
 
-  if (!response.ok) {
-    throw new Error(
-      result?.message || "Something went wrong",
-    );
-  }
-
-  return result.data;
-}
-
-export async function getSchools(
-  params: GetSchoolsParams = {},
-) {
-  const searchParams = new URLSearchParams();
-
-  if (params.page) {
-    searchParams.set("page", String(params.page));
-  }
-
-  if (params.limit) {
-    searchParams.set("limit", String(params.limit));
-  }
-
-  if (params.search) {
-    searchParams.set("search", params.search);
-  }
-
-  if (params.status) {
-    searchParams.set("status", params.status);
-  }
-
-  const query = searchParams.toString();
-
-  return apiRequest<SchoolListResponse>(
-    `/schools${query ? `?${query}` : ""}`,
-  );
-}
-
-export async function approveSchool(id: number) {
-  return apiRequest<School>(
+export const approveSchool = async (
+  id: number,
+): Promise<School> => {
+  const response = await api.patch<ApiResponse<School>>(
     `/schools/${id}/approve`,
-    {
-      method: "PATCH",
-    },
   );
-}
 
-export async function blockSchool(id: number) {
-  return apiRequest<School>(
+  return response.data.data;
+};
+
+export const blockSchool = async (
+  id: number,
+): Promise<School> => {
+  const response = await api.patch<ApiResponse<School>>(
     `/schools/${id}/block`,
-    {
-      method: "PATCH",
-    },
   );
-}
 
-export async function unblockSchool(id: number) {
-  return apiRequest<School>(
+  return response.data.data;
+};
+
+export const unblockSchool = async (
+  id: number,
+): Promise<School> => {
+  const response = await api.patch<ApiResponse<School>>(
     `/schools/${id}/unblock`,
-    {
-      method: "PATCH",
-    },
   );
-}
 
-export async function rejectSchool(
+  return response.data.data;
+};
+
+export const rejectSchool = async (
   id: number,
   rejectionReason: string,
-) {
-  return apiRequest<School>(
+): Promise<School> => {
+  const response = await api.patch<ApiResponse<School>>(
     `/schools/${id}/reject`,
     {
-      method: "PATCH",
-      body: JSON.stringify({
-        rejectionReason,
-      }),
+      rejectionReason,
     },
   );
-}
 
-export async function deleteSchool(id: number) {
-  return apiRequest<{
-    schoolId: number;
-    deleted: boolean;
-  }>(
-    `/schools/${id}`,
-    {
-      method: "DELETE",
-    },
-  );
-}
+  return response.data.data;
+};
+
+export const deleteSchool = async (
+  id: number,
+): Promise<{
+  schoolId: number;
+  deleted: boolean;
+}> => {
+  const response = await api.delete<
+    ApiResponse<{
+      schoolId: number;
+      deleted: boolean;
+    }>
+  >(`/schools/${id}`);
+
+  return response.data.data;
+};

@@ -3,18 +3,18 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft, Loader2, MailCheck } from "lucide-react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { useForm } from "react-hook-form";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
+import { useVerifyAdminEmail } from "@/features/schools/hooks";
 import {
   verifyAdminEmailSchema,
   type VerifyAdminEmailFormValues,
 } from "@/features/schools/schema";
-import { useVerifyAdminEmail } from "@/features/schools/hooks";
 
-export default function VerifyEmailPage() {
+function VerifyEmailForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -172,9 +172,7 @@ export default function VerifyEmailPage() {
                 <Loader2 className="h-4 w-4 animate-spin" />
               )}
 
-              {isSubmitting
-                ? "Verifying..."
-                : "Verify Email"}
+              {isSubmitting ? "Verifying..." : "Verify Email"}
             </button>
           </form>
 
@@ -194,6 +192,25 @@ export default function VerifyEmailPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+function VerifyEmailLoading() {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-muted/30 px-4 py-10">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Loading verification...
+      </div>
+    </main>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={<VerifyEmailLoading />}>
+      <VerifyEmailForm />
+    </Suspense>
   );
 }
 
