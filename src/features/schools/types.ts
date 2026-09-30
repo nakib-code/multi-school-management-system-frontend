@@ -4,7 +4,7 @@ export type SchoolStatus =
   | "BLOCKED"
   | "REJECTED";
 
-export interface CreateSchoolPayload {
+export interface CreateSchoolInput {
   name: string;
   code: string;
   email?: string;
@@ -15,6 +15,7 @@ export interface CreateSchoolPayload {
   adminEmail: string;
   adminPhone?: string;
   adminPassword: string;
+  packageId: number;
 }
 
 export interface RegisteredSchool {
