@@ -18,6 +18,7 @@ import {
   UserRoundCog,
   X,
   type LucideIcon,
+  Package,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -38,33 +39,48 @@ interface NavigationItem {
 }
 
 const navigationByRole: Record<string, NavigationItem[]> = {
-  SUPER_ADMIN: [
-    {
-      label: "Dashboard",
-      href: "/dashboard/super-admin",
-      icon: LayoutDashboard,
-    },
-    {
-      label: "Schools",
-      href: "/dashboard/super-admin/schools",
-      icon: Building2,
-    },
-    {
-      label: "Users",
-      href: "/dashboard/super-admin/users",
-      icon: Users,
-    },
-    {
-      label: "Reports",
-      href: "/dashboard/super-admin/reports",
-      icon: FileBarChart,
-    },
-    {
-      label: "Audit Logs",
-      href: "/dashboard/super-admin/audit-logs",
-      icon: ShieldCheck,
-    },
-  ],
+SUPER_ADMIN: [
+  {
+    label: "Dashboard",
+    href: "/dashboard/super-admin",
+    icon: LayoutDashboard,
+  },
+  {
+    label: "Schools",
+    href: "/dashboard/super-admin/schools",
+    icon: Building2,
+  },
+  {
+    label: "Users",
+    href: "/dashboard/super-admin/users",
+    icon: Users,
+  },
+  {
+    label: "Packages",
+    href: "/dashboard/super-admin/packages",
+    icon: Package,
+  },
+  {
+    label: "Subscriptions",
+    href: "/dashboard/super-admin/subscriptions",
+    icon: CreditCard,
+  },
+  {
+    label: "Custom Package Requests",
+    href: "/dashboard/super-admin/custom-package-requests",
+    icon: ClipboardList,
+  },
+  {
+    label: "Reports",
+    href: "/dashboard/super-admin/reports",
+    icon: FileBarChart,
+  },
+  {
+    label: "Audit Logs",
+    href: "/dashboard/super-admin/audit-logs",
+    icon: ShieldCheck,
+  },
+],
 
   ADMIN: [
     {
