@@ -6,6 +6,8 @@ import {
   Users,
 } from "lucide-react";
 
+import type { SchoolUserRole } from "./types";
+
 export const USER_CATEGORIES = [
   {
     key: "admin",
@@ -42,6 +44,13 @@ export const USER_CATEGORIES = [
     icon: HeartHandshake,
     description: "Student guardians",
   },
-] as const;
+] as const satisfies readonly {
+  key: string;
+  role: SchoolUserRole;
+  label: string;
+  icon: typeof ShieldCheck;
+  description: string;
+}[];
 
-export type UserCategoryKey = (typeof USER_CATEGORIES)[number]["key"];
+export type UserCategoryKey =
+  (typeof USER_CATEGORIES)[number]["key"];

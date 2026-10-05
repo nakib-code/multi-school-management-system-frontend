@@ -39,48 +39,48 @@ interface NavigationItem {
 }
 
 const navigationByRole: Record<string, NavigationItem[]> = {
-SUPER_ADMIN: [
-  {
-    label: "Dashboard",
-    href: "/dashboard/super-admin",
-    icon: LayoutDashboard,
-  },
-  {
-    label: "Schools",
-    href: "/dashboard/super-admin/schools",
-    icon: Building2,
-  },
-  {
-    label: "Users",
-    href: "/dashboard/super-admin/users",
-    icon: Users,
-  },
-  {
-    label: "Packages",
-    href: "/dashboard/super-admin/packages",
-    icon: Package,
-  },
-  {
-    label: "Subscriptions",
-    href: "/dashboard/super-admin/subscriptions",
-    icon: CreditCard,
-  },
-  {
-    label: "Custom Package Requests",
-    href: "/dashboard/super-admin/custom-package-requests",
-    icon: ClipboardList,
-  },
-  {
-    label: "Reports",
-    href: "/dashboard/super-admin/reports",
-    icon: FileBarChart,
-  },
-  {
-    label: "Audit Logs",
-    href: "/dashboard/super-admin/audit-logs",
-    icon: ShieldCheck,
-  },
-],
+  SUPER_ADMIN: [
+    {
+      label: "Dashboard",
+      href: "/dashboard/super-admin",
+      icon: LayoutDashboard,
+    },
+    {
+      label: "Schools",
+      href: "/dashboard/super-admin/schools",
+      icon: Building2,
+    },
+    {
+      label: "Users",
+      href: "/dashboard/super-admin/users",
+      icon: Users,
+    },
+    {
+      label: "Packages",
+      href: "/dashboard/super-admin/packages",
+      icon: Package,
+    },
+    {
+      label: "Subscriptions",
+      href: "/dashboard/super-admin/subscriptions",
+      icon: CreditCard,
+    },
+    {
+      label: "Custom Package Requests",
+      href: "/dashboard/super-admin/custom-package-requests",
+      icon: ClipboardList,
+    },
+    {
+      label: "Reports",
+      href: "/dashboard/super-admin/reports",
+      icon: FileBarChart,
+    },
+    {
+      label: "Audit Logs",
+      href: "/dashboard/super-admin/audit-logs",
+      icon: ShieldCheck,
+    },
+  ],
 
   ADMIN: [
     {
@@ -122,6 +122,11 @@ SUPER_ADMIN: [
       label: "Attendance",
       href: "/dashboard/admin/attendance",
       icon: CalendarCheck,
+    },
+    {
+      label: "Subscription",
+      href: "/dashboard/admin/subscription/payment",
+      icon: CreditCard,
     },
     {
       label: "Exams",
@@ -293,18 +298,13 @@ SUPER_ADMIN: [
   ],
 };
 
-export function Sidebar({
-  open,
-  onClose,
-}: SidebarProps) {
+export function Sidebar({ open, onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
 
   const { user, logout } = useAuth();
 
-  const navigation = user
-    ? navigationByRole[user.role] ?? []
-    : [];
+  const navigation = user ? (navigationByRole[user.role] ?? []) : [];
 
   const handleLogout = async () => {
     try {
@@ -331,9 +331,7 @@ export function Sidebar({
 
       <aside
         className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r bg-background transition-transform duration-200 lg:translate-x-0 ${
-          open
-            ? "translate-x-0"
-            : "-translate-x-full"
+          open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         <div className="flex h-16 items-center justify-between border-b px-4">
@@ -347,9 +345,7 @@ export function Sidebar({
             </div>
 
             <div>
-              <p className="text-sm font-bold">
-                SchoolHub
-              </p>
+              <p className="text-sm font-bold">SchoolHub</p>
 
               <p className="text-[11px] text-muted-foreground">
                 Management System
@@ -375,9 +371,7 @@ export function Sidebar({
               </div>
 
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium">
-                  {user.name}
-                </p>
+                <p className="truncate text-sm font-medium">{user.name}</p>
 
                 <p className="truncate text-xs text-muted-foreground">
                   {user.role.replace("_", " ")}
@@ -396,8 +390,7 @@ export function Sidebar({
                 label={item.label}
                 icon={item.icon}
                 active={
-                  pathname === item.href ||
-                  pathname.startsWith(`${item.href}/`)
+                  pathname === item.href || pathname.startsWith(`${item.href}/`)
                 }
                 onClick={onClose}
               />

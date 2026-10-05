@@ -1,16 +1,16 @@
-import Link from "next/link";
 import { GraduationCap } from "lucide-react";
+import Link from "next/link";
 
 const productLinks = [
-  { label: "Features", href: "#features" },
-  { label: "How It Works", href: "#how-it-works" },
-  { label: "Roles", href: "#roles" },
-  { label: "Pricing", href: "#packages" },
+  { label: "Features", href: "/#features" },
+  { label: "How It Works", href: "/#how-it-works" },
+  { label: "Roles", href: "/#roles" },
+  { label: "Pricing", href: "/#packages" },
 ];
 
 const accountLinks = [
   { label: "Sign In", href: "/auth/login" },
-  { label: "Register School", href: "/auth/register-school" },
+  { label: "Register School", href: "/#packages" },
 ];
 
 export function Footer() {
@@ -32,6 +32,7 @@ export function Footer() {
                 <p className="text-sm font-bold leading-none tracking-tight">
                   SchoolHub
                 </p>
+
                 <p className="mt-1 text-[10px] leading-none text-muted-foreground">
                   School Management
                 </p>

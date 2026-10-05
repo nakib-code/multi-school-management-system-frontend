@@ -1,15 +1,24 @@
 "use client";
 
-import { ArrowLeft, ChevronRight } from "lucide-react";
+import {
+  ArrowLeft,
+  Building2,
+  Users,
+} from "lucide-react";
 
+import {
+  USER_CATEGORIES,
+  type UserCategoryKey,
+} from "@/features/super-admin/users/constants";
 
 import type { SchoolUserSummary } from "@/features/super-admin/users/types";
-import { USER_CATEGORIES, UserCategoryKey } from "@/features/super-admin/users/constants";
 
 interface SchoolUserDetailsProps {
   data: SchoolUserSummary;
   onBack: () => void;
-  onSelectCategory: (role: UserCategoryKey) => void;
+  onSelectCategory: (
+    role: UserCategoryKey,
+  ) => void;
 }
 
 export function SchoolUserDetails({
@@ -21,90 +30,72 @@ export function SchoolUserDetails({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-3">
-          <button
-            type="button"
-            onClick={onBack}
-            className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border bg-background transition hover:bg-muted"
-            aria-label="Back to schools"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </button>
+      {/* Back */}
+      <button
+        type="button"
+        onClick={onBack}
+        className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to schools
+      </button>
 
-          <div>
-            <p className="text-sm text-muted-foreground">School Users</p>
+      {/* School Header */}
+      <div className="rounded-xl border bg-background">
+        <div className="flex flex-col gap-5 p-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Building2 className="h-6 w-6" />
+            </div>
 
-            <h2 className="text-2xl font-semibold tracking-tight">
-              {school.name}
-            </h2>
+            <div className="min-w-0">
+              <h1 className="truncate text-2xl font-bold tracking-tight">
+                {school.name}
+              </h1>
 
-            <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-              <span>{school.code}</span>
-              <span>•</span>
-              <span
-                className={
-                  school.status === "ACTIVE"
-                    ? "font-medium text-green-600"
-                    : "font-medium"
-                }
-              >
-                {school.status}
-              </span>
+              <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                <span className="font-mono">
+                  {school.code}
+                </span>
+
+                <span>•</span>
+
+                <span className="capitalize">
+                  {school.status.toLowerCase()}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Total users */}
-        <div className="rounded-xl border bg-background px-5 py-3">
-          <p className="text-xs text-muted-foreground">Total Users</p>
-          <p className="mt-1 text-2xl font-semibold">{counts.total}</p>
+          <div className="rounded-xl bg-muted px-6 py-4 text-center">
+            <div className="flex items-center justify-center gap-2 text-muted-foreground">
+              <Users className="h-4 w-4" />
+
+              <span className="text-xs font-medium">
+                Total Users
+              </span>
+            </div>
+
+            <p className="mt-1 text-2xl font-bold">
+              {counts.total}
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Category cards (clickable) */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        {USER_CATEGORIES.map((category) => {
-          const Icon = category.icon;
-          const count = counts[category.key];
-
-          return (
-            <button
-              key={category.key}
-              type="button"
-              onClick={() => onSelectCategory(category.key)}
-              className="rounded-xl border bg-background p-5 text-left transition hover:border-primary/30 hover:shadow-sm"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                  <Icon className="h-5 w-5" />
-                </div>
-
-                <span className="text-2xl font-semibold">{count}</span>
-              </div>
-
-              <h3 className="mt-4 font-medium">{category.label}</h3>
-
-              <p className="mt-1 text-xs text-muted-foreground">
-                {category.description}
-              </p>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Category list (clickable) */}
-      <div className="rounded-xl border bg-background">
-        <div className="border-b px-5 py-4">
-          <h3 className="font-semibold">User Categories</h3>
+      {/* Categories */}
+      <section>
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold">
+            User Categories
+          </h2>
 
           <p className="mt-1 text-sm text-muted-foreground">
-            Manage users by their role within {school.name}.
+            Select a category to view users from this school.
           </p>
         </div>
 
-        <div className="divide-y">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {USER_CATEGORIES.map((category) => {
             const Icon = category.icon;
             const count = counts[category.key];
@@ -113,35 +104,35 @@ export function SchoolUserDetails({
               <button
                 key={category.key}
                 type="button"
-                onClick={() => onSelectCategory(category.key)}
-                className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left transition hover:bg-muted/50"
+                onClick={() =>
+                  onSelectCategory(category.key)
+                }
+                className="group rounded-xl border bg-background p-5 text-left transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-sm"
               >
-                <div className="flex min-w-0 items-center gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
-                    <Icon className="h-4 w-4 text-muted-foreground" />
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-muted transition-colors group-hover:bg-primary/10">
+                    <Icon className="h-5 w-5 text-muted-foreground transition-colors group-hover:text-primary" />
                   </div>
 
-                  <div className="min-w-0">
-                    <p className="font-medium">{category.label}</p>
-
-                    <p className="text-xs text-muted-foreground">
-                      {category.description}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex shrink-0 items-center gap-2">
-                  <span className="rounded-full bg-muted px-3 py-1 text-sm font-medium">
+                  <span className="text-2xl font-bold">
                     {count}
                   </span>
+                </div>
 
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                <div className="mt-4">
+                  <h3 className="font-semibold">
+                    {category.label}
+                  </h3>
+
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    {category.description}
+                  </p>
                 </div>
               </button>
             );
           })}
         </div>
-      </div>
+      </section>
     </div>
   );
 }

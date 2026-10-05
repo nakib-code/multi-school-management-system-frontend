@@ -23,7 +23,9 @@ export const getSchoolUsers = async (
 ): Promise<SchoolUsersResponse> => {
   const response = await api.get<ApiResponse<SchoolUsersResponse>>(
     `/schools/${schoolId}/users`,
-    { params },
+    {
+      params,
+    },
   );
 
   return response.data.data;

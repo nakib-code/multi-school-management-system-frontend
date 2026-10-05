@@ -45,11 +45,6 @@ export const createSchoolSchema = z
       .max(100, "Password is too long"),
 
     confirmPassword: z.string(),
-
-    packageId: z
-      .number()
-      .int()
-      .positive("Please select a package"),
   })
   .refine(
     (data) => data.adminPassword === data.confirmPassword,
@@ -61,4 +56,27 @@ export const createSchoolSchema = z
 
 export type CreateSchoolFormValues = z.infer<
   typeof createSchoolSchema
+>;
+
+/**
+ * Verify Admin Email
+ */
+export const verifyAdminEmailSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .email("Please enter a valid email address"),
+
+  code: z
+    .string()
+    .trim()
+    .length(6, "Verification code must be 6 digits")
+    .regex(
+      /^\d{6}$/,
+      "Verification code must contain only numbers",
+    ),
+});
+
+export type VerifyEmailAdminFormValues = z.infer<
+  typeof verifyAdminEmailSchema
 >;

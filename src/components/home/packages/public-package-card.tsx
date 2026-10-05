@@ -1,9 +1,8 @@
 "use client";
 
-import { PublicPackage } from "@/features/public/types";
+import type { PublicPackage } from "@/features/public/types";
 import { Check } from "lucide-react";
 import Link from "next/link";
-
 
 interface PublicPackageCardProps {
   package: PublicPackage;
@@ -13,13 +12,15 @@ const formatPrice = (price: string | number) => {
   const numericPrice = Number(price);
 
   if (Number.isNaN(numericPrice)) {
-    return price;
+    return String(price);
   }
 
   return new Intl.NumberFormat("en-BD").format(numericPrice);
 };
 
-const getBillingLabel = (billingCycle: PublicPackage["billingCycle"]) => {
+const getBillingLabel = (
+  billingCycle: PublicPackage["billingCycle"],
+) => {
   switch (billingCycle) {
     case "MONTHLY":
       return "/ month";
@@ -76,6 +77,7 @@ export function PublicPackageCard({
             className="flex items-start gap-2 text-sm text-muted-foreground"
           >
             <Check className="mt-0.5 size-4 shrink-0 text-primary" />
+
             <span>
               {item.feature
                 .replaceAll("_", " ")
@@ -87,7 +89,7 @@ export function PublicPackageCard({
       </ul>
 
       <Link
-        href={`/auth/register-school?packageId=${pkg.id}`}
+        href={`/auth/register?packageId=${pkg.id}`}
         className="mt-6 inline-flex h-11 items-center justify-center rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
       >
         Choose {pkg.name}

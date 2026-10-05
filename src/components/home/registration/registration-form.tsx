@@ -28,37 +28,22 @@ import type {
 } from "@/features/schools/types";
 
 import { RegistrationFormField } from "./registration-form-field";
-import { PublicPackage } from "@/features/public/types";
 
 interface RegistrationFormProps {
-  packageId: number;
-  selectedPackage: PublicPackage;
-
-  registerSchool: (
-    payload: CreateSchoolInput,
-  ) => Promise<CreateSchoolResponse>;
+  registerSchool: (payload: CreateSchoolInput) => Promise<CreateSchoolResponse>;
 }
 
-export function RegistrationForm({
-  packageId,
-  selectedPackage,
-  registerSchool,
-}: RegistrationFormProps) {
+export function RegistrationForm({ registerSchool }: RegistrationFormProps) {
   const router = useRouter();
 
-  const [showPassword, setShowPassword] =
-    useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
-  const [showConfirmPassword, setShowConfirmPassword] =
-    useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const {
     register,
     handleSubmit,
-    formState: {
-      errors,
-      isSubmitting,
-    },
+    formState: { errors, isSubmitting },
   } = useForm<CreateSchoolFormValues>({
     resolver: zodResolver(createSchoolSchema),
 
@@ -69,66 +54,56 @@ export function RegistrationForm({
       phone: "",
       address: "",
       logo: "",
-
       adminName: "",
       adminEmail: "",
       adminPhone: "",
       adminPassword: "",
       confirmPassword: "",
-
-      packageId,
     },
   });
 
-  const onSubmit = async (
-    values: CreateSchoolFormValues,
-  ) => {
+  const onSubmit = async (values: CreateSchoolFormValues) => {
     try {
-      const {
-        confirmPassword: _confirmPassword,
-        ...schoolData
-      } = values;
+      const { confirmPassword: _confirmPassword, ...schoolData } = values;
 
       const payload: CreateSchoolInput = {
         name: schoolData.name,
         code: schoolData.code,
 
         email: schoolData.email || undefined,
+
         phone: schoolData.phone || undefined,
+
         address: schoolData.address || undefined,
+
         logo: schoolData.logo || undefined,
 
         adminName: schoolData.adminName,
-        adminEmail: schoolData.adminEmail,
-        adminPhone:
-          schoolData.adminPhone || undefined,
-        adminPassword: schoolData.adminPassword,
 
-        packageId,
+        adminEmail: schoolData.adminEmail,
+
+        adminPhone: schoolData.adminPhone || undefined,
+
+        adminPassword: schoolData.adminPassword,
       };
 
+      // Create school registration
       const result = await registerSchool(payload);
 
+      const adminEmail = result.admin.email;
+
+      // Save registration email
+      sessionStorage.setItem("schoolRegistrationEmail", adminEmail);
+
       toast.success("Registration submitted", {
-        description:
-          "Please verify the admin email to continue.",
+        description: "Please verify your admin email to continue.",
       });
 
-      sessionStorage.setItem(
-        "schoolRegistrationEmail",
-        result.admin.email,
-      );
-
-      router.push(
-        `/auth/verify-email?email=${encodeURIComponent(
-          result.admin.email,
-        )}`,
-      );
+      // Go to email verification
+      router.push(`/auth/verify-email?email=${encodeURIComponent(adminEmail)}`);
     } catch (error) {
       const message =
-        error instanceof Error
-          ? error.message
-          : "Failed to register school";
+        error instanceof Error ? error.message : "Failed to register school";
 
       toast.error("Registration failed", {
         description: message,
@@ -138,26 +113,23 @@ export function RegistrationForm({
 
   return (
     <form
-      onSubmit={handleSubmit(onSubmit)}
+      onSubmit={handleSubmit(onSubmit, (errors) => {
+        console.log("REGISTRATION VALIDATION ERRORS:", errors);
+      })}
       className="space-y-8 p-6 sm:p-8"
     >
       {/* SCHOOL INFORMATION */}
-
       <section>
         <div className="mb-5">
-          <h2 className="text-base font-semibold">
-            School Information
-          </h2>
+          <h2 className="text-base font-semibold">School Information</h2>
 
           <p className="mt-1 text-sm text-muted-foreground">
-            Enter the basic information about your
-            school.
+            Enter the basic information about your school.
           </p>
         </div>
 
         <div className="grid gap-5 sm:grid-cols-2">
           {/* School Name */}
-
           <RegistrationFormField
             label="School Name"
             htmlFor="name"
@@ -171,14 +143,11 @@ export function RegistrationForm({
               placeholder="ABC School & College"
               autoComplete="organization"
               {...register("name")}
-              className={inputClass(
-                !!errors.name,
-              )}
+              className={inputClass(!!errors.name)}
             />
           </RegistrationFormField>
 
           {/* School Code */}
-
           <RegistrationFormField
             label="School Code"
             htmlFor="code"
@@ -191,14 +160,11 @@ export function RegistrationForm({
               type="text"
               placeholder="ABC001"
               {...register("code")}
-              className={inputClass(
-                !!errors.code,
-              )}
+              className={inputClass(!!errors.code)}
             />
           </RegistrationFormField>
 
           {/* School Email */}
-
           <RegistrationFormField
             label="School Email"
             htmlFor="email"
@@ -211,14 +177,11 @@ export function RegistrationForm({
               placeholder="school@example.com"
               autoComplete="email"
               {...register("email")}
-              className={inputClass(
-                !!errors.email,
-              )}
+              className={inputClass(!!errors.email)}
             />
           </RegistrationFormField>
 
           {/* School Phone */}
-
           <RegistrationFormField
             label="Phone"
             htmlFor="phone"
@@ -231,14 +194,11 @@ export function RegistrationForm({
               placeholder="+880 1XXXXXXXXX"
               autoComplete="tel"
               {...register("phone")}
-              className={inputClass(
-                !!errors.phone,
-              )}
+              className={inputClass(!!errors.phone)}
             />
           </RegistrationFormField>
 
           {/* Address */}
-
           <RegistrationFormField
             label="Address"
             htmlFor="address"
@@ -251,14 +211,11 @@ export function RegistrationForm({
               rows={3}
               placeholder="School address"
               {...register("address")}
-              className={`${inputClass(
-                !!errors.address,
-              )} h-auto py-3`}
+              className={`${inputClass(!!errors.address)} h-auto py-3`}
             />
           </RegistrationFormField>
 
           {/* Logo */}
-
           <RegistrationFormField
             label="Logo URL"
             htmlFor="logo"
@@ -271,31 +228,25 @@ export function RegistrationForm({
               type="url"
               placeholder="https://example.com/logo.png"
               {...register("logo")}
-              className={inputClass(
-                !!errors.logo,
-              )}
+              className={inputClass(!!errors.logo)}
             />
           </RegistrationFormField>
         </div>
       </section>
 
       {/* ADMIN INFORMATION */}
-
       <section className="border-t pt-8">
         <div className="mb-5">
-          <h2 className="text-base font-semibold">
-            Administrator Information
-          </h2>
+          <h2 className="text-base font-semibold">Administrator Information</h2>
 
           <p className="mt-1 text-sm text-muted-foreground">
-            This account will become the school
-            administrator after approval.
+            This account will become the school administrator after your school
+            is approved.
           </p>
         </div>
 
         <div className="grid gap-5 sm:grid-cols-2">
           {/* Admin Name */}
-
           <RegistrationFormField
             label="Admin Name"
             htmlFor="adminName"
@@ -309,14 +260,11 @@ export function RegistrationForm({
               placeholder="John Doe"
               autoComplete="name"
               {...register("adminName")}
-              className={inputClass(
-                !!errors.adminName,
-              )}
+              className={inputClass(!!errors.adminName)}
             />
           </RegistrationFormField>
 
           {/* Admin Phone */}
-
           <RegistrationFormField
             label="Admin Phone"
             htmlFor="adminPhone"
@@ -329,14 +277,11 @@ export function RegistrationForm({
               placeholder="+880 1XXXXXXXXX"
               autoComplete="tel"
               {...register("adminPhone")}
-              className={inputClass(
-                !!errors.adminPhone,
-              )}
+              className={inputClass(!!errors.adminPhone)}
             />
           </RegistrationFormField>
 
           {/* Admin Email */}
-
           <RegistrationFormField
             label="Admin Email"
             htmlFor="adminEmail"
@@ -351,14 +296,11 @@ export function RegistrationForm({
               placeholder="admin@example.com"
               autoComplete="email"
               {...register("adminEmail")}
-              className={inputClass(
-                !!errors.adminEmail,
-              )}
+              className={inputClass(!!errors.adminEmail)}
             />
           </RegistrationFormField>
 
           {/* Password */}
-
           <RegistrationFormField
             label="Password"
             htmlFor="adminPassword"
@@ -369,32 +311,18 @@ export function RegistrationForm({
             <div className="relative">
               <input
                 id="adminPassword"
-                type={
-                  showPassword
-                    ? "text"
-                    : "password"
-                }
+                type={showPassword ? "text" : "password"}
                 autoComplete="new-password"
                 placeholder="Minimum 8 characters"
                 {...register("adminPassword")}
-                className={`${inputClass(
-                  !!errors.adminPassword,
-                )} pr-10`}
+                className={`${inputClass(!!errors.adminPassword)} pr-10`}
               />
 
               <button
                 type="button"
-                onClick={() =>
-                  setShowPassword(
-                    (value) => !value,
-                  )
-                }
+                onClick={() => setShowPassword((value) => !value)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
-                aria-label={
-                  showPassword
-                    ? "Hide password"
-                    : "Show password"
-                }
+                aria-label={showPassword ? "Hide password" : "Show password"}
               >
                 {showPassword ? (
                   <EyeOff className="h-4 w-4" />
@@ -406,44 +334,29 @@ export function RegistrationForm({
           </RegistrationFormField>
 
           {/* Confirm Password */}
-
           <RegistrationFormField
             label="Confirm Password"
             htmlFor="confirmPassword"
             icon={<LockKeyhole className="h-4 w-4" />}
-            error={
-              errors.confirmPassword?.message
-            }
+            error={errors.confirmPassword?.message}
             required
           >
             <div className="relative">
               <input
                 id="confirmPassword"
-                type={
-                  showConfirmPassword
-                    ? "text"
-                    : "password"
-                }
+                type={showConfirmPassword ? "text" : "password"}
                 autoComplete="new-password"
                 placeholder="Re-enter your password"
                 {...register("confirmPassword")}
-                className={`${inputClass(
-                  !!errors.confirmPassword,
-                )} pr-10`}
+                className={`${inputClass(!!errors.confirmPassword)} pr-10`}
               />
 
               <button
                 type="button"
-                onClick={() =>
-                  setShowConfirmPassword(
-                    (value) => !value,
-                  )
-                }
+                onClick={() => setShowConfirmPassword((value) => !value)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
                 aria-label={
-                  showConfirmPassword
-                    ? "Hide password"
-                    : "Show password"
+                  showConfirmPassword ? "Hide password" : "Show password"
                 }
               >
                 {showConfirmPassword ? (
@@ -458,26 +371,20 @@ export function RegistrationForm({
       </section>
 
       {/* SUBMIT */}
-
       <div className="border-t pt-6">
         <button
           type="submit"
           disabled={isSubmitting}
           className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {isSubmitting && (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          )}
+          {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
 
-          {isSubmitting
-            ? "Submitting registration..."
-            : `Register with ${selectedPackage.name}`}
+          {isSubmitting ? "Submitting registration..." : "Submit Registration"}
         </button>
 
         <p className="mt-4 text-center text-xs leading-5 text-muted-foreground">
-          After registration, you'll need to verify
-          the admin email before your school can be
-          reviewed.
+          After registration, you&apos;ll need to verify the admin email. Your
+          school will then be reviewed by the Super Admin.
         </p>
       </div>
     </form>

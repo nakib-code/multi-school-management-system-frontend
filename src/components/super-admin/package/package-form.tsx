@@ -1,37 +1,49 @@
 "use client";
 
-import { Package, PackageFeature } from "@/features/super-admin/packages/type";
-import { useCreatePackage, useUpdatePackage } from "@/features/super-admin/packages/use-packages";
+import {
+  Package,
+  PackageFeature,
+} from "@/features/super-admin/packages/type";
+import {
+  useCreatePackage,
+  useUpdatePackage,
+} from "@/features/super-admin/packages/use-packages";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
-
+import { PackageFeatureSelector } from "./package-feature-selector";
 
 const packageFormSchema = z.object({
   name: z.string().min(2, "Package name is required"),
+
   description: z
     .string()
     .max(500, "Description cannot exceed 500 characters")
     .optional(),
+
   price: z.coerce
     .number()
     .min(0, "Price cannot be negative"),
+
   billingCycle: z.enum([
     "MONTHLY",
     "YEARLY",
     "CUSTOM",
   ]),
+
   studentLimit: z.coerce
     .number()
     .int("Student limit must be an integer")
     .positive("Student limit must be greater than 0"),
+
   isActive: z.boolean(),
 });
 
-type PackageFormValues = z.infer<typeof packageFormSchema>;
+type PackageFormInput = z.input<typeof packageFormSchema>;
+type PackageFormValues = z.output<typeof packageFormSchema>;
 
 interface PackageFormProps {
   packageData?: Package;
@@ -61,8 +73,13 @@ export function PackageForm({
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<PackageFormValues>({
+  } = useForm<
+    PackageFormInput,
+    unknown,
+    PackageFormValues
+  >({
     resolver: zodResolver(packageFormSchema),
+
     defaultValues: {
       name: packageData?.name ?? "",
       description: packageData?.description ?? "",

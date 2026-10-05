@@ -7,7 +7,7 @@ const benefits = [
   "Role-based access for your team",
 ];
 
-export function CtaSection () {
+export function CtaSection() {
   return (
     <section className="border-b border-border/60 bg-background">
       <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 lg:py-24">
@@ -61,7 +61,7 @@ export function CtaSection () {
               </Link>
 
               <Link
-                href="/auth/register-school"
+                href="/#packages"
                 className="inline-flex h-12 items-center justify-center rounded-xl border border-border bg-background px-6 text-sm font-semibold transition-colors hover:bg-muted"
               >
                 Register Your School

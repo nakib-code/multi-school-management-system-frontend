@@ -1,5 +1,3 @@
-import type { SchoolStatus } from "@/types/school";
-
 export type SchoolUserRole =
   | "ADMIN"
   | "MANAGER"
@@ -8,6 +6,24 @@ export type SchoolUserRole =
   | "GUARDIAN";
 
 export type SchoolUserStatus = "ACTIVE" | "INACTIVE";
+
+export interface SchoolUserSummary {
+  school: {
+    id: number;
+    name: string;
+    code: string;
+    status: string;
+  };
+
+  counts: {
+    total: number;
+    admin: number;
+    manager: number;
+    teacher: number;
+    student: number;
+    guardian: number;
+  };
+}
 
 export interface SchoolUser {
   id: number;
@@ -21,7 +37,7 @@ export interface SchoolUser {
   createdAt: string;
 }
 
-export interface SchoolUserMeta {
+export interface SchoolUsersMeta {
   page: number;
   limit: number;
   total: number;
@@ -30,25 +46,7 @@ export interface SchoolUserMeta {
 
 export interface SchoolUsersResponse {
   users: SchoolUser[];
-  meta: SchoolUserMeta;
-}
-
-export interface SchoolUserSummary {
-  school: {
-    id: number;
-    name: string;
-    code: string;
-    status: SchoolStatus;
-  };
-
-  counts: {
-    total: number;
-    admin: number;
-    manager: number;
-    teacher: number;
-    student: number;
-    guardian: number;
-  };
+  meta: SchoolUsersMeta;
 }
 
 export interface GetSchoolUsersParams {
@@ -58,5 +56,3 @@ export interface GetSchoolUsersParams {
   role?: SchoolUserRole;
   status?: SchoolUserStatus;
 }
-
-export type UserStatus = SchoolUserStatus;

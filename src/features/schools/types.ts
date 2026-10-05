@@ -15,8 +15,9 @@ export interface CreateSchoolInput {
   adminEmail: string;
   adminPhone?: string;
   adminPassword: string;
-  packageId: number;
+  packageId?: number;
 }
+
 
 export interface RegisteredSchool {
   id: number;
@@ -73,6 +74,6 @@ export interface SchoolListResponse {
 }
 
 export interface RejectSchoolPayload {
-  reason: string;
+  rejectionReason: string;
 }
 

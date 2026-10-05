@@ -2,8 +2,9 @@ import { api } from "@/lib/api";
 import type { ApiResponse } from "@/types/api";
 
 import type {
-  CreateSchoolPayload,
+  CreateSchoolInput,
   CreateSchoolResponse,
+  RejectSchoolPayload,
   VerifyAdminEmailPayload,
   VerifyAdminEmailResponse,
 } from "./types";
@@ -15,7 +16,7 @@ import type { School } from "@/types/school";
 // ============================================
 
 export const createSchool = async (
-  payload: CreateSchoolPayload,
+  payload: CreateSchoolInput,
 ): Promise<CreateSchoolResponse> => {
   const response = await api.post<
     ApiResponse<CreateSchoolResponse>
@@ -99,13 +100,11 @@ export const unblockSchool = async (
 
 export const rejectSchool = async (
   id: number,
-  rejectionReason: string,
+  payload: RejectSchoolPayload,
 ): Promise<School> => {
   const response = await api.patch<ApiResponse<School>>(
     `/schools/${id}/reject`,
-    {
-      rejectionReason,
-    },
+    payload,
   );
 
   return response.data.data;

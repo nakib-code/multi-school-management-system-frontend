@@ -1,21 +1,47 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import {
+  approveSchool,
+  blockSchool,
   createSchool,
+  deleteSchool,
+  getSchools,
+  rejectSchool,
+  unblockSchool,
   verifyAdminEmail,
+  type GetSchoolsParams,
 } from "./api";
 
 import type {
-  CreateSchoolPayload,
+  CreateSchoolInput,
+  RejectSchoolPayload,
   VerifyAdminEmailPayload,
 } from "./types";
 
+/* -------------------------------------------------------------------------- */
+/*                               School Queries                               */
+/* -------------------------------------------------------------------------- */
+
+export const useSchools = (params: GetSchoolsParams = {}) => {
+  return useQuery({
+    queryKey: ["schools", "list", params],
+    queryFn: () => getSchools(params),
+  });
+};
+
+/* -------------------------------------------------------------------------- */
+/*                              Public Registration                           */
+/* -------------------------------------------------------------------------- */
+
 export const useCreateSchool = () => {
   return useMutation({
-    mutationFn: (payload: CreateSchoolPayload) =>
-      createSchool(payload),
+    mutationFn: (payload: CreateSchoolInput) => createSchool(payload),
   });
 };
 
@@ -26,13 +52,81 @@ export const useVerifyAdminEmail = () => {
   });
 };
 
+/* -------------------------------------------------------------------------- */
+/*                            Super Admin Mutations                           */
+/* -------------------------------------------------------------------------- */
 
-import { useQuery } from "@tanstack/react-query";
+export const useApproveSchool = () => {
+  const queryClient = useQueryClient();
 
-import { getSchools, type GetSchoolsParams } from "./api";
-
-export const useSchools = (params: GetSchoolsParams = {}) =>
-  useQuery({
-    queryKey: ["schools", "list", params],
-    queryFn: () => getSchools(params),
+  return useMutation({
+    mutationFn: (id: number) => approveSchool(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["schools", "list"],
+      });
+    },
   });
+};
+
+export const useRejectSchool = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: number;
+      payload: RejectSchoolPayload;
+    }) => rejectSchool(id, payload),
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["schools", "list"],
+      });
+    },
+  });
+};
+
+export const useBlockSchool = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: number) => blockSchool(id),
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["schools", "list"],
+      });
+    },
+  });
+};
+
+export const useUnblockSchool = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: number) => unblockSchool(id),
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["schools", "list"],
+      });
+    },
+  });
+};
+
+export const useDeleteSchool = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: number) => deleteSchool(id),
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["schools", "list"],
+      });
+    },
+  });
+};

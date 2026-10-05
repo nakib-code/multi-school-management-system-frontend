@@ -1,7 +1,7 @@
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
-import { PublicPackageList } from "./packages/public-package-list";
 
+import { PublicPackageList } from "./packages/public-package-list";
 
 export function PricingSection() {
   return (
@@ -54,7 +54,7 @@ export function PricingSection() {
             </div>
 
             <Link
-              href="/auth/register-school"
+              href="/auth/register?custom=true"
               className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-5 text-sm font-semibold text-primary transition-colors hover:bg-primary/10"
             >
               Get Started

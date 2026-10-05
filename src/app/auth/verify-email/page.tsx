@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { useVerifyAdminEmail } from "@/features/schools/hooks";
 import {
   verifyAdminEmailSchema,
-  type VerifyAdminEmailFormValues,
+  VerifyEmailAdminFormValues,
 } from "@/features/schools/schema";
 
 function VerifyEmailForm() {
@@ -27,7 +27,7 @@ function VerifyEmailForm() {
     handleSubmit,
     setValue,
     formState: { errors, isSubmitting },
-  } = useForm<VerifyAdminEmailFormValues>({
+  } = useForm<VerifyEmailAdminFormValues>({
     resolver: zodResolver(verifyAdminEmailSchema),
     defaultValues: {
       email: emailFromUrl,
@@ -41,44 +41,46 @@ function VerifyEmailForm() {
       return;
     }
 
-    const savedEmail = sessionStorage.getItem(
-      "schoolRegistrationEmail",
-    );
+    const savedEmail = sessionStorage.getItem("schoolRegistrationEmail");
 
     if (savedEmail) {
       setValue("email", savedEmail);
     }
   }, [emailFromUrl, setValue]);
 
-  const onSubmit = async (
-    values: VerifyAdminEmailFormValues,
-  ) => {
-    try {
-      const result = await verifyEmail(values);
+const onSubmit = async (
+  values: VerifyEmailAdminFormValues,
+) => {
+  try {
+    const result = await verifyEmail(values);
 
-      toast.success("Email verified successfully", {
-        description:
-          "Your school registration has been submitted for review.",
-      });
+    const adminEmail =
+      result?.adminEmail ?? values.email;
 
-      sessionStorage.removeItem("schoolRegistrationEmail");
+    sessionStorage.setItem(
+      "schoolRegistrationEmail",
+      adminEmail,
+    );
 
-      router.push(
-        `/auth/login?verified=true&email=${encodeURIComponent(
-          result.adminEmail ?? values.email,
-        )}`,
-      );
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Invalid or expired verification code";
+    toast.success("Email verified successfully", {
+      description:
+        "Your email has been verified. Please login to continue with payment.",
+    });
 
-      toast.error("Verification failed", {
-        description: message,
-      });
-    }
-  };
+    router.push(
+      `/auth/login?email=${encodeURIComponent(adminEmail)}&next=/dashboard/admin/subscription/payment`,
+    );
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Invalid or expired verification code";
+
+    toast.error("Verification failed", {
+      description: message,
+    });
+  }
+};
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-muted/30 px-4 py-10">
@@ -102,20 +104,14 @@ function VerifyEmailForm() {
             </h1>
 
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              We sent a 6-digit verification code to your admin
-              email address.
+              We sent a 6-digit verification code to your admin email address.
             </p>
           </div>
 
-          <form
-            onSubmit={handleSubmit(onSubmit)}
-            className="space-y-5"
-          >
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            {/* Email */}
             <div className="space-y-2">
-              <label
-                htmlFor="email"
-                className="text-sm font-medium"
-              >
+              <label htmlFor="email" className="text-sm font-medium">
                 Admin Email
               </label>
 
@@ -135,11 +131,9 @@ function VerifyEmailForm() {
               )}
             </div>
 
+            {/* Verification Code */}
             <div className="space-y-2">
-              <label
-                htmlFor="code"
-                className="text-sm font-medium"
-              >
+              <label htmlFor="code" className="text-sm font-medium">
                 Verification Code
               </label>
 
@@ -163,14 +157,13 @@ function VerifyEmailForm() {
               )}
             </div>
 
+            {/* Submit */}
             <button
               type="submit"
               disabled={isSubmitting}
               className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isSubmitting && (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              )}
+              {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
 
               {isSubmitting ? "Verifying..." : "Verify Email"}
             </button>
@@ -178,8 +171,8 @@ function VerifyEmailForm() {
 
           <div className="mt-6 border-t pt-6 text-center">
             <p className="text-xs leading-5 text-muted-foreground">
-              Didn&apos;t receive the code? Please check your
-              spam folder or make sure the email address is correct.
+              Didn&apos;t receive the code? Please check your spam folder or
+              make sure the email address is correct.
             </p>
 
             <Link

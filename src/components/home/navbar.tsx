@@ -83,7 +83,7 @@ export function Navbar() {
             href="/#packages"
             className="inline-flex h-10 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm transition-all hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-md"
           >
-            Get Started
+            Register Your School
           </Link>
         </div>
 
@@ -92,7 +92,9 @@ export function Navbar() {
           type="button"
           onClick={() => setIsOpen((value) => !value)}
           className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground md:hidden"
-          aria-label={isOpen ? "Close navigation menu" : "Open navigation menu"}
+          aria-label={
+            isOpen ? "Close navigation menu" : "Open navigation menu"
+          }
           aria-expanded={isOpen}
           aria-controls="mobile-navigation"
         >
@@ -125,6 +127,7 @@ export function Navbar() {
               </Link>
             ))}
 
+            {/* Mobile Actions */}
             <div className="mt-3 grid grid-cols-2 gap-3 border-t border-border pt-4">
               <Link
                 href="/auth/login"
@@ -139,17 +142,9 @@ export function Navbar() {
                 onClick={closeMenu}
                 className="inline-flex h-10 items-center justify-center rounded-lg bg-primary text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
               >
-                Get Started
+                Register Your School
               </Link>
             </div>
-
-            <Link
-              href="/auth/register-school"
-              onClick={closeMenu}
-              className="mt-3 inline-flex h-10 items-center justify-center rounded-lg border border-primary/20 bg-primary/5 text-sm font-medium text-primary transition-colors hover:bg-primary/10"
-            >
-              Register Your School
-            </Link>
           </nav>
         </div>
       )}

@@ -4,7 +4,6 @@ import { Loader2 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 
-import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { useAuth } from "@/providers/auth-provider";
 
 const roleDashboardPaths = {
@@ -31,6 +30,7 @@ export default function DashboardLayout({
       return;
     }
 
+    // User is not authenticated
     if (!isAuthenticated || !user) {
       router.replace(
         `/auth/login?redirect=${encodeURIComponent(pathname)}`,
@@ -40,16 +40,19 @@ export default function DashboardLayout({
 
     const expectedPath = roleDashboardPaths[user.role];
 
+    // Unknown / unsupported role
     if (!expectedPath) {
       router.replace("/auth/login");
       return;
     }
 
+    // /dashboard → user's own dashboard
     if (pathname === "/dashboard") {
       router.replace(expectedPath);
       return;
     }
 
+    // Check role-based access
     const isAuthorizedPath =
       pathname === expectedPath ||
       pathname.startsWith(`${expectedPath}/`);
@@ -65,7 +68,8 @@ export default function DashboardLayout({
     user,
   ]);
 
-  if (isLoading || !isAuthenticated || !user) {
+  // Authentication loading
+  if (isLoading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-muted/30">
         <div className="flex flex-col items-center gap-3">
@@ -79,8 +83,39 @@ export default function DashboardLayout({
     );
   }
 
+  // Not authenticated
+  if (!isAuthenticated || !user) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-muted/30">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+
+          <p className="text-sm text-muted-foreground">
+            Redirecting to login...
+          </p>
+        </div>
+      </main>
+    );
+  }
+
   const expectedPath = roleDashboardPaths[user.role];
 
+  // Invalid role
+  if (!expectedPath) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-muted/30">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+
+          <p className="text-sm text-muted-foreground">
+            Redirecting...
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  // Check role-based access
   const isAuthorizedPath =
     pathname === expectedPath ||
     pathname.startsWith(`${expectedPath}/`);
@@ -99,9 +134,6 @@ export default function DashboardLayout({
     );
   }
 
-  return (
-    <DashboardShell>
-      {children}
-    </DashboardShell>
-  );
+
+  return <>{children}</>;
 }

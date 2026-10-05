@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  AlertTriangle,
   CheckCircle,
   ChevronLeft,
   ChevronRight,
@@ -9,86 +10,68 @@ import {
   ShieldBan,
   ShieldCheck,
   Trash2,
+  X,
   XCircle,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import { useState } from "react";
 import { toast } from "sonner";
 
-
-import type {
-  School,
-  SchoolStatus,
-} from "@/types/school";
+import {
+  useApproveSchool,
+  useBlockSchool,
+  useDeleteSchool,
+  useRejectSchool,
+  useSchools,
+  useUnblockSchool,
+} from "@/features/schools/hooks";
+import type { School, SchoolStatus } from "@/types/school";
 
 import { RejectSchoolDialog } from "./reject-school-dialog";
 import { SchoolFilters } from "./school-filters";
 import { SchoolStatusBadge } from "./school-status-badge";
-import { approveSchool, blockSchool, deleteSchool, getSchools, rejectSchool, unblockSchool } from "@/features/schools/api";
 
 const PAGE_SIZE = 10;
 
 export function SchoolTable() {
-  const [schools, setSchools] = useState<School[]>(
-    [],
-  );
-
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [status, setStatus] =
-    useState<SchoolStatus>();
+  const [status, setStatus] = useState<SchoolStatus>();
+  const [rejectingSchool, setRejectingSchool] = useState<School | null>(null);
+  const [deletingSchool, setDeletingSchool] = useState<School | null>(null);
 
-  const [total, setTotal] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
+  const { data, isLoading, isFetching } = useSchools({
+    page,
+    limit: PAGE_SIZE,
+    search: search.trim() || undefined,
+    status,
+  });
 
-  const [loading, setLoading] = useState(true);
+  const approveMutation = useApproveSchool();
+  const rejectMutation = useRejectSchool();
+  const blockMutation = useBlockSchool();
+  const unblockMutation = useUnblockSchool();
+  const deleteMutation = useDeleteSchool();
 
-  const [actionLoadingId, setActionLoadingId] =
-    useState<number | null>(null);
+  const schools = data?.schools ?? [];
+  const total = data?.meta.total ?? 0;
+  const totalPages = data?.meta.totalPages ?? 0;
 
-  const [rejectingSchool, setRejectingSchool] =
-    useState<School | null>(null);
+  const actionLoadingId =
+    approveMutation.variables ??
+    blockMutation.variables ??
+    unblockMutation.variables ??
+    deleteMutation.variables ??
+    null;
 
-  const [rejectLoading, setRejectLoading] =
-    useState(false);
-
-  const loadSchools = useCallback(async () => {
-    try {
-      setLoading(true);
-
-      const result = await getSchools({
-        page,
-        limit: PAGE_SIZE,
-        search: search.trim() || undefined,
-        status,
-      });
-
-      setSchools(result.schools);
-      setTotal(result.meta.total);
-      setTotalPages(result.meta.totalPages);
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Failed to load schools";
-
-      toast.error(message);
-    } finally {
-      setLoading(false);
-    }
-  }, [page, search, status]);
-
-  useEffect(() => {
-    loadSchools();
-  }, [loadSchools]);
+  const isRejectLoading = rejectMutation.isPending;
 
   const handleSearchChange = (value: string) => {
     setSearch(value);
     setPage(1);
   };
 
-  const handleStatusChange = (
-    value?: SchoolStatus,
-  ) => {
+  const handleStatusChange = (value?: SchoolStatus) => {
     setStatus(value);
     setPage(1);
   };
@@ -99,156 +82,111 @@ export function SchoolTable() {
     setPage(1);
   };
 
-  const runSchoolAction = async (
-    school: School,
-    action: () => Promise<School>,
-    successMessage: string,
-  ) => {
+  const handleApprove = async (school: School) => {
+    if (!window.confirm(`Are you sure you want to approve "${school.name}"?`)) {
+      return;
+    }
+
     try {
-      setActionLoadingId(school.id);
-
-      await action();
-
-      toast.success(successMessage);
-
-      await loadSchools();
+      await approveMutation.mutateAsync(school.id);
+      toast.success("School approved successfully");
     } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Something went wrong";
-
-      toast.error(message);
-    } finally {
-      setActionLoadingId(null);
-    }
-  };
-
-  const handleApprove = (school: School) => {
-    if (
-      !window.confirm(
-        `Are you sure you want to approve "${school.name}"?`,
-      )
-    ) {
-      return;
-    }
-
-    runSchoolAction(
-      school,
-      () => approveSchool(school.id),
-      "School approved successfully",
-    );
-  };
-
-  const handleBlock = (school: School) => {
-    if (
-      !window.confirm(
-        `Are you sure you want to block "${school.name}"?`,
-      )
-    ) {
-      return;
-    }
-
-    runSchoolAction(
-      school,
-      () => blockSchool(school.id),
-      "School blocked successfully",
-    );
-  };
-
-  const handleUnblock = (school: School) => {
-    if (
-      !window.confirm(
-        `Are you sure you want to unblock "${school.name}"?`,
-      )
-    ) {
-      return;
-    }
-
-    runSchoolAction(
-      school,
-      () => unblockSchool(school.id),
-      "School unblocked successfully",
-    );
-  };
-
-  const handleDelete = async (school: School) => {
-    if (
-      !window.confirm(
-        `Are you sure you want to permanently delete "${school.name}"?`,
-      )
-    ) {
-      return;
-    }
-
-    try {
-      setActionLoadingId(school.id);
-
-      await deleteSchool(school.id);
-
-      toast.success(
-        "School deleted successfully",
+      toast.error(
+        error instanceof Error ? error.message : "Failed to approve school",
       );
-
-      await loadSchools();
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Failed to delete school";
-
-      toast.error(message);
-    } finally {
-      setActionLoadingId(null);
     }
   };
 
-  const handleReject = async (
-    rejectionReason: string,
-  ) => {
+  const handleBlock = async (school: School) => {
+    if (!window.confirm(`Are you sure you want to block "${school.name}"?`)) {
+      return;
+    }
+
+    try {
+      await blockMutation.mutateAsync(school.id);
+      toast.success("School blocked successfully");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to block school",
+      );
+    }
+  };
+
+  const handleUnblock = async (school: School) => {
+    if (!window.confirm(`Are you sure you want to unblock "${school.name}"?`)) {
+      return;
+    }
+
+    try {
+      await unblockMutation.mutateAsync(school.id);
+      toast.success("School unblocked successfully");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to unblock school",
+      );
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingSchool) {
+      return;
+    }
+
+    try {
+      await deleteMutation.mutateAsync(deletingSchool.id);
+
+      toast.success("School deleted successfully", {
+        description: `${deletingSchool.name} has been permanently removed.`,
+      });
+
+      setDeletingSchool(null);
+
+      // If the last item on the current page was deleted,
+      // move back to the previous page.
+      if (schools.length === 1 && page > 1) {
+        setPage((current) => current - 1);
+      }
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to delete school",
+      );
+    }
+  };
+
+  const handleReject = async (rejectionReason: string) => {
     if (!rejectingSchool) {
       return;
     }
 
     try {
-      setRejectLoading(true);
+      await rejectMutation.mutateAsync({
+        id: rejectingSchool.id,
+        payload: {
+          rejectionReason,
+        },
+      });
 
-      await rejectSchool(
-        rejectingSchool.id,
-        rejectionReason,
-      );
-
-      toast.success(
-        "School rejected successfully",
-      );
-
+      toast.success("School rejected successfully");
       setRejectingSchool(null);
-
-      await loadSchools();
     } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Failed to reject school";
-
-      toast.error(message);
-    } finally {
-      setRejectLoading(false);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to reject school",
+      );
     }
   };
 
-  const startIndex =
-    total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const startIndex = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const endIndex = Math.min(page * PAGE_SIZE, total);
 
-  const endIndex = Math.min(
-    page * PAGE_SIZE,
-    total,
-  );
+  const isAnyActionPending =
+    approveMutation.isPending ||
+    blockMutation.isPending ||
+    unblockMutation.isPending ||
+    deleteMutation.isPending;
 
   return (
     <>
       <div className="space-y-4">
-        {/* Filters */}
         <SchoolFilters
           search={search}
           status={status}
@@ -257,7 +195,6 @@ export function SchoolTable() {
           onReset={handleReset}
         />
 
-        {/* Table */}
         <div className="overflow-hidden rounded-xl border bg-background">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[900px] text-sm">
@@ -290,12 +227,9 @@ export function SchoolTable() {
               </thead>
 
               <tbody>
-                {loading ? (
+                {isLoading ? (
                   <tr>
-                    <td
-                      colSpan={6}
-                      className="h-48 text-center"
-                    >
+                    <td colSpan={6} className="h-48 text-center">
                       <div className="flex items-center justify-center gap-2 text-muted-foreground">
                         <Loader2 className="h-5 w-5 animate-spin" />
                         Loading schools...
@@ -304,29 +238,23 @@ export function SchoolTable() {
                   </tr>
                 ) : schools.length === 0 ? (
                   <tr>
-                    <td
-                      colSpan={6}
-                      className="h-56 text-center"
-                    >
+                    <td colSpan={6} className="h-56 text-center">
                       <div className="flex flex-col items-center justify-center">
                         <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
                           <SchoolIcon className="h-6 w-6 text-muted-foreground" />
                         </div>
 
-                        <p className="font-medium">
-                          No schools found
-                        </p>
+                        <p className="font-medium">No schools found</p>
 
                         <p className="mt-1 text-sm text-muted-foreground">
-                          Try changing your search or
-                          filters.
+                          Try changing your search or filters.
                         </p>
                       </div>
                     </td>
                   </tr>
                 ) : (
                   schools.map((school) => {
-                    const isLoading =
+                    const isCurrentActionLoading =
                       actionLoadingId === school.id;
 
                     return (
@@ -334,7 +262,6 @@ export function SchoolTable() {
                         key={school.id}
                         className="border-b last:border-b-0 hover:bg-muted/30"
                       >
-                        {/* School */}
                         <td className="px-4 py-4">
                           <div className="flex items-center gap-3">
                             <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-muted">
@@ -351,9 +278,12 @@ export function SchoolTable() {
                             </div>
 
                             <div className="min-w-0">
-                              <p className="truncate font-medium">
+                              <Link
+                                href={`/dashboard/super-admin/schools/${school.id}`}
+                                className="block truncate font-medium transition-colors hover:text-primary"
+                              >
                                 {school.name}
-                              </p>
+                              </Link>
 
                               {school.email && (
                                 <p className="truncate text-xs text-muted-foreground">
@@ -364,14 +294,12 @@ export function SchoolTable() {
                           </div>
                         </td>
 
-                        {/* Code */}
                         <td className="px-4 py-4">
                           <span className="rounded-md bg-muted px-2 py-1 font-mono text-xs">
                             {school.code}
                           </span>
                         </td>
 
-                        {/* Admin */}
                         <td className="px-4 py-4">
                           <div>
                             <p className="font-medium">
@@ -384,113 +312,101 @@ export function SchoolTable() {
                           </div>
                         </td>
 
-                        {/* Contact */}
                         <td className="px-4 py-4">
                           <div className="text-sm">
-                            <p>
-                              {school.phone || "—"}
-                            </p>
+                            <p>{school.phone || "—"}</p>
 
                             {school.adminPhone && (
                               <p className="text-xs text-muted-foreground">
-                                Admin:{" "}
-                                {school.adminPhone}
+                                Admin: {school.adminPhone}
                               </p>
                             )}
                           </div>
                         </td>
 
-                        {/* Status */}
                         <td className="px-4 py-4">
-                          <SchoolStatusBadge
-                            status={school.status}
-                          />
+                          <SchoolStatusBadge status={school.status} />
                         </td>
 
-                        {/* Actions */}
                         <td className="px-4 py-4">
-                          {isLoading ? (
+                          {isCurrentActionLoading ? (
                             <div className="flex justify-end">
                               <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                             </div>
                           ) : (
                             <div className="flex justify-end gap-1">
-                              {school.status ===
-                                "PENDING" && (
+                              {school.status === "PENDING" && (
                                 <>
                                   <button
                                     type="button"
-                                    onClick={() =>
-                                      handleApprove(
-                                        school,
-                                      )
-                                    }
-                                    className="inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-green-600 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-500/10"
+                                    onClick={() => handleApprove(school)}
+                                    disabled={isAnyActionPending}
+                                    className="inline-flex h-8 w-8 items-center justify-center rounded-md text-green-600 transition hover:bg-green-50 disabled:pointer-events-none disabled:opacity-50 dark:text-green-400 dark:hover:bg-green-500/10"
                                     title="Approve"
                                   >
                                     <CheckCircle className="h-4 w-4" />
+                                    <span className="sr-only">
+                                      Approve school
+                                    </span>
                                   </button>
 
                                   <button
                                     type="button"
-                                    onClick={() =>
-                                      setRejectingSchool(
-                                        school,
-                                      )
-                                    }
-                                    className="inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10"
+                                    onClick={() => setRejectingSchool(school)}
+                                    disabled={isAnyActionPending}
+                                    className="inline-flex h-8 w-8 items-center justify-center rounded-md text-red-600 transition hover:bg-red-50 disabled:pointer-events-none disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-500/10"
                                     title="Reject"
                                   >
                                     <XCircle className="h-4 w-4" />
+                                    <span className="sr-only">
+                                      Reject school
+                                    </span>
                                   </button>
                                 </>
                               )}
 
-                              {school.status ===
-                                "ACTIVE" && (
+                              {school.status === "ACTIVE" && (
                                 <button
                                   type="button"
-                                  onClick={() =>
-                                    handleBlock(
-                                      school,
-                                    )
-                                  }
-                                  className="inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-orange-600 hover:bg-orange-50 dark:text-orange-400 dark:hover:bg-orange-500/10"
+                                  onClick={() => handleBlock(school)}
+                                  disabled={isAnyActionPending}
+                                  className="inline-flex h-8 w-8 items-center justify-center rounded-md text-orange-600 transition hover:bg-orange-50 disabled:pointer-events-none disabled:opacity-50 dark:text-orange-400 dark:hover:bg-orange-500/10"
                                   title="Block"
                                 >
                                   <ShieldBan className="h-4 w-4" />
+                                  <span className="sr-only">
+                                    Block school
+                                  </span>
                                 </button>
                               )}
 
-                              {school.status ===
-                                "BLOCKED" && (
+                              {school.status === "BLOCKED" && (
                                 <button
                                   type="button"
-                                  onClick={() =>
-                                    handleUnblock(
-                                      school,
-                                    )
-                                  }
-                                  className="inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-green-600 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-500/10"
+                                  onClick={() => handleUnblock(school)}
+                                  disabled={isAnyActionPending}
+                                  className="inline-flex h-8 w-8 items-center justify-center rounded-md text-green-600 transition hover:bg-green-50 disabled:pointer-events-none disabled:opacity-50 dark:text-green-400 dark:hover:bg-green-500/10"
                                   title="Unblock"
                                 >
                                   <ShieldCheck className="h-4 w-4" />
+                                  <span className="sr-only">
+                                    Unblock school
+                                  </span>
                                 </button>
                               )}
 
-                              {school.status ===
-                                "REJECTED" && (
+                              {school.status === "REJECTED" && (
                                 <button
                                   type="button"
-                                  onClick={() =>
-                                    handleDelete(
-                                      school,
-                                    )
-                                  }
-                                  className="inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10"
-                                  title="Delete"
+                                  onClick={() => setDeletingSchool(school)}
+                                  disabled={isAnyActionPending}
+                                  className="inline-flex h-8 w-8 items-center justify-center rounded-md text-red-600 transition hover:bg-red-50 disabled:pointer-events-none disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-500/10"
+                                  title="Delete permanently"
                                 >
                                   <Trash2 className="h-4 w-4" />
+                                  <span className="sr-only">
+                                    Delete school permanently
+                                  </span>
                                 </button>
                               )}
                             </div>
@@ -504,8 +420,7 @@ export function SchoolTable() {
             </table>
           </div>
 
-          {/* Pagination */}
-          {!loading && total > 0 && (
+          {!isLoading && total > 0 && (
             <div className="flex flex-col gap-3 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-muted-foreground">
                 Showing{" "}
@@ -513,13 +428,9 @@ export function SchoolTable() {
                   {startIndex}
                 </span>{" "}
                 to{" "}
-                <span className="font-medium text-foreground">
-                  {endIndex}
-                </span>{" "}
+                <span className="font-medium text-foreground">{endIndex}</span>{" "}
                 of{" "}
-                <span className="font-medium text-foreground">
-                  {total}
-                </span>{" "}
+                <span className="font-medium text-foreground">{total}</span>{" "}
                 schools
               </p>
 
@@ -527,11 +438,9 @@ export function SchoolTable() {
                 <button
                   type="button"
                   onClick={() =>
-                    setPage((current) =>
-                      Math.max(current - 1, 1),
-                    )
+                    setPage((current) => Math.max(current - 1, 1))
                   }
-                  disabled={page === 1}
+                  disabled={page === 1 || isFetching}
                   className="inline-flex h-9 items-center gap-1 rounded-lg border px-3 text-sm font-medium transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-50"
                 >
                   <ChevronLeft className="h-4 w-4" />
@@ -540,9 +449,7 @@ export function SchoolTable() {
 
                 <span className="px-2 text-sm text-muted-foreground">
                   Page{" "}
-                  <span className="font-medium text-foreground">
-                    {page}
-                  </span>{" "}
+                  <span className="font-medium text-foreground">{page}</span>{" "}
                   of{" "}
                   <span className="font-medium text-foreground">
                     {totalPages}
@@ -552,16 +459,9 @@ export function SchoolTable() {
                 <button
                   type="button"
                   onClick={() =>
-                    setPage((current) =>
-                      Math.min(
-                        current + 1,
-                        totalPages,
-                      ),
-                    )
+                    setPage((current) => Math.min(current + 1, totalPages))
                   }
-                  disabled={
-                    page >= totalPages
-                  }
+                  disabled={page >= totalPages || isFetching}
                   className="inline-flex h-9 items-center gap-1 rounded-lg border px-3 text-sm font-medium transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-50"
                 >
                   Next
@@ -573,18 +473,130 @@ export function SchoolTable() {
         </div>
       </div>
 
-      {/* Reject Dialog */}
       <RejectSchoolDialog
         school={rejectingSchool}
         open={Boolean(rejectingSchool)}
-        loading={rejectLoading}
+        loading={isRejectLoading}
         onClose={() => {
-          if (!rejectLoading) {
+          if (!isRejectLoading) {
             setRejectingSchool(null);
           }
         }}
         onConfirm={handleReject}
       />
+
+      <DeleteSchoolDialog
+        school={deletingSchool}
+        open={Boolean(deletingSchool)}
+        loading={deleteMutation.isPending}
+        onClose={() => {
+          if (!deleteMutation.isPending) {
+            setDeletingSchool(null);
+          }
+        }}
+        onConfirm={handleDeleteConfirm}
+      />
     </>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*                         Delete Confirmation Dialog                         */
+/* -------------------------------------------------------------------------- */
+
+interface DeleteSchoolDialogProps {
+  school: School | null;
+  open: boolean;
+  loading: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}
+
+function DeleteSchoolDialog({
+  school,
+  open,
+  loading,
+  onClose,
+  onConfirm,
+}: DeleteSchoolDialogProps) {
+  if (!open || !school) {
+    return null;
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="delete-school-title"
+    >
+      <div className="w-full max-w-md rounded-2xl border bg-background shadow-2xl">
+        <div className="p-6">
+          <div className="flex items-start gap-4">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-destructive/10">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+            </div>
+
+            <div className="min-w-0">
+              <h2
+                id="delete-school-title"
+                className="text-lg font-semibold"
+              >
+                Delete school permanently?
+              </h2>
+
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                You are about to permanently delete{" "}
+                <span className="font-medium text-foreground">
+                  {school.name}
+                </span>
+                .
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-5 rounded-xl border border-destructive/20 bg-destructive/5 p-4">
+            <p className="text-sm font-medium text-destructive">
+              This action cannot be undone.
+            </p>
+
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">
+              The school and its associated data will be permanently removed
+              from the system.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-3 border-t px-6 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={loading}
+            className="inline-flex h-10 items-center justify-center rounded-lg border px-4 text-sm font-medium transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-50"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={loading}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-destructive px-4 text-sm font-semibold text-destructive-foreground transition-opacity hover:opacity-90 disabled:pointer-events-none disabled:opacity-50"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Deleting...
+              </>
+            ) : (
+              <>
+                <Trash2 className="h-4 w-4" />
+                Delete Permanently
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
