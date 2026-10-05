@@ -1,55 +1,41 @@
 "use client";
 
-import { GraduationCap, Menu, X } from "lucide-react";
 import Link from "next/link";
+import { GraduationCap, Menu, X } from "lucide-react";
 import { useState } from "react";
 
 const navItems = [
-  {
-    label: "Features",
-    href: "/#features",
-  },
-  {
-    label: "How It Works",
-    href: "/#how-it-works",
-  },
-  {
-    label: "Roles",
-    href: "/#roles",
-  },
-  {
-    label: "Pricing",
-    href: "/#packages",
-  },
+  { label: "Home", href: "#home" },
+  { label: "Admission", href: "#admission" },
+  { label: "Schools", href: "#schools" },
+  { label: "About", href: "#about" },
 ];
 
-export function Navbar() {
+export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
 
-  const closeMenu = () => {
-    setIsOpen(false);
-  };
+  const closeMenu = () => setIsOpen(false);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border/60 bg-background/85 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        {/* Brand */}
+    <header className="sticky top-0 z-50 border-b border-white/10 bg-[#061842]/85 backdrop-blur-xl">
+      <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        {/* Logo */}
         <Link
           href="/"
           onClick={closeMenu}
-          className="group flex items-center gap-2.5"
+          className="group flex items-center gap-3"
         >
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm transition-transform duration-200 group-hover:scale-105">
-            <GraduationCap className="h-5 w-5" />
-          </span>
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#00d2c4] text-[#061842] shadow-lg shadow-cyan-500/20 transition-transform group-hover:scale-105">
+            <GraduationCap className="h-6 w-6" />
+          </div>
 
-          <div className="hidden sm:block">
-            <p className="text-sm font-bold leading-none tracking-tight">
-              SchoolHub
+          <div>
+            <p className="text-lg font-black tracking-tight text-white">
+              School<span className="text-[#00d2c4]">Hub</span>
             </p>
 
-            <p className="mt-1 text-[10px] leading-none text-muted-foreground">
-              School Management
+            <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-white/50">
+              Education Platform
             </p>
           </div>
         </Link>
@@ -57,33 +43,33 @@ export function Navbar() {
         {/* Desktop Navigation */}
         <nav
           aria-label="Main navigation"
-          className="hidden items-center gap-7 md:flex"
+          className="hidden items-center gap-8 md:flex"
         >
           {navItems.map((item) => (
-            <Link
+            <a
               key={item.label}
               href={item.href}
-              className="relative py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              className="text-sm font-medium text-white/75 transition-colors hover:text-[#00d2c4]"
             >
               {item.label}
-            </Link>
+            </a>
           ))}
         </nav>
 
         {/* Desktop Actions */}
-        <div className="hidden items-center gap-2 md:flex">
+        <div className="hidden items-center gap-3 md:flex">
           <Link
-            href="/auth/login"
-            className="inline-flex h-10 items-center justify-center rounded-lg px-4 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            href="/login"
+            className="rounded-full px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10"
           >
-            Sign In
+            Login
           </Link>
 
           <Link
-            href="/#packages"
-            className="inline-flex h-10 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm transition-all hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-md"
+            href="/register-school"
+            className="rounded-full bg-[#00d2c4] px-6 py-2.5 text-sm font-bold text-gray-950 shadow-lg shadow-cyan-500/20 transition hover:bg-[#00bcaf]"
           >
-            Register Your School
+            Register School
           </Link>
         </div>
 
@@ -91,12 +77,9 @@ export function Navbar() {
         <button
           type="button"
           onClick={() => setIsOpen((value) => !value)}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground md:hidden"
-          aria-label={
-            isOpen ? "Close navigation menu" : "Open navigation menu"
-          }
+          aria-label={isOpen ? "Close menu" : "Open menu"}
           aria-expanded={isOpen}
-          aria-controls="mobile-navigation"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-white/15 text-white transition hover:bg-white/10 md:hidden"
         >
           {isOpen ? (
             <X className="h-5 w-5" />
@@ -106,43 +89,36 @@ export function Navbar() {
         </button>
       </div>
 
-      {/* Mobile Navigation */}
+      {/* Mobile Menu */}
       {isOpen && (
-        <div
-          id="mobile-navigation"
-          className="border-t border-border/60 bg-background md:hidden"
-        >
-          <nav
-            aria-label="Mobile navigation"
-            className="mx-auto flex max-w-7xl flex-col px-4 py-4 sm:px-6"
-          >
+        <div className="border-t border-white/10 bg-[#061842] md:hidden">
+          <nav className="mx-auto flex max-w-7xl flex-col px-4 py-4 sm:px-6">
             {navItems.map((item) => (
-              <Link
+              <a
                 key={item.label}
                 href={item.href}
                 onClick={closeMenu}
-                className="rounded-lg px-3 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                className="rounded-lg px-3 py-3 text-sm font-medium text-white/80 transition hover:bg-white/10 hover:text-[#00d2c4]"
               >
                 {item.label}
-              </Link>
+              </a>
             ))}
 
-            {/* Mobile Actions */}
-            <div className="mt-3 grid grid-cols-2 gap-3 border-t border-border pt-4">
+            <div className="mt-3 grid grid-cols-2 gap-3 border-t border-white/10 pt-4">
               <Link
-                href="/auth/login"
+                href="/login"
                 onClick={closeMenu}
-                className="inline-flex h-10 items-center justify-center rounded-lg border border-border text-sm font-medium transition-colors hover:bg-muted"
+                className="flex h-11 items-center justify-center rounded-full border border-white/15 text-sm font-semibold text-white"
               >
-                Sign In
+                Login
               </Link>
 
               <Link
-                href="/#packages"
+                href="/register-school"
                 onClick={closeMenu}
-                className="inline-flex h-10 items-center justify-center rounded-lg bg-primary text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+                className="flex h-11 items-center justify-center rounded-full bg-[#00d2c4] text-sm font-bold text-gray-950"
               >
-                Register Your School
+                Register School
               </Link>
             </div>
           </nav>

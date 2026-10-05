@@ -1,21 +1,19 @@
-import { CtaSection } from "@/components/home/cta-section";
-import { FeaturesSection } from "@/components/home/features-section";
-import { HeroSection } from "@/components/home/hero-section";
-import { HighlightsSection } from "@/components/home/highlights-section";
-import { HowItWorks } from "@/components/home/how-it-works";
-import { PricingSection } from "@/components/home/pricing-section";
-import { RolesSection } from "@/components/home/roles-section";
+import Cta from "@/components/home/Cta";
+import FeaturedSchools from "@/components/home/featured-schools";
+import Hero from "@/components/home/hero";
+import HowAdmissionWorks from "@/components/home/how-admission-works";
+import Pricing from "@/components/home/pricing";
+import SchoolAdminCta from "@/components/home/school-admin-cta";
 
 export default function HomePage() {
   return (
     <>
-      <HeroSection />
-      <HighlightsSection />
-      <FeaturesSection />
-      <HowItWorks />
-      <RolesSection />
-      <PricingSection />
-      <CtaSection />
+      <Hero />
+      <FeaturedSchools/>
+      <HowAdmissionWorks/>
+      <SchoolAdminCta/>
+      <Pricing />
+      <Cta />
     </>
   );
 }

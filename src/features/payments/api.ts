@@ -6,6 +6,8 @@ import type {
   CashPaymentRequestResponse,
   InitiateSubscriptionPaymentResponse,
   PendingCashPaymentsResponse,
+  SubscriptionPaymentHistoryResponse,
+  SubscriptionPaymentSummary,
 } from "./types";
 
 // ====================================================
@@ -82,3 +84,30 @@ export const rejectCashPayment = async (
 
   return response.data.data;
 };
+
+
+// ====================================================
+// SUPER ADMIN - PAYMENT SUMMARY
+// ====================================================
+
+export const getSubscriptionPaymentSummary =
+  async (): Promise<SubscriptionPaymentSummary> => {
+    const response = await api.get<
+      ApiResponse<SubscriptionPaymentSummary>
+    >("/payments/subscription/summary");
+
+    return response.data.data;
+  };
+
+// ====================================================
+// SUPER ADMIN - PAYMENT HISTORY
+// ====================================================
+
+export const getSubscriptionPaymentHistory =
+  async (): Promise<SubscriptionPaymentHistoryResponse> => {
+    const response = await api.get<
+      ApiResponse<SubscriptionPaymentHistoryResponse>
+    >("/payments/subscription/history");
+
+    return response.data.data;
+  };

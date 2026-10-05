@@ -11,6 +11,7 @@ import {
   GraduationCap,
   LayoutDashboard,
   LogOut,
+  Package,
   Settings,
   ShieldCheck,
   Users,
@@ -18,7 +19,6 @@ import {
   UserRoundCog,
   X,
   type LucideIcon,
-  Package,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -39,49 +39,65 @@ interface NavigationItem {
 }
 
 const navigationByRole: Record<string, NavigationItem[]> = {
-  SUPER_ADMIN: [
-    {
-      label: "Dashboard",
-      href: "/dashboard/super-admin",
-      icon: LayoutDashboard,
-    },
-    {
-      label: "Schools",
-      href: "/dashboard/super-admin/schools",
-      icon: Building2,
-    },
-    {
-      label: "Users",
-      href: "/dashboard/super-admin/users",
-      icon: Users,
-    },
-    {
-      label: "Packages",
-      href: "/dashboard/super-admin/packages",
-      icon: Package,
-    },
-    {
-      label: "Subscriptions",
-      href: "/dashboard/super-admin/subscriptions",
-      icon: CreditCard,
-    },
-    {
-      label: "Custom Package Requests",
-      href: "/dashboard/super-admin/custom-package-requests",
-      icon: ClipboardList,
-    },
-    {
-      label: "Reports",
-      href: "/dashboard/super-admin/reports",
-      icon: FileBarChart,
-    },
-    {
-      label: "Audit Logs",
-      href: "/dashboard/super-admin/audit-logs",
-      icon: ShieldCheck,
-    },
-  ],
+  // ==================================================
+  // SUPER ADMIN
+  // ==================================================
+ SUPER_ADMIN: [
+  {
+    label: "Dashboard",
+    href: "/dashboard/super-admin",
+    icon: LayoutDashboard,
+  },
+  {
+    label: "Schools",
+    href: "/dashboard/super-admin/schools",
+    icon: Building2,
+  },
+  {
+    label: "Users",
+    href: "/dashboard/super-admin/users",
+    icon: Users,
+  },
+  {
+    label: "Packages",
+    href: "/dashboard/super-admin/packages",
+    icon: Package,
+  },
+  {
+    label: "Subscriptions",
+    href: "/dashboard/super-admin/subscriptions",
+    icon: CreditCard,
+  },
+  {
+    label: "Payments",
+    href: "/dashboard/super-admin/payments",
+    icon: CreditCard,
+  },
+  {
+    label: "Custom Package Requests",
+    href: "/dashboard/super-admin/custom-package-requests",
+    icon: ClipboardList,
+  },
+  {
+    label: "Reports",
+    href: "/dashboard/super-admin/reports",
+    icon: FileBarChart,
+  },
+  {
+    label: "Audit Logs",
+    href: "/dashboard/super-admin/audit-logs",
+    icon: ShieldCheck,
+  },
+  {
+    label: "Settings",
+    href: "/dashboard/super-admin/settings",
+    icon: Settings,
+  },
+],
 
+  // ==================================================
+  // ADMIN
+  // ==================================================
   ADMIN: [
     {
       label: "Dashboard",
@@ -155,6 +171,9 @@ const navigationByRole: Record<string, NavigationItem[]> = {
     },
   ],
 
+  // ==================================================
+  // MANAGER
+  // ==================================================
   MANAGER: [
     {
       label: "Dashboard",
@@ -203,6 +222,9 @@ const navigationByRole: Record<string, NavigationItem[]> = {
     },
   ],
 
+  // ==================================================
+  // TEACHER
+  // ==================================================
   TEACHER: [
     {
       label: "Dashboard",
@@ -236,6 +258,9 @@ const navigationByRole: Record<string, NavigationItem[]> = {
     },
   ],
 
+  // ==================================================
+  // STUDENT
+  // ==================================================
   STUDENT: [
     {
       label: "Dashboard",
@@ -269,6 +294,9 @@ const navigationByRole: Record<string, NavigationItem[]> = {
     },
   ],
 
+  // ==================================================
+  // GUARDIAN
+  // ==================================================
   GUARDIAN: [
     {
       label: "Dashboard",
@@ -298,13 +326,40 @@ const navigationByRole: Record<string, NavigationItem[]> = {
   ],
 };
 
+// ==================================================
+// Dashboard paths
+// ==================================================
+
+const dashboardPathByRole: Record<string, string> = {
+  SUPER_ADMIN: "/dashboard/super-admin",
+  ADMIN: "/dashboard/admin",
+  MANAGER: "/dashboard/manager",
+  TEACHER: "/dashboard/teacher",
+  STUDENT: "/dashboard/student",
+  GUARDIAN: "/dashboard/guardian",
+};
+
+// ==================================================
+// Component
+// ==================================================
+
 export function Sidebar({ open, onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
 
   const { user, logout } = useAuth();
 
-  const navigation = user ? (navigationByRole[user.role] ?? []) : [];
+  const navigation = user
+    ? (navigationByRole[user.role] ?? [])
+    : [];
+
+  const dashboardPath = user
+    ? dashboardPathByRole[user.role] ?? "/dashboard"
+    : "/dashboard";
+
+  // ==================================================
+  // Logout
+  // ==================================================
 
   const handleLogout = async () => {
     try {
@@ -318,8 +373,13 @@ export function Sidebar({ open, onClose }: SidebarProps) {
     }
   };
 
+  // ==================================================
+  // Render
+  // ==================================================
+
   return (
     <>
+      {/* Mobile overlay */}
       {open && (
         <button
           type="button"
@@ -329,14 +389,16 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         />
       )}
 
+      {/* Sidebar */}
       <aside
         className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r bg-background transition-transform duration-200 lg:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
+        {/* Header */}
         <div className="flex h-16 items-center justify-between border-b px-4">
           <Link
-            href="/dashboard"
+            href={dashboardPath}
             onClick={onClose}
             className="flex items-center gap-2"
           >
@@ -353,6 +415,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             </div>
           </Link>
 
+          {/* Mobile close button */}
           <button
             type="button"
             onClick={onClose}
@@ -363,6 +426,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           </button>
         </div>
 
+        {/* User info */}
         <div className="border-b px-4 py-4">
           {user && (
             <div className="flex items-center gap-3">
@@ -371,33 +435,41 @@ export function Sidebar({ open, onClose }: SidebarProps) {
               </div>
 
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium">{user.name}</p>
+                <p className="truncate text-sm font-medium">
+                  {user.name}
+                </p>
 
                 <p className="truncate text-xs text-muted-foreground">
-                  {user.role.replace("_", " ")}
+                  {user.role.replaceAll("_", " ")}
                 </p>
               </div>
             </div>
           )}
         </div>
 
+        {/* Navigation */}
         <nav className="flex-1 overflow-y-auto p-3">
           <div className="space-y-1">
-            {navigation.map((item) => (
-              <SidebarItem
-                key={item.href}
-                href={item.href}
-                label={item.label}
-                icon={item.icon}
-                active={
-                  pathname === item.href || pathname.startsWith(`${item.href}/`)
-                }
-                onClick={onClose}
-              />
-            ))}
+            {navigation.map((item) => {
+              const isActive =
+                pathname === item.href ||
+                pathname.startsWith(`${item.href}/`);
+
+              return (
+                <SidebarItem
+                  key={item.href}
+                  href={item.href}
+                  label={item.label}
+                  icon={item.icon}
+                  active={isActive}
+                  onClick={onClose}
+                />
+              );
+            })}
           </div>
         </nav>
 
+        {/* Logout */}
         <div className="border-t p-3">
           <button
             type="button"

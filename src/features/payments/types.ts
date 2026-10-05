@@ -18,12 +18,10 @@ export interface PendingCashPayment {
   id: number;
   subscriptionId: number;
   schoolId: number;
-
   amount: number;
   currency: string;
   status: string;
   paymentMethod: string;
-
   transactionId?: string | null;
   createdAt: string;
 
@@ -62,3 +60,63 @@ export interface CashPaymentActionResponse {
   paidAt?: string | null;
   remarks?: string | null;
 }
+
+// ====================================================
+// PAYMENT SUMMARY
+// ====================================================
+
+export interface SubscriptionPaymentSummary {
+  totalRevenue: number;
+  onlineRevenue: number;
+  cashRevenue: number;
+  pendingCashAmount: number;
+
+  totalPayments: number;
+  paidPayments: number;
+  pendingPayments: number;
+  failedPayments: number;
+  cancelledPayments: number;
+}
+
+// ====================================================
+// PAYMENT HISTORY
+// ====================================================
+
+export interface SubscriptionPaymentHistoryItem {
+  id: number;
+  subscriptionId: number;
+  schoolId: number;
+
+  amount: number;
+  currency: string;
+
+  status: string;
+  paymentMethod: string;
+
+  transactionId: string | null;
+  validationId: string | null;
+
+  paidAt: string | null;
+  createdAt: string;
+
+  school: {
+    id: number;
+    name: string;
+    code: string;
+  };
+
+  subscription: {
+    id: number;
+    status: string;
+
+    package: {
+      id: number;
+      name: string;
+      price: number;
+      billingCycle: string;
+    };
+  };
+}
+
+export type SubscriptionPaymentHistoryResponse =
+  SubscriptionPaymentHistoryItem[];

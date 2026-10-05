@@ -9,6 +9,8 @@ import {
 import {
   approveCashPayment,
   getPendingCashPayments,
+  getSubscriptionPaymentHistory,
+  getSubscriptionPaymentSummary,
   initiateSubscriptionPayment,
   rejectCashPayment,
   requestCashPayment,
@@ -23,6 +25,12 @@ export const paymentKeys = {
 
   pendingCash: () =>
     [...paymentKeys.all, "pending-cash"] as const,
+
+  summary: () =>
+    [...paymentKeys.all, "summary"] as const,
+
+  history: () =>
+    [...paymentKeys.all, "history"] as const,
 };
 
 // ====================================================
@@ -47,9 +55,25 @@ export const useInitiateSubscriptionPayment = () => {
 // ====================================================
 
 export const useRequestCashPayment = () => {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: (subscriptionId: number) =>
       requestCashPayment(subscriptionId),
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: paymentKeys.pendingCash(),
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: paymentKeys.summary(),
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: paymentKeys.history(),
+      });
+    },
   });
 };
 
@@ -84,6 +108,14 @@ export const useApproveCashPayment = () => {
       queryClient.invalidateQueries({
         queryKey: paymentKeys.pendingCash(),
       });
+
+      queryClient.invalidateQueries({
+        queryKey: paymentKeys.summary(),
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: paymentKeys.history(),
+      });
     },
   });
 };
@@ -108,6 +140,36 @@ export const useRejectCashPayment = () => {
       queryClient.invalidateQueries({
         queryKey: paymentKeys.pendingCash(),
       });
+
+      queryClient.invalidateQueries({
+        queryKey: paymentKeys.summary(),
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: paymentKeys.history(),
+      });
     },
+  });
+};
+
+// ====================================================
+// SUPER ADMIN - PAYMENT SUMMARY
+// ====================================================
+
+export const useSubscriptionPaymentSummary = () => {
+  return useQuery({
+    queryKey: paymentKeys.summary(),
+    queryFn: getSubscriptionPaymentSummary,
+  });
+};
+
+// ====================================================
+// SUPER ADMIN - PAYMENT HISTORY
+// ====================================================
+
+export const useSubscriptionPaymentHistory = () => {
+  return useQuery({
+    queryKey: paymentKeys.history(),
+    queryFn: getSubscriptionPaymentHistory,
   });
 };
