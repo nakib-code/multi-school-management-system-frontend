@@ -8,16 +8,18 @@ const navItems = [
   { label: "Home", href: "#home" },
   { label: "Admission", href: "#admission" },
   { label: "Schools", href: "#schools" },
-  { label: "About", href: "#about" },
+  { label: "Packages", href: "#pricing" },
 ];
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
 
-  const closeMenu = () => setIsOpen(false);
+  const closeMenu = () => {
+    setIsOpen(false);
+  };
 
   return (
-    <header className="sticky top-0 z-50 border-b border-white/10 bg-[#061842]/85 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 border-b border-white/10 bg-[#061842]/90 backdrop-blur-xl">
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Logo */}
         <Link
@@ -25,7 +27,7 @@ export default function Navbar() {
           onClick={closeMenu}
           className="group flex items-center gap-3"
         >
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#00d2c4] text-[#061842] shadow-lg shadow-cyan-500/20 transition-transform group-hover:scale-105">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#00d2c4] text-[#061842] shadow-lg shadow-cyan-500/20 transition-transform duration-200 group-hover:scale-105">
             <GraduationCap className="h-6 w-6" />
           </div>
 
@@ -49,7 +51,7 @@ export default function Navbar() {
             <a
               key={item.label}
               href={item.href}
-              className="text-sm font-medium text-white/75 transition-colors hover:text-[#00d2c4]"
+              className="relative py-2 text-sm font-medium text-white/70 transition-colors hover:text-[#00d2c4]"
             >
               {item.label}
             </a>
@@ -59,7 +61,7 @@ export default function Navbar() {
         {/* Desktop Actions */}
         <div className="hidden items-center gap-3 md:flex">
           <Link
-            href="/login"
+            href="/auth/login"
             className="rounded-full px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10"
           >
             Login
@@ -67,7 +69,7 @@ export default function Navbar() {
 
           <Link
             href="/register-school"
-            className="rounded-full bg-[#00d2c4] px-6 py-2.5 text-sm font-bold text-gray-950 shadow-lg shadow-cyan-500/20 transition hover:bg-[#00bcaf]"
+            className="rounded-full bg-[#00d2c4] px-6 py-2.5 text-sm font-bold text-[#061842] shadow-lg shadow-cyan-500/20 transition hover:bg-[#00bcaf]"
           >
             Register School
           </Link>
@@ -92,7 +94,10 @@ export default function Navbar() {
       {/* Mobile Menu */}
       {isOpen && (
         <div className="border-t border-white/10 bg-[#061842] md:hidden">
-          <nav className="mx-auto flex max-w-7xl flex-col px-4 py-4 sm:px-6">
+          <nav
+            aria-label="Mobile navigation"
+            className="mx-auto flex max-w-7xl flex-col px-4 py-4 sm:px-6"
+          >
             {navItems.map((item) => (
               <a
                 key={item.label}
@@ -106,9 +111,9 @@ export default function Navbar() {
 
             <div className="mt-3 grid grid-cols-2 gap-3 border-t border-white/10 pt-4">
               <Link
-                href="/login"
+                href="/auth/login"
                 onClick={closeMenu}
-                className="flex h-11 items-center justify-center rounded-full border border-white/15 text-sm font-semibold text-white"
+                className="flex h-11 items-center justify-center rounded-full border border-white/15 text-sm font-semibold text-white transition hover:bg-white/10"
               >
                 Login
               </Link>
@@ -116,7 +121,7 @@ export default function Navbar() {
               <Link
                 href="/register-school"
                 onClick={closeMenu}
-                className="flex h-11 items-center justify-center rounded-full bg-[#00d2c4] text-sm font-bold text-gray-950"
+                className="flex h-11 items-center justify-center rounded-full bg-[#00d2c4] text-sm font-bold text-[#061842] transition hover:bg-[#00bcaf]"
               >
                 Register School
               </Link>

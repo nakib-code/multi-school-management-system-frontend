@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   ArrowRight,
@@ -62,7 +63,7 @@ export default function HowAdmissionWorks() {
           transition={{ duration: 0.6 }}
           className="mx-auto max-w-3xl text-center"
         >
-          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#00d2c4]/20 bg-[#00d2c4]/10 px-4 py-2 text-sm font-semibold text-[#008f87]">
+          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#00d2c4]/20 bg-[#00d2c4]/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-[#008f87]">
             <Sparkles className="h-4 w-4" />
             Simple Admission Process
           </div>
@@ -79,11 +80,11 @@ export default function HowAdmissionWorks() {
         </motion.div>
 
         {/* ================= STEPS ================= */}
-        <div className="relative mt-16">
-          {/* Connecting Line - Desktop */}
+        <div className="relative mt-14 sm:mt-16">
+          {/* Desktop Connecting Line */}
           <div className="absolute left-[12%] right-[12%] top-14 hidden h-px bg-gradient-to-r from-transparent via-[#00d2c4]/40 to-transparent lg:block" />
 
-          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
             {steps.map((step, index) => {
               const Icon = step.icon;
 
@@ -112,7 +113,7 @@ export default function HowAdmissionWorks() {
                   </div>
 
                   {/* Content */}
-                  <div className="mt-6">
+                  <div className="mx-auto mt-6 max-w-xs">
                     <h3 className="text-lg font-bold text-[#061842]">
                       {step.title}
                     </h3>
@@ -122,7 +123,7 @@ export default function HowAdmissionWorks() {
                     </p>
                   </div>
 
-                  {/* Arrow - Desktop */}
+                  {/* Desktop Arrow */}
                   {index < steps.length - 1 && (
                     <ArrowRight className="absolute -right-5 top-12 hidden h-5 w-5 text-[#00d2c4]/50 lg:block" />
                   )}
@@ -138,7 +139,7 @@ export default function HowAdmissionWorks() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="mt-16 overflow-hidden rounded-3xl bg-[#061842]"
+          className="mt-16 overflow-hidden rounded-3xl bg-[#061842] shadow-xl"
         >
           <div className="relative px-6 py-8 sm:px-10 sm:py-10">
             {/* Glow */}
@@ -146,7 +147,7 @@ export default function HowAdmissionWorks() {
 
             <div className="relative flex flex-col items-center justify-between gap-6 md:flex-row">
               <div>
-                <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#00d2c4]">
+                <div className="mb-2 flex items-center gap-2 text-sm font-bold text-[#00d2c4]">
                   <CreditCard className="h-4 w-4" />
                   Secure Online Admission
                 </div>
@@ -161,13 +162,14 @@ export default function HowAdmissionWorks() {
                 </p>
               </div>
 
-              <a
+              <Link
                 href="/schools"
-                className="inline-flex h-12 shrink-0 items-center gap-2 rounded-xl bg-[#00d2c4] px-6 text-sm font-bold text-[#061842] transition hover:bg-[#20e0d3]"
+                className="group inline-flex h-12 shrink-0 items-center gap-2 rounded-xl bg-[#00d2c4] px-6 text-sm font-bold text-[#061842] transition hover:bg-[#20e0d3]"
               >
                 Find a School
-                <ArrowRight className="h-4 w-4" />
-              </a>
+
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </Link>
             </div>
           </div>
         </motion.div>

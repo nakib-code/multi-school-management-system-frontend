@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
@@ -56,7 +57,7 @@ export default function FeaturedSchools() {
           className="mx-auto max-w-3xl text-center"
         >
           {/* Badge */}
-          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#00d2c4]/20 bg-[#00d2c4]/10 px-4 py-2 text-sm font-semibold text-[#008f87]">
+          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#00d2c4]/20 bg-[#00d2c4]/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-[#008f87]">
             <School className="h-4 w-4" />
             Find Your School
           </div>
@@ -90,14 +91,16 @@ export default function FeaturedSchools() {
             >
               {/* Image */}
               <div className="relative aspect-[16/10] overflow-hidden bg-slate-100">
-                <img
+                <Image
                   src={school.image}
-                  alt={school.name}
-                  className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
+                  alt={`${school.name} campus`}
+                  fill
+                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  className="object-cover transition duration-700 group-hover:scale-105"
                 />
 
                 {/* Image Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-[#061842]/60 via-transparent to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#061842]/70 via-[#061842]/10 to-transparent" />
 
                 {/* Admission Badge */}
                 <div className="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-bold text-emerald-600 shadow-lg">
@@ -113,7 +116,7 @@ export default function FeaturedSchools() {
 
               {/* Card Content */}
               <div className="p-5">
-                <h3 className="text-lg font-bold text-[#061842] transition-colors group-hover:text-[#009e94]">
+                <h3 className="line-clamp-2 min-h-[3.5rem] text-lg font-bold leading-7 text-[#061842] transition-colors group-hover:text-[#009e94]">
                   {school.name}
                 </h3>
 
@@ -140,10 +143,11 @@ export default function FeaturedSchools() {
                 {/* View Button */}
                 <Link
                   href={`/schools/${school.id}`}
-                  className="mt-6 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#061842] text-sm font-bold text-white transition hover:bg-[#0b285f]"
+                  className="group/button mt-6 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#061842] text-sm font-bold text-white transition hover:bg-[#0b285f]"
                 >
                   View School
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover/button:translate-x-1" />
                 </Link>
               </div>
             </motion.article>
@@ -156,11 +160,11 @@ export default function FeaturedSchools() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="mt-12 overflow-hidden rounded-3xl bg-[#061842] px-6 py-8 sm:px-10"
+          className="mt-12 overflow-hidden rounded-3xl bg-[#061842] px-6 py-8 shadow-xl sm:px-10"
         >
           <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
             <div>
-              <p className="text-sm font-semibold text-[#00d2c4]">
+              <p className="text-sm font-bold text-[#00d2c4]">
                 Can&apos;t find your school?
               </p>
 

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   ArrowRight,
@@ -59,7 +60,7 @@ export default function StudentBenefits() {
             transition={{ duration: 0.6 }}
           >
             {/* Badge */}
-            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#00d2c4]/20 bg-[#00d2c4]/10 px-4 py-2 text-sm font-semibold text-[#008f87]">
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#00d2c4]/20 bg-[#00d2c4]/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-[#008f87]">
               <Sparkles className="h-4 w-4" />
               Built for Students &amp; Guardians
             </div>
@@ -79,7 +80,7 @@ export default function StudentBenefits() {
             </p>
 
             {/* Highlight */}
-            <div className="mt-8 flex items-start gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+            <div className="mt-8 flex items-start gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-5 transition-colors hover:border-[#00d2c4]/30">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#061842] text-[#00d2c4]">
                 <CheckCircle2 className="h-5 w-5" />
               </div>
@@ -97,13 +98,13 @@ export default function StudentBenefits() {
             </div>
 
             {/* CTA */}
-            <a
+            <Link
               href="/schools"
-              className="mt-8 inline-flex h-12 items-center gap-2 rounded-xl bg-[#061842] px-6 text-sm font-bold text-white transition hover:bg-[#0b285f]"
+              className="group mt-8 inline-flex h-12 items-center gap-2 rounded-xl bg-[#061842] px-6 text-sm font-bold text-white transition hover:bg-[#0b285f]"
             >
               Explore Schools
-              <ArrowRight className="h-4 w-4" />
-            </a>
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+            </Link>
           </motion.div>
 
           {/* ================= RIGHT BENEFITS ================= */}
@@ -147,7 +148,7 @@ export default function StudentBenefits() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="mt-16 grid overflow-hidden rounded-3xl bg-[#061842] sm:grid-cols-3"
+          className="mt-16 grid overflow-hidden rounded-3xl bg-[#061842] shadow-xl sm:grid-cols-3"
         >
           <div className="border-b border-white/10 px-6 py-8 text-center sm:border-b-0 sm:border-r">
             <p className="text-3xl font-black text-[#00d2c4]">100%</p>
