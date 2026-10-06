@@ -23,21 +23,29 @@ export function RegistrationFormField({
     <div className={`space-y-2 ${className}`}>
       <label
         htmlFor={htmlFor}
-        className="flex items-center gap-1.5 text-sm font-medium"
+        className="flex items-center gap-1.5 text-sm font-semibold text-[#061842]"
       >
-        {icon}
+        <span className="text-[#008f87]">{icon}</span>
 
         <span>{label}</span>
 
         {required && (
-          <span className="text-destructive">*</span>
+          <span
+            className="text-red-500"
+            aria-hidden="true"
+          >
+            *
+          </span>
         )}
       </label>
 
       {children}
 
       {error && (
-        <p className="text-xs text-destructive">
+        <p
+          className="text-xs font-medium text-red-500"
+          role="alert"
+        >
           {error}
         </p>
       )}

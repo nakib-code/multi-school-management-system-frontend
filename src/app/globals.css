@@ -2,131 +2,733 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/* =========================================================
+   Tailwind Dark Variant
+========================================================= */
+
 @custom-variant dark (&:is(.dark *));
 
+/* =========================================================
+   Root / Light Theme
+========================================================= */
+
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.141 0.005 285.823);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.141 0.005 285.823);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.141 0.005 285.823);
-    --primary: oklch(0.841 0.238 128.85);
-    --primary-foreground: oklch(0.405 0.101 131.063);
-    --secondary: oklch(0.967 0.001 286.375);
-    --secondary-foreground: oklch(0.21 0.006 285.885);
-    --muted: oklch(0.967 0.001 286.375);
-    --muted-foreground: oklch(0.552 0.016 285.938);
-    --accent: oklch(0.967 0.001 286.375);
-    --accent-foreground: oklch(0.21 0.006 285.885);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.92 0.004 286.32);
-    --input: oklch(0.92 0.004 286.32);
-    --ring: oklch(0.705 0.015 286.067);
-    --chart-1: oklch(0.897 0.196 126.665);
-    --chart-2: oklch(0.768 0.233 130.85);
-    --chart-3: oklch(0.648 0.2 131.684);
-    --chart-4: oklch(0.532 0.157 131.589);
-    --chart-5: oklch(0.453 0.124 130.933);
-    --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.141 0.005 285.823);
-    --sidebar-primary: oklch(0.648 0.2 131.684);
-    --sidebar-primary-foreground: oklch(0.986 0.031 120.757);
-    --sidebar-accent: oklch(0.967 0.001 286.375);
-    --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
-    --sidebar-border: oklch(0.92 0.004 286.32);
-    --sidebar-ring: oklch(0.705 0.015 286.067);
+  /* -------------------------
+     Shadcn / App Colors
+  ------------------------- */
+
+  --background: oklch(0.985 0.002 247);
+  --foreground: oklch(0.18 0.035 255);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.18 0.035 255);
+
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.18 0.035 255);
+
+  /* -------------------------
+     SchoolHub Brand
+  ------------------------- */
+
+  --brand-navy: #061842;
+  --brand-navy-light: #0b285f;
+
+  --brand-teal: #00d2c4;
+  --brand-teal-dark: #008f87;
+  --brand-teal-hover: #00bdb1;
+
+  --brand-yellow: #facc15;
+  --brand-yellow-hover: #fde047;
+
+  --brand-blue: #3b82f6;
+  --brand-pink: #f472b6;
+
+  /* -------------------------
+     Primary
+  ------------------------- */
+
+  --primary: #061842;
+  --primary-foreground: #ffffff;
+
+  --secondary: #eef2f7;
+  --secondary-foreground: #061842;
+
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+
+  --accent: #e8fffd;
+  --accent-foreground: #008f87;
+
+  --destructive: oklch(0.577 0.245 27.325);
+
+  /* -------------------------
+     Borders / Inputs
+  ------------------------- */
+
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #00d2c4;
+
+  /* -------------------------
+     Surface
+  ------------------------- */
+
+  --surface: #ffffff;
+  --page: #f8fafc;
+
+  /* -------------------------
+     Text
+  ------------------------- */
+
+  --text-primary: #061842;
+  --text-muted: #64748b;
+  --text-soft: #94a3b8;
+
+  /* -------------------------
+     Charts
+  ------------------------- */
+
+  --chart-1: #00d2c4;
+  --chart-2: #3b82f6;
+  --chart-3: #facc15;
+  --chart-4: #f472b6;
+  --chart-5: #008f87;
+
+  /* -------------------------
+     Radius
+  ------------------------- */
+
+  --radius: 0.75rem;
+
+  /* -------------------------
+     Sidebar
+  ------------------------- */
+
+  --sidebar: #ffffff;
+  --sidebar-foreground: #061842;
+
+  --sidebar-primary: #00d2c4;
+  --sidebar-primary-foreground: #061842;
+
+  --sidebar-accent: #e8fffd;
+  --sidebar-accent-foreground: #008f87;
+
+  --sidebar-border: #e2e8f0;
+  --sidebar-ring: #00d2c4;
 }
+
+/* =========================================================
+   Dark Theme
+========================================================= */
 
 .dark {
-    --background: oklch(0.141 0.005 285.823);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.21 0.006 285.885);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.21 0.006 285.885);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.768 0.233 130.85);
-    --primary-foreground: oklch(0.405 0.101 131.063);
-    --secondary: oklch(0.274 0.006 286.033);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.274 0.006 286.033);
-    --muted-foreground: oklch(0.705 0.015 286.067);
-    --accent: oklch(0.274 0.006 286.033);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.552 0.016 285.938);
-    --chart-1: oklch(0.897 0.196 126.665);
-    --chart-2: oklch(0.768 0.233 130.85);
-    --chart-3: oklch(0.648 0.2 131.684);
-    --chart-4: oklch(0.532 0.157 131.589);
-    --chart-5: oklch(0.453 0.124 130.933);
-    --sidebar: oklch(0.21 0.006 285.885);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.768 0.233 130.85);
-    --sidebar-primary-foreground: oklch(0.274 0.072 132.109);
-    --sidebar-accent: oklch(0.274 0.006 286.033);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.552 0.016 285.938);
+  --background: #061842;
+  --foreground: #f8fafc;
+
+  --card: #0b285f;
+  --card-foreground: #f8fafc;
+
+  --popover: #0b285f;
+  --popover-foreground: #f8fafc;
+
+  --primary: #00d2c4;
+  --primary-foreground: #061842;
+
+  --secondary: #122b58;
+  --secondary-foreground: #f8fafc;
+
+  --muted: #122b58;
+  --muted-foreground: #94a3b8;
+
+  --accent: #123f4b;
+  --accent-foreground: #5ff5eb;
+
+  --destructive: oklch(0.704 0.191 22.216);
+
+  --border: rgba(255, 255, 255, 0.1);
+  --input: rgba(255, 255, 255, 0.15);
+  --ring: #00d2c4;
+
+  --surface: #0b285f;
+  --page: #061842;
+
+  --text-primary: #ffffff;
+  --text-muted: #94a3b8;
+  --text-soft: #64748b;
+
+  --sidebar: #0b285f;
+  --sidebar-foreground: #ffffff;
+
+  --sidebar-primary: #00d2c4;
+  --sidebar-primary-foreground: #061842;
+
+  --sidebar-accent: #123f4b;
+  --sidebar-accent-foreground: #5ff5eb;
+
+  --sidebar-border: rgba(255, 255, 255, 0.1);
+  --sidebar-ring: #00d2c4;
 }
 
+/* =========================================================
+   Tailwind Theme
+========================================================= */
+
 @theme inline {
-    --font-sans: var(--font-sans);
-    --font-heading: var(--font-heading);
-    --color-sidebar-ring: var(--sidebar-ring);
-    --color-sidebar-border: var(--sidebar-border);
-    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-    --color-sidebar-accent: var(--sidebar-accent);
-    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-    --color-sidebar-primary: var(--sidebar-primary);
-    --color-sidebar-foreground: var(--sidebar-foreground);
-    --color-sidebar: var(--sidebar);
-    --color-chart-5: var(--chart-5);
-    --color-chart-4: var(--chart-4);
-    --color-chart-3: var(--chart-3);
-    --color-chart-2: var(--chart-2);
-    --color-chart-1: var(--chart-1);
-    --color-ring: var(--ring);
-    --color-input: var(--input);
-    --color-border: var(--border);
-    --color-destructive: var(--destructive);
-    --color-accent-foreground: var(--accent-foreground);
-    --color-accent: var(--accent);
-    --color-muted-foreground: var(--muted-foreground);
-    --color-muted: var(--muted);
-    --color-secondary-foreground: var(--secondary-foreground);
-    --color-secondary: var(--secondary);
-    --color-primary-foreground: var(--primary-foreground);
-    --color-primary: var(--primary);
-    --color-popover-foreground: var(--popover-foreground);
-    --color-popover: var(--popover);
-    --color-card-foreground: var(--card-foreground);
-    --color-card: var(--card);
-    --color-foreground: var(--foreground);
-    --color-background: var(--background);
-    --radius-sm: calc(var(--radius) * 0.6);
-    --radius-md: calc(var(--radius) * 0.8);
-    --radius-lg: var(--radius);
-    --radius-xl: calc(var(--radius) * 1.4);
-    --radius-2xl: calc(var(--radius) * 1.8);
-    --radius-3xl: calc(var(--radius) * 2.2);
-    --radius-4xl: calc(var(--radius) * 2.6);
+  /* Fonts */
+
+  --font-sans: var(--font-sans);
+  --font-heading: var(--font-heading);
+
+  /* Shadcn */
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-destructive: var(--destructive);
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Brand */
+
+  --color-brand-navy: var(--brand-navy);
+  --color-brand-navy-light: var(--brand-navy-light);
+
+  --color-brand-teal: var(--brand-teal);
+  --color-brand-teal-dark: var(--brand-teal-dark);
+  --color-brand-teal-hover: var(--brand-teal-hover);
+
+  --color-brand-yellow: var(--brand-yellow);
+  --color-brand-yellow-hover: var(--brand-yellow-hover);
+
+  --color-brand-blue: var(--brand-blue);
+  --color-brand-pink: var(--brand-pink);
+
+  /* Surface */
+
+  --color-surface: var(--surface);
+  --color-page: var(--page);
+
+  /* Text */
+
+  --color-text-primary: var(--text-primary);
+  --color-text-muted: var(--text-muted);
+  --color-text-soft: var(--text-soft);
+
+  /* Charts */
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* Sidebar */
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Radius */
+
+  --radius-sm: calc(var(--radius) * 0.65);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
+
+/* =========================================================
+   Base
+========================================================= */
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
-    }
-  body {
-    @apply bg-background text-foreground;
-    }
-  button:not(:disabled), [role="button"]:not(:disabled) {
-    cursor: pointer;
-    }
+  }
+
   html {
     @apply font-sans;
-    }
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+/* =========================================================
+   SchoolHub Container
+========================================================= */
+
+.school-container {
+  width: 100%;
+  max-width: 80rem;
+  margin-inline: auto;
+  padding-inline: 1rem;
+}
+
+@media (min-width: 640px) {
+  .school-container {
+    padding-inline: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .school-container {
+    padding-inline: 2rem;
+  }
+}
+
+/* =========================================================
+   SchoolHub Section
+========================================================= */
+
+.school-section {
+  position: relative;
+  overflow: hidden;
+  padding-block: 5rem;
+  background: var(--surface);
+}
+
+@media (min-width: 1024px) {
+  .school-section {
+    padding-block: 7rem;
+  }
+}
+
+/* =========================================================
+   Section Header
+========================================================= */
+
+.school-section-header {
+  max-width: 48rem;
+  margin-inline: auto;
+  text-align: center;
+}
+
+.school-section-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  margin-bottom: 1.25rem;
+
+  border: 1px solid rgba(0, 210, 196, 0.2);
+  border-radius: 9999px;
+
+  background: rgba(0, 210, 196, 0.1);
+
+  padding: 0.5rem 1rem;
+
+  font-size: 0.75rem;
+  font-weight: 700;
+
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+
+  color: var(--brand-teal-dark);
+}
+
+.school-dark-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  border: 1px solid rgba(0, 210, 196, 0.3);
+  border-radius: 9999px;
+
+  background: rgba(0, 210, 196, 0.1);
+
+  padding: 0.5rem 1rem;
+
+  font-size: 0.75rem;
+  font-weight: 700;
+
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+
+  color: #5ff5eb;
+}
+
+.school-section-title {
+  font-size: 2.25rem;
+  line-height: 1.1;
+  font-weight: 900;
+  letter-spacing: -0.025em;
+
+  color: var(--text-primary);
+}
+
+.school-section-title-accent {
+  display: block;
+  color: var(--brand-teal-dark);
+}
+
+.school-section-description {
+  max-width: 42rem;
+  margin: 1.25rem auto 0;
+
+  font-size: 1rem;
+  line-height: 1.75;
+
+  color: var(--text-muted);
+}
+
+@media (min-width: 640px) {
+  .school-section-title {
+    font-size: 2.5rem;
+  }
+
+  .school-section-description {
+    font-size: 1.125rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .school-section-title {
+    font-size: 3rem;
+  }
+}
+
+/* =========================================================
+   Common Buttons
+========================================================= */
+
+.school-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+
+  height: 3rem;
+
+  padding-inline: 1.5rem;
+
+  border-radius: 0.875rem;
+
+  font-size: 0.875rem;
+  font-weight: 700;
+
+  transition:
+    background-color 200ms ease,
+    color 200ms ease,
+    border-color 200ms ease,
+    box-shadow 200ms ease,
+    transform 200ms ease;
+
+  cursor: pointer;
+}
+
+.school-btn:hover {
+  transform: translateY(-1px);
+}
+
+.school-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
+}
+
+/* -------------------------
+   Primary Navy
+------------------------- */
+
+.school-btn-primary {
+  background: var(--brand-navy);
+  color: #ffffff;
+  box-shadow: 0 10px 25px rgba(6, 24, 66, 0.12);
+}
+
+.school-btn-primary:hover {
+  background: var(--brand-navy-light);
+}
+
+/* -------------------------
+   Teal
+------------------------- */
+
+.school-btn-teal {
+  background: var(--brand-teal);
+  color: var(--brand-navy);
+
+  box-shadow:
+    0 10px 25px rgba(0, 210, 196, 0.18);
+}
+
+.school-btn-teal:hover {
+  background: var(--brand-teal-hover);
+}
+
+/* -------------------------
+   Yellow
+------------------------- */
+
+.school-btn-accent {
+  background: var(--brand-yellow);
+  color: var(--brand-navy);
+
+  box-shadow:
+    0 10px 25px rgba(250, 204, 21, 0.12);
+}
+
+.school-btn-accent:hover {
+  background: var(--brand-yellow-hover);
+}
+
+/* -------------------------
+   Light Outline
+------------------------- */
+
+.school-btn-outline {
+  border: 1px solid var(--border);
+  background: #ffffff;
+  color: var(--brand-navy);
+}
+
+.school-btn-outline:hover {
+  border-color: var(--brand-teal);
+  background: rgba(0, 210, 196, 0.05);
+}
+
+/* -------------------------
+   Dark Outline
+------------------------- */
+
+.school-btn-dark-outline {
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
+}
+
+.school-btn-dark-outline:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* =========================================================
+   Button Sizes
+========================================================= */
+
+.school-btn-sm {
+  height: 2.5rem;
+  padding-inline: 1rem;
+  font-size: 0.8125rem;
+}
+
+.school-btn-lg {
+  height: 3.25rem;
+  padding-inline: 1.75rem;
+}
+
+/* =========================================================
+   Common Card
+========================================================= */
+
+.school-card {
+  overflow: hidden;
+
+  border: 1px solid var(--border);
+  border-radius: 1.5rem;
+
+  background: var(--surface);
+
+  box-shadow:
+    0 4px 20px rgba(6, 24, 66, 0.06);
+
+  transition:
+    transform 300ms ease,
+    border-color 300ms ease,
+    box-shadow 300ms ease;
+}
+
+.school-card:hover {
+  transform: translateY(-0.5rem);
+
+  border-color: rgba(0, 210, 196, 0.3);
+
+  box-shadow:
+    0 20px 40px rgba(6, 24, 66, 0.12);
+}
+
+/* =========================================================
+   Dark Section
+========================================================= */
+
+.school-dark-section {
+  position: relative;
+  overflow: hidden;
+
+  background: var(--brand-navy);
+  color: #ffffff;
+}
+
+/* =========================================================
+   Common Input
+========================================================= */
+
+.school-input {
+  width: 100%;
+  height: 3rem;
+
+  border: 1px solid var(--border);
+  border-radius: 0.875rem;
+
+  background: #ffffff;
+
+  padding-inline: 0.875rem;
+
+  font-size: 0.875rem;
+
+  color: var(--text-primary);
+
+  outline: none;
+
+  transition:
+    border-color 200ms ease,
+    box-shadow 200ms ease;
+}
+
+.school-input::placeholder {
+  color: var(--text-soft);
+}
+
+.school-input:focus {
+  border-color: var(--brand-teal);
+
+  box-shadow:
+    0 0 0 4px rgba(0, 210, 196, 0.1);
+}
+
+/* =========================================================
+   Status Badges
+========================================================= */
+
+.school-badge-success {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+
+  border-radius: 9999px;
+
+  background: rgba(16, 185, 129, 0.1);
+
+  padding: 0.375rem 0.75rem;
+
+  font-size: 0.75rem;
+  font-weight: 700;
+
+  color: #059669;
+}
+
+.school-badge-teal {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+
+  border: 1px solid rgba(0, 210, 196, 0.2);
+  border-radius: 9999px;
+
+  background: rgba(0, 210, 196, 0.1);
+
+  padding: 0.375rem 0.75rem;
+
+  font-size: 0.75rem;
+  font-weight: 700;
+
+  color: var(--brand-teal-dark);
+}
+
+/* =========================================================
+   Text Helpers
+========================================================= */
+
+.school-text-primary {
+  color: var(--text-primary);
+}
+
+.school-text-teal {
+  color: var(--brand-teal-dark);
+}
+
+.school-text-muted {
+  color: var(--text-muted);
+}
+
+.school-text-soft {
+  color: var(--text-soft);
+}
+
+/* =========================================================
+   Decorative Glows
+========================================================= */
+
+.school-glow-teal {
+  pointer-events: none;
+
+  position: absolute;
+
+  border-radius: 9999px;
+
+  background: rgba(0, 210, 196, 0.1);
+
+  filter: blur(64px);
+}
+
+.school-glow-blue {
+  pointer-events: none;
+
+  position: absolute;
+
+  border-radius: 9999px;
+
+  background: rgba(59, 130, 246, 0.1);
+
+  filter: blur(64px);
+}
+
+.school-glow-yellow {
+  pointer-events: none;
+
+  position: absolute;
+
+  border-radius: 9999px;
+
+  background: rgba(250, 204, 21, 0.08);
+
+  filter: blur(64px);
 }

@@ -68,7 +68,7 @@ export default function Navbar() {
           </Link>
 
           <Link
-            href="/register-school"
+            href="/auth/school-register"
             className="rounded-full bg-[#00d2c4] px-6 py-2.5 text-sm font-bold text-[#061842] shadow-lg shadow-cyan-500/20 transition hover:bg-[#00bcaf]"
           >
             Register School
@@ -119,7 +119,7 @@ export default function Navbar() {
               </Link>
 
               <Link
-                href="/register-school"
+                href="/auth/school-register"
                 onClick={closeMenu}
                 className="flex h-11 items-center justify-center rounded-full bg-[#00d2c4] text-sm font-bold text-[#061842] transition hover:bg-[#00bcaf]"
               >
