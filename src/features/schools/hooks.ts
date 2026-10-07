@@ -11,6 +11,9 @@ import {
   blockSchool,
   createSchool,
   deleteSchool,
+  getPublicSchoolById,
+  getPublicSchools,
+  GetPublicSchoolsParams,
   getSchools,
   rejectSchool,
   unblockSchool,
@@ -128,5 +131,32 @@ export const useDeleteSchool = () => {
         queryKey: ["schools", "list"],
       });
     },
+  });
+};
+
+
+// ============================================
+// Public - School Details
+// ============================================
+
+export const useSchool = (schoolId: number) => {
+  return useQuery({
+    queryKey: ["schools", "public", schoolId],
+    queryFn: () => getPublicSchoolById(schoolId),
+    enabled: Number.isInteger(schoolId) && schoolId > 0,
+  });
+};
+
+// ============================================
+// Public - School List
+// ============================================
+
+export const usePublicSchools = (
+  params: GetPublicSchoolsParams = {},
+) => {
+  return useQuery({
+    queryKey: ["schools", "public", params],
+    queryFn: () => getPublicSchools(params),
+    placeholderData: (previousData) => previousData,
   });
 };

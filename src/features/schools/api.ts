@@ -125,3 +125,52 @@ export const deleteSchool = async (
 
   return response.data.data;
 };
+
+
+// ============================================
+// Public - School Details
+// ============================================
+
+export const getPublicSchoolById = async (
+  id: number,
+): Promise<School> => {
+  const response = await api.get<ApiResponse<School>>(
+    `/schools/${id}/public`,
+  );
+
+  return response.data.data;
+};
+
+
+
+// ============================================
+// Public - School List
+// ============================================
+
+export interface GetPublicSchoolsParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+}
+
+export interface PublicSchoolListResponse {
+  schools: School[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export const getPublicSchools = async (
+  params: GetPublicSchoolsParams = {},
+): Promise<PublicSchoolListResponse> => {
+  const response = await api.get<
+    ApiResponse<PublicSchoolListResponse>
+  >("/schools/public", {
+    params,
+  });
+
+  return response.data.data;
+};
