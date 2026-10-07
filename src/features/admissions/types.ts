@@ -48,3 +48,60 @@ export interface CreateAdmissionResponse {
   paymentStatus: "PENDING";
   emailVerificationRequired: boolean;
 }
+
+export interface TrackAdmissionInput {
+  applicationNo: string;
+  studentEmail: string;
+}
+
+export interface TrackAdmissionResponse {
+  admissionId: number;
+  applicationNo: string;
+
+  student: {
+    name: string;
+    email: string;
+    emailVerified: boolean;
+  };
+
+  school: {
+    id: number;
+    name: string;
+    code: string;
+  };
+
+  academic: {
+    year: string;
+    class: {
+      id: number;
+      name: string;
+      code: string;
+    } | null;
+    section: {
+      id: number;
+      name: string;
+      code: string;
+    } | null;
+    shift: string | null;
+    group: string | null;
+  };
+
+  status: string;
+
+  rejectionReason: string | null;
+
+  reviewedAt: string | null;
+
+  payment: {
+    id: number;
+    amount: number;
+    paymentMethod: string;
+    status: string;
+    transactionId: string | null;
+    paidAt: string | null;
+    remarks: string | null;
+  } | null;
+
+  createdAt: string;
+  updatedAt: string;
+}

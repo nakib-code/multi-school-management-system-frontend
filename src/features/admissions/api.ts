@@ -1,6 +1,8 @@
 import type {
   CreateAdmissionInput,
   CreateAdmissionResponse,
+  TrackAdmissionInput,
+  TrackAdmissionResponse,
 } from "./types";
 
 const API_URL =
@@ -65,6 +67,32 @@ export async function initiateAdmissionPayment(
     throw new Error(
       result?.message ??
         "Failed to initiate online payment",
+    );
+  }
+
+  return result.data;
+}
+
+export async function trackAdmission(
+  input: TrackAdmissionInput,
+): Promise<TrackAdmissionResponse> {
+  const response = await fetch(
+    `${API_URL}/admissions/track`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    },
+  );
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      result?.message ??
+        "Failed to track admission application",
     );
   }
 
