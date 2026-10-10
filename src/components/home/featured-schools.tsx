@@ -14,25 +14,22 @@ import {
 
 const schools = [
   {
-    id: 1,
     name: "Sunrise International School",
     location: "Dhaka, Bangladesh",
     students: "1,200+ Students",
-    image: "/schools/sunrise-school.jpg",
+    image: "/images/s1.jpg",
   },
   {
-    id: 2,
     name: "Green Valley School",
     location: "Chattogram, Bangladesh",
     students: "850+ Students",
-    image: "/schools/green-valley-school.jpg",
+    image: "/images/s1.jpg",
   },
   {
-    id: 3,
     name: "Bright Future Academy",
     location: "Dhaka, Bangladesh",
     students: "950+ Students",
-    image: "/schools/bright-future-school.jpg",
+    image: "/images/s1.jpg",
   },
 ];
 
@@ -44,11 +41,10 @@ export default function FeaturedSchools() {
     >
       {/* Background Decoration */}
       <div className="pointer-events-none absolute -left-40 top-20 h-80 w-80 rounded-full bg-[#00d2c4]/5 blur-3xl" />
-
       <div className="pointer-events-none absolute -right-40 bottom-10 h-96 w-96 rounded-full bg-blue-500/5 blur-3xl" />
 
       <div className="relative mx-auto max-w-7xl">
-        {/* ================= HEADER ================= */}
+        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 25 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -56,7 +52,6 @@ export default function FeaturedSchools() {
           transition={{ duration: 0.6 }}
           className="mx-auto max-w-3xl text-center"
         >
-          {/* Badge */}
           <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#00d2c4]/20 bg-[#00d2c4]/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-[#008f87]">
             <School className="h-4 w-4" />
             Find Your School
@@ -75,11 +70,11 @@ export default function FeaturedSchools() {
           </p>
         </motion.div>
 
-        {/* ================= SCHOOL CARDS ================= */}
+        {/* School Cards */}
         <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {schools.map((school, index) => (
             <motion.article
-              key={school.id}
+              key={school.name}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.15 }}
@@ -99,16 +94,13 @@ export default function FeaturedSchools() {
                   className="object-cover transition duration-700 group-hover:scale-105"
                 />
 
-                {/* Image Overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-[#061842]/70 via-[#061842]/10 to-transparent" />
 
-                {/* Admission Badge */}
                 <div className="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-bold text-emerald-600 shadow-lg">
                   <CheckCircle2 className="h-3.5 w-3.5" />
                   Admission Open
                 </div>
 
-                {/* Academic Year */}
                 <div className="absolute bottom-4 left-4 rounded-lg bg-[#061842]/80 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-md">
                   2026–2027
                 </div>
@@ -121,32 +113,28 @@ export default function FeaturedSchools() {
                 </h3>
 
                 <div className="mt-4 space-y-2.5">
-                  {/* Location */}
                   <div className="flex items-center gap-2 text-sm text-slate-500">
                     <MapPin className="h-4 w-4 shrink-0 text-[#00a99d]" />
                     <span>{school.location}</span>
                   </div>
 
-                  {/* Students */}
                   <div className="flex items-center gap-2 text-sm text-slate-500">
                     <Users className="h-4 w-4 shrink-0 text-[#00a99d]" />
                     <span>{school.students}</span>
                   </div>
 
-                  {/* Academic Year */}
                   <div className="flex items-center gap-2 text-sm text-slate-500">
                     <CalendarDays className="h-4 w-4 shrink-0 text-[#00a99d]" />
                     <span>Academic Year 2026–2027</span>
                   </div>
                 </div>
 
-                {/* View Button */}
+                {/* View School */}
                 <Link
-                  href={`/schools/${school.id}`}
+                  href="/schools"
                   className="group/button mt-6 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#061842] text-sm font-bold text-white transition hover:bg-[#0b285f]"
                 >
                   View School
-
                   <ArrowRight className="h-4 w-4 transition-transform group-hover/button:translate-x-1" />
                 </Link>
               </div>
@@ -154,7 +142,7 @@ export default function FeaturedSchools() {
           ))}
         </div>
 
-        {/* ================= BOTTOM CTA ================= */}
+        {/* Bottom CTA */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}

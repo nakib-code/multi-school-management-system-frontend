@@ -1,17 +1,17 @@
+import type { ReactNode } from "react";
+
 import Footer from "@/components/home/footer";
 import Navbar from "@/components/home/navbar";
 
 export default function PublicLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: ReactNode;
 }>) {
   return (
     <>
       <Navbar />
-
-      <main>{children}</main>
-
+      <main className="pt-20">{children}</main>
       <Footer />
     </>
   );

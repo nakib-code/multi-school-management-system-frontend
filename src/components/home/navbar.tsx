@@ -1,27 +1,26 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { GraduationCap, Menu, X } from "lucide-react";
 import { useState } from "react";
 
 const navItems = [
-  { label: "Home", href: "#home" },
-  { label: "Admission", href: "#admission" },
-  { label: "Schools", href: "#schools" },
-  { label: "Packages", href: "#pricing" },
+  { label: "Home", href: "/#home" },
+  { label: "Admission", href: "/#admission" },
+  { label: "Schools", href: "/#schools" },
+  { label: "Packages", href: "/#pricing" },
 ];
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const pathname = usePathname();
 
-  const closeMenu = () => {
-    setIsOpen(false);
-  };
+  const closeMenu = () => setIsOpen(false);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-white/10 bg-[#061842]/90 backdrop-blur-xl">
+   <header className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-[#061842]/95 backdrop-blur-xl">
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        {/* Logo */}
         <Link
           href="/"
           onClick={closeMenu}
@@ -35,7 +34,6 @@ export default function Navbar() {
             <p className="text-lg font-black tracking-tight text-white">
               School<span className="text-[#00d2c4]">Hub</span>
             </p>
-
             <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-white/50">
               Education Platform
             </p>
@@ -48,13 +46,13 @@ export default function Navbar() {
           className="hidden items-center gap-8 md:flex"
         >
           {navItems.map((item) => (
-            <a
+            <Link
               key={item.label}
               href={item.href}
               className="relative py-2 text-sm font-medium text-white/70 transition-colors hover:text-[#00d2c4]"
             >
               {item.label}
-            </a>
+            </Link>
           ))}
         </nav>
 
@@ -99,14 +97,14 @@ export default function Navbar() {
             className="mx-auto flex max-w-7xl flex-col px-4 py-4 sm:px-6"
           >
             {navItems.map((item) => (
-              <a
+              <Link
                 key={item.label}
                 href={item.href}
                 onClick={closeMenu}
                 className="rounded-lg px-3 py-3 text-sm font-medium text-white/80 transition hover:bg-white/10 hover:text-[#00d2c4]"
               >
                 {item.label}
-              </a>
+              </Link>
             ))}
 
             <div className="mt-3 grid grid-cols-2 gap-3 border-t border-white/10 pt-4">
