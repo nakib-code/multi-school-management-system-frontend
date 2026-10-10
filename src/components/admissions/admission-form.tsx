@@ -11,7 +11,8 @@ import {
   User,
   Users,
 } from "lucide-react";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useState, type FormEvent } from "react";
 import {
   Controller,
   type FieldPath,
@@ -22,14 +23,33 @@ import { z } from "zod";
 
 import {
   createAdmission,
-  initiateAdmissionPayment,
+  verifyStudentEmail,
 } from "@/features/admissions/api";
 import { admissionSchema } from "@/features/admissions/schema";
 import type { AdmissionFormValues } from "@/features/admissions/schema";
 import type { CreateAdmissionInput } from "@/features/admissions/types";
+import { usePublicActiveClasses } from "@/features/public/classes/hook";
 
 interface AdmissionFormProps {
   schoolId: number;
+}
+
+type PaymentMethod = "CASH" | "ONLINE";
+
+interface SubmittedApplication {
+  applicationNo: string;
+  studentEmail: string;
+  paymentMethod: PaymentMethod;
+  paymentStatus: "PENDING";
+  emailVerificationRequired: boolean;
+}
+
+interface PendingAdmission {
+  id: number;
+  applicationNo: string;
+  studentEmail: string;
+  paymentMethod: PaymentMethod;
+  emailVerified: boolean;
 }
 
 const steps = [
@@ -62,16 +82,15 @@ const steps = [
 export default function AdmissionForm({
   schoolId,
 }: AdmissionFormProps) {
-  const [step, setStep] = useState(1);
+  const router = useRouter();
 
+  const [step, setStep] = useState(1);
   const [submittedApplication, setSubmittedApplication] =
-    useState<{
-      applicationNo: string;
-      studentEmail: string;
-      paymentMethod: "CASH" | "ONLINE";
-      paymentStatus: "PENDING";
-      emailVerificationRequired: boolean;
-    } | null>(null);
+    useState<SubmittedApplication | null>(null);
+  const [pendingAdmission, setPendingAdmission] =
+    useState<PendingAdmission | null>(null);
+  const [verificationCode, setVerificationCode] = useState("");
+  const [isVerifying, setIsVerifying] = useState(false);
 
   const {
     register,
@@ -79,10 +98,7 @@ export default function AdmissionForm({
     trigger,
     watch,
     handleSubmit,
-    formState: {
-      errors,
-      isSubmitting,
-    },
+    formState: { errors, isSubmitting },
   } = useForm<
     z.input<typeof admissionSchema>,
     unknown,
@@ -98,10 +114,167 @@ export default function AdmissionForm({
 
   const values = watch();
 
-  // ============================================================
-  // NEXT STEP
-  // ============================================================
+  // PUBLIC CLASSES
+  const {
+    data: classes = [],
+    isLoading: isClassesLoading,
+    isError: isClassesError,
+  } = usePublicActiveClasses(schoolId);
 
+  const selectedClassId = watch("classId") as
+    | number
+    | undefined;
+
+  const selectedClass = classes.find(
+    (item) => item.id === selectedClassId,
+  );
+
+  // NAVIGATE TO THE SEPARATE PAYMENT PAGE
+  const startOnlinePayment = (admissionId: number) => {
+    if (
+      !Number.isInteger(schoolId) ||
+      schoolId <= 0 ||
+      !Number.isInteger(admissionId) ||
+      admissionId <= 0
+    ) {
+      toast.error("Invalid school or admission information.");
+      return;
+    }
+
+    router.push(
+      `/admissions/payment?schoolId=${schoolId}&admissionId=${admissionId}`,
+    );
+  };
+
+  // SUBMIT ADMISSION
+  const onSubmit = async (data: AdmissionFormValues) => {
+    try {
+      if (!Number.isInteger(schoolId) || schoolId <= 0) {
+        toast.error("Invalid school information.");
+        return;
+      }
+
+      const input: CreateAdmissionInput = {
+        schoolId,
+        ...data,
+      };
+
+      const result = await createAdmission(input);
+
+      // Show OTP verification before continuing when required.
+      if (result.emailVerificationRequired) {
+        setPendingAdmission({
+          id: result.id,
+          applicationNo: result.applicationNo,
+          studentEmail: result.studentEmail,
+          paymentMethod: result.paymentMethod,
+          emailVerified: false,
+        });
+
+        setVerificationCode("");
+
+        toast.success(
+          "Application created. Check your email for the OTP.",
+        );
+
+        return;
+      }
+
+      // If verification is not required by the API, continue
+      // to the separate payment page for online applications.
+      if (result.paymentMethod === "ONLINE") {
+        startOnlinePayment(result.id);
+        return;
+      }
+
+      // Preserve the existing cash-payment flow.
+      setSubmittedApplication({
+        applicationNo: result.applicationNo,
+        studentEmail: result.studentEmail,
+        paymentMethod: result.paymentMethod,
+        paymentStatus: result.paymentStatus,
+        emailVerificationRequired: false,
+      });
+
+      toast.success("Admission application submitted!");
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to submit admission application.",
+      );
+    }
+  };
+
+  // VERIFY EMAIL OTP
+  const handleVerifyEmail = async (
+    event: FormEvent<HTMLFormElement>,
+  ) => {
+    event.preventDefault();
+
+    if (!pendingAdmission || pendingAdmission.emailVerified) {
+      return;
+    }
+
+    if (!/^\d{6}$/.test(verificationCode)) {
+      toast.error("Enter the 6-digit verification code.");
+      return;
+    }
+
+    setIsVerifying(true);
+
+    try {
+      const result = await verifyStudentEmail(
+        pendingAdmission.studentEmail,
+        verificationCode,
+      );
+
+      if (
+        !result.emailVerified ||
+        result.admissionId !== pendingAdmission.id
+      ) {
+        throw new Error("Email verification failed.");
+      }
+
+      const verifiedAdmission: PendingAdmission = {
+        ...pendingAdmission,
+        emailVerified: true,
+      };
+
+      setPendingAdmission(verifiedAdmission);
+      setVerificationCode("");
+
+      toast.success("Email verified successfully!");
+
+      // Online payment: navigate only.
+      // The payment page will initiate the payment gateway request.
+      if (verifiedAdmission.paymentMethod === "ONLINE") {
+        startOnlinePayment(verifiedAdmission.id);
+        return;
+      }
+
+      // Cash payment: show confirmation after OTP verification.
+      setSubmittedApplication({
+        applicationNo: verifiedAdmission.applicationNo,
+        studentEmail: verifiedAdmission.studentEmail,
+        paymentMethod: "CASH",
+        paymentStatus: "PENDING",
+        emailVerificationRequired: false,
+      });
+
+      setPendingAdmission(null);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to verify email.",
+      );
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  // NEXT STEP
   const nextStep = async () => {
     let fields: FieldPath<
       z.input<typeof admissionSchema>
@@ -116,11 +289,7 @@ export default function AdmissionForm({
     }
 
     if (step === 2) {
-      fields = [
-        "academicYear",
-        "classId",
-        "sectionId",
-      ];
+      fields = ["academicYear", "classId"];
     }
 
     if (step === 3) {
@@ -137,203 +306,219 @@ export default function AdmissionForm({
 
     const valid = await trigger(fields);
 
-    if (!valid) {
-      return;
-    }
+    if (!valid) return;
 
-    setStep((current) =>
-      Math.min(current + 1, 4),
-    );
+    setStep((current) => Math.min(current + 1, 4));
   };
 
-  // ============================================================
   // PREVIOUS STEP
-  // ============================================================
-
   const previousStep = () => {
-    setStep((current) =>
-      Math.max(current - 1, 1),
+    setStep((current) => Math.max(current - 1, 1));
+  };
+
+  // EMAIL VERIFICATION SCREEN
+  if (pendingAdmission) {
+    return (
+      <div className="mx-auto max-w-lg rounded-2xl border bg-background p-6 shadow-sm sm:p-8">
+        <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+          <Check className="h-7 w-7 text-primary" />
+        </div>
+
+        <h2 className="text-2xl font-semibold tracking-tight">
+          {pendingAdmission.emailVerified
+            ? "Continue Your Application"
+            : "Verify Your Email"}
+        </h2>
+
+        <p className="mt-2 text-sm text-muted-foreground">
+          {pendingAdmission.emailVerified
+            ? "Your application is ready. Continue to the next step."
+            : "We sent a 6-digit verification code to "}
+
+          {!pendingAdmission.emailVerified && (
+            <span className="font-medium text-foreground">
+              {pendingAdmission.studentEmail}
+            </span>
+          )}
+
+          {!pendingAdmission.emailVerified &&
+            ". Enter the code to continue."}
+        </p>
+
+        <div className="mt-5 rounded-xl border bg-muted/30 p-4">
+          <p className="text-xs text-muted-foreground">
+            Application Number
+          </p>
+          <p className="mt-1 font-semibold">
+            {pendingAdmission.applicationNo}
+          </p>
+        </div>
+
+        {pendingAdmission.emailVerified ? (
+          <div className="mt-6 space-y-4">
+            <p className="text-sm text-green-600">
+              {pendingAdmission.paymentMethod === "ONLINE"
+                ? "Your email is verified. Continue to online payment."
+                : "Your email has been verified."}
+            </p>
+
+            {pendingAdmission.paymentMethod === "ONLINE" ? (
+              <button
+                type="button"
+                onClick={() =>
+                  startOnlinePayment(pendingAdmission.id)
+                }
+                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-medium text-primary-foreground"
+              >
+                <CreditCard className="h-4 w-4" />
+                Continue to Payment
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setSubmittedApplication({
+                    applicationNo:
+                      pendingAdmission.applicationNo,
+                    studentEmail:
+                      pendingAdmission.studentEmail,
+                    paymentMethod: "CASH",
+                    paymentStatus: "PENDING",
+                    emailVerificationRequired: false,
+                  });
+
+                  setPendingAdmission(null);
+                }}
+                className="w-full rounded-lg bg-primary px-5 py-3 text-sm font-medium text-primary-foreground"
+              >
+                Continue
+              </button>
+            )}
+          </div>
+        ) : (
+          <form
+            onSubmit={handleVerifyEmail}
+            className="mt-6 space-y-4"
+          >
+            <div>
+              <label
+                htmlFor="verificationCode"
+                className="mb-2 block text-sm font-medium"
+              >
+                Verification Code
+              </label>
+
+              <input
+                id="verificationCode"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                pattern="[0-9]{6}"
+                required
+                value={verificationCode}
+                onChange={(event) =>
+                  setVerificationCode(
+                    event.target.value
+                      .replace(/\D/g, "")
+                      .slice(0, 6),
+                  )
+                }
+                placeholder="Enter 6-digit OTP"
+                className="h-12 w-full rounded-lg border bg-background px-3 text-center text-lg tracking-[0.4em] outline-none focus:border-primary"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={
+                isVerifying || verificationCode.length !== 6
+              }
+              className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isVerifying ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Verifying...
+                </>
+              ) : (
+                "Verify Email"
+              )}
+            </button>
+
+            <p className="text-center text-xs text-muted-foreground">
+              Check your inbox and spam folder for the code.
+            </p>
+          </form>
+        )}
+      </div>
     );
-  };
+  }
 
-  // ============================================================
-  // SUBMIT
-  // ============================================================
-
-  const onSubmit = async (
-    data: AdmissionFormValues,
-  ) => {
-    try {
-      const input: CreateAdmissionInput = {
-        schoolId,
-        ...data,
-      };
-
-      // --------------------------------------------------------
-      // 1. Create admission application
-      // --------------------------------------------------------
-
-      const result = await createAdmission(input);
-
-      // --------------------------------------------------------
-      // 2. Online payment
-      // --------------------------------------------------------
-
-      if (result.paymentMethod === "ONLINE") {
-        const loadingToast = toast.loading(
-          "Redirecting to payment gateway...",
-        );
-
-        try {
-          const payment =
-            await initiateAdmissionPayment(
-              schoolId,
-              result.id,
-            );
-
-          toast.dismiss(loadingToast);
-
-          // Redirect to SSLCommerz
-          window.location.href =
-            payment.paymentUrl;
-
-          return;
-        } catch (paymentError) {
-          toast.dismiss(loadingToast);
-
-          throw paymentError;
-        }
-      }
-
-      // --------------------------------------------------------
-      // 3. Cash payment
-      // --------------------------------------------------------
-
-      setSubmittedApplication({
-        applicationNo: result.applicationNo,
-        studentEmail: result.studentEmail,
-        paymentMethod: result.paymentMethod,
-        paymentStatus: result.paymentStatus,
-        emailVerificationRequired:
-          result.emailVerificationRequired,
-      });
-
-      toast.success(
-        "Admission application submitted successfully!",
-      );
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to submit admission application",
-      );
-    }
-  };
-
-  // ============================================================
   // SUCCESS SCREEN
-  // ============================================================
-
   if (submittedApplication) {
     return (
       <div className="rounded-2xl border bg-background p-6 shadow-sm sm:p-8">
         <div className="mx-auto flex max-w-xl flex-col items-center text-center">
-          {/* Success Icon */}
           <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10">
             <Check className="h-8 w-8 text-green-600" />
           </div>
 
-          {/* Title */}
           <h2 className="text-2xl font-semibold tracking-tight">
             Application Submitted
           </h2>
 
           <p className="mt-2 text-sm text-muted-foreground">
-            Your admission application has been
-            submitted successfully.
+            Your admission application has been submitted successfully.
           </p>
 
-          {/* Application Details */}
           <div className="mt-6 w-full rounded-xl border bg-muted/30 p-5 text-left">
             <div className="space-y-4">
-              {/* Application Number */}
-              <div>
-                <p className="text-xs text-muted-foreground">
-                  Application Number
-                </p>
+              <ReviewItem
+                label="Application Number"
+                value={submittedApplication.applicationNo}
+              />
 
-                <p className="mt-1 text-lg font-semibold">
-                  {
-                    submittedApplication.applicationNo
-                  }
-                </p>
-              </div>
+              <ReviewItem
+                label="Student Email"
+                value={submittedApplication.studentEmail}
+              />
 
-              {/* Student Email */}
-              <div>
-                <p className="text-xs text-muted-foreground">
-                  Student Email
-                </p>
-
-                <p className="mt-1 text-sm font-medium">
-                  {
-                    submittedApplication.studentEmail
-                  }
-                </p>
-              </div>
-
-              {/* Payment Method */}
-              <div>
-                <p className="text-xs text-muted-foreground">
-                  Payment Method
-                </p>
-
-                <p className="mt-1 text-sm font-medium">
-                  {submittedApplication.paymentMethod ===
-                  "ONLINE"
+              <ReviewItem
+                label="Payment Method"
+                value={
+                  submittedApplication.paymentMethod === "ONLINE"
                     ? "Online Payment"
-                    : "Cash Payment"}
-                </p>
-              </div>
+                    : "Cash Payment"
+                }
+              />
 
-              {/* Payment Status */}
-              <div>
-                <p className="text-xs text-muted-foreground">
-                  Payment Status
-                </p>
-
-                <span className="mt-1 inline-flex rounded-full bg-yellow-500/10 px-2.5 py-1 text-xs font-medium text-yellow-700">
-                  {submittedApplication.paymentStatus}
-                </span>
-              </div>
+              <ReviewItem
+                label="Payment Status"
+                value={submittedApplication.paymentStatus}
+              />
             </div>
           </div>
 
-          {/* Email Verification */}
           {submittedApplication.emailVerificationRequired && (
             <div className="mt-5 w-full rounded-xl border border-blue-200 bg-blue-50 p-4 text-left dark:border-blue-900 dark:bg-blue-950/30">
               <p className="text-sm font-medium">
                 Email verification required
               </p>
-
               <p className="mt-1 text-xs text-muted-foreground">
-                Please check your student email and
-                verify your email address.
+                Please check your email and verify your address.
               </p>
             </div>
           )}
 
-          {/* Cash Payment */}
-          {submittedApplication.paymentMethod ===
-            "CASH" && (
+          {submittedApplication.paymentMethod === "CASH" && (
             <div className="mt-5 w-full rounded-xl border border-yellow-200 bg-yellow-50 p-4 text-left dark:border-yellow-900 dark:bg-yellow-950/30">
               <p className="text-sm font-medium">
                 Cash payment
               </p>
-
               <p className="mt-1 text-xs text-muted-foreground">
-                Please contact the school and complete
-                your admission payment in cash.
+                Please contact the school and complete your
+                admission payment in cash.
               </p>
             </div>
           )}
@@ -342,29 +527,19 @@ export default function AdmissionForm({
     );
   }
 
-  // ============================================================
-  // FORM
-  // ============================================================
-
+  // ADMISSION FORM
   return (
     <form
       onSubmit={handleSubmit(onSubmit)}
       className="space-y-8"
     >
-      {/* ======================================================
-          STEPS
-      ======================================================= */}
-
+      {/* STEPS */}
       <div className="overflow-x-auto pb-2">
         <div className="mx-auto flex min-w-[650px] max-w-4xl items-start justify-between">
           {steps.map((item, index) => {
             const Icon = item.icon;
-
-            const isActive =
-              step === item.id;
-
-            const isCompleted =
-              step > item.id;
+            const isActive = step === item.id;
+            const isCompleted = step > item.id;
 
             return (
               <div
@@ -423,24 +598,19 @@ export default function AdmissionForm({
         </div>
       </div>
 
-      {/* ======================================================
-          STEP 1 - STUDENT
-      ======================================================= */}
-
+      {/* STEP 1 — STUDENT */}
       {step === 1 && (
         <section className="rounded-2xl border bg-background p-6 shadow-sm sm:p-8">
           <div className="mb-6">
             <h2 className="text-xl font-semibold">
               Student Information
             </h2>
-
             <p className="mt-1 text-sm text-muted-foreground">
               Enter the student's basic information.
             </p>
           </div>
 
           <div className="grid gap-5 md:grid-cols-2">
-            {/* Student Name */}
             <div className="md:col-span-2">
               <label
                 htmlFor="studentName"
@@ -448,14 +618,12 @@ export default function AdmissionForm({
               >
                 Student Name *
               </label>
-
               <input
                 id="studentName"
                 {...register("studentName")}
                 placeholder="Enter student name"
                 className="h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
               />
-
               {errors.studentName && (
                 <p className="mt-1.5 text-xs text-destructive">
                   {errors.studentName.message}
@@ -463,7 +631,6 @@ export default function AdmissionForm({
               )}
             </div>
 
-            {/* Student Email */}
             <div>
               <label
                 htmlFor="studentEmail"
@@ -471,15 +638,13 @@ export default function AdmissionForm({
               >
                 Student Email *
               </label>
-
               <input
                 id="studentEmail"
                 type="email"
                 {...register("studentEmail")}
                 placeholder="student@example.com"
-                className="h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+                className="h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:border-primary"
               />
-
               {errors.studentEmail && (
                 <p className="mt-1.5 text-xs text-destructive">
                   {errors.studentEmail.message}
@@ -487,7 +652,6 @@ export default function AdmissionForm({
               )}
             </div>
 
-            {/* Password */}
             <div>
               <label
                 htmlFor="password"
@@ -495,15 +659,13 @@ export default function AdmissionForm({
               >
                 Password *
               </label>
-
               <input
                 id="password"
                 type="password"
                 {...register("password")}
                 placeholder="Minimum 8 characters"
-                className="h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+                className="h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:border-primary"
               />
-
               {errors.password && (
                 <p className="mt-1.5 text-xs text-destructive">
                   {errors.password.message}
@@ -511,7 +673,6 @@ export default function AdmissionForm({
               )}
             </div>
 
-            {/* Date of Birth */}
             <div>
               <label
                 htmlFor="dateOfBirth"
@@ -519,7 +680,6 @@ export default function AdmissionForm({
               >
                 Date of Birth
               </label>
-
               <input
                 id="dateOfBirth"
                 type="date"
@@ -528,7 +688,6 @@ export default function AdmissionForm({
               />
             </div>
 
-            {/* Gender */}
             <div>
               <label
                 htmlFor="gender"
@@ -536,28 +695,18 @@ export default function AdmissionForm({
               >
                 Gender
               </label>
-
               <select
                 id="gender"
                 {...register("gender")}
                 className="h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:border-primary"
               >
-                <option value="">
-                  Select gender
-                </option>
-                <option value="MALE">
-                  Male
-                </option>
-                <option value="FEMALE">
-                  Female
-                </option>
-                <option value="OTHER">
-                  Other
-                </option>
+                <option value="">Select gender</option>
+                <option value="MALE">Male</option>
+                <option value="FEMALE">Female</option>
+                <option value="OTHER">Other</option>
               </select>
             </div>
 
-            {/* Blood Group */}
             <div>
               <label
                 htmlFor="bloodGroup"
@@ -565,15 +714,12 @@ export default function AdmissionForm({
               >
                 Blood Group
               </label>
-
               <select
                 id="bloodGroup"
                 {...register("bloodGroup")}
                 className="h-10 w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
               >
-                <option value="">
-                  Select blood group
-                </option>
+                <option value="">Select blood group</option>
                 <option value="A+">A+</option>
                 <option value="A-">A-</option>
                 <option value="B+">B+</option>
@@ -585,7 +731,6 @@ export default function AdmissionForm({
               </select>
             </div>
 
-            {/* Previous School */}
             <div>
               <label
                 htmlFor="previousSchool"
@@ -593,7 +738,6 @@ export default function AdmissionForm({
               >
                 Previous School
               </label>
-
               <input
                 id="previousSchool"
                 {...register("previousSchool")}
@@ -602,7 +746,6 @@ export default function AdmissionForm({
               />
             </div>
 
-            {/* Previous Class */}
             <div>
               <label
                 htmlFor="previousClass"
@@ -610,7 +753,6 @@ export default function AdmissionForm({
               >
                 Previous Class
               </label>
-
               <input
                 id="previousClass"
                 {...register("previousClass")}
@@ -622,24 +764,19 @@ export default function AdmissionForm({
         </section>
       )}
 
-      {/* ======================================================
-          STEP 2 - ACADEMIC
-      ======================================================= */}
-
+      {/* STEP 2 — ACADEMIC */}
       {step === 2 && (
         <section className="rounded-2xl border bg-background p-6 shadow-sm sm:p-8">
           <div className="mb-6">
             <h2 className="text-xl font-semibold">
               Academic Information
             </h2>
-
             <p className="mt-1 text-sm text-muted-foreground">
-              Select the academic year, class and section.
+              Select the academic year and class.
             </p>
           </div>
 
           <div className="grid gap-5 md:grid-cols-2">
-            {/* Academic Year */}
             <div>
               <label
                 htmlFor="academicYear"
@@ -647,13 +784,11 @@ export default function AdmissionForm({
               >
                 Academic Year *
               </label>
-
               <input
                 id="academicYear"
                 {...register("academicYear")}
                 className="h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:border-primary"
               />
-
               {errors.academicYear && (
                 <p className="mt-1.5 text-xs text-destructive">
                   {errors.academicYear.message}
@@ -661,7 +796,6 @@ export default function AdmissionForm({
               )}
             </div>
 
-            {/* Class */}
             <div>
               <label
                 htmlFor="classId"
@@ -677,54 +811,36 @@ export default function AdmissionForm({
                   <select
                     id="classId"
                     value={
-                      field.value
-                        ? String(field.value)
-                        : ""
+                      field.value ? String(field.value) : ""
                     }
-                    onChange={(event) =>
-                      field.onChange(
-                        event.target.value
-                          ? Number(
-                              event.target.value,
-                            )
-                          : undefined,
-                      )
-                    }
-                    className="h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:border-primary"
+                    disabled={isClassesLoading}
+                    onChange={(event) => {
+                      const classId = event.target.value
+                        ? Number(event.target.value)
+                        : undefined;
+
+                      field.onChange(classId);
+                    }}
+                    className="h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:border-primary disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <option value="">
-                      Select class
+                      {isClassesLoading
+                        ? "Loading classes..."
+                        : isClassesError
+                          ? "Failed to load classes"
+                          : classes.length === 0
+                            ? "No classes available"
+                            : "Select class"}
                     </option>
-                    <option value="1">
-                      Class 1
-                    </option>
-                    <option value="2">
-                      Class 2
-                    </option>
-                    <option value="3">
-                      Class 3
-                    </option>
-                    <option value="4">
-                      Class 4
-                    </option>
-                    <option value="5">
-                      Class 5
-                    </option>
-                    <option value="6">
-                      Class 6
-                    </option>
-                    <option value="7">
-                      Class 7
-                    </option>
-                    <option value="8">
-                      Class 8
-                    </option>
-                    <option value="9">
-                      Class 9
-                    </option>
-                    <option value="10">
-                      Class 10
-                    </option>
+
+                    {classes.map((schoolClass) => (
+                      <option
+                        key={schoolClass.id}
+                        value={schoolClass.id}
+                      >
+                        {schoolClass.name} ({schoolClass.code})
+                      </option>
+                    ))}
                   </select>
                 )}
               />
@@ -736,61 +852,6 @@ export default function AdmissionForm({
               )}
             </div>
 
-            {/* Section */}
-            <div>
-              <label
-                htmlFor="sectionId"
-                className="mb-2 block text-sm font-medium"
-              >
-                Section *
-              </label>
-
-              <Controller
-                name="sectionId"
-                control={control}
-                render={({ field }) => (
-                  <select
-                    id="sectionId"
-                    value={
-                      field.value
-                        ? String(field.value)
-                        : ""
-                    }
-                    onChange={(event) =>
-                      field.onChange(
-                        event.target.value
-                          ? Number(
-                              event.target.value,
-                            )
-                          : undefined,
-                      )
-                    }
-                    className="h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:border-primary"
-                  >
-                    <option value="">
-                      Select section
-                    </option>
-                    <option value="1">
-                      Section A
-                    </option>
-                    <option value="2">
-                      Section B
-                    </option>
-                    <option value="3">
-                      Section C
-                    </option>
-                  </select>
-                )}
-              />
-
-              {errors.sectionId && (
-                <p className="mt-1.5 text-xs text-destructive">
-                  {errors.sectionId.message}
-                </p>
-              )}
-            </div>
-
-            {/* Shift */}
             <div>
               <label
                 htmlFor="shift"
@@ -798,25 +859,17 @@ export default function AdmissionForm({
               >
                 Shift
               </label>
-
               <select
                 id="shift"
                 {...register("shift")}
                 className="h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:border-primary"
               >
-                <option value="">
-                  Select shift
-                </option>
-                <option value="MORNING">
-                  Morning
-                </option>
-                <option value="DAY">
-                  Day
-                </option>
+                <option value="">Select shift</option>
+                <option value="MORNING">Morning</option>
+                <option value="DAY">Day</option>
               </select>
             </div>
 
-            {/* Group */}
             <div>
               <label
                 htmlFor="group"
@@ -824,48 +877,34 @@ export default function AdmissionForm({
               >
                 Group
               </label>
-
               <select
                 id="group"
                 {...register("group")}
                 className="h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:border-primary"
               >
-                <option value="">
-                  Select group
-                </option>
-                <option value="SCIENCE">
-                  Science
-                </option>
-                <option value="COMMERCE">
-                  Commerce
-                </option>
-                <option value="ARTS">
-                  Arts
-                </option>
+                <option value="">Select group</option>
+                <option value="SCIENCE">Science</option>
+                <option value="COMMERCE">Commerce</option>
+                <option value="ARTS">Arts</option>
               </select>
             </div>
           </div>
         </section>
       )}
 
-      {/* ======================================================
-          STEP 3 - GUARDIAN
-      ======================================================= */}
-
+      {/* STEP 3 — GUARDIAN */}
       {step === 3 && (
         <section className="rounded-2xl border bg-background p-6 shadow-sm sm:p-8">
           <div className="mb-6">
             <h2 className="text-xl font-semibold">
               Guardian Information
             </h2>
-
             <p className="mt-1 text-sm text-muted-foreground">
               Enter the student's guardian information.
             </p>
           </div>
 
           <div className="grid gap-5 md:grid-cols-2">
-            {/* Guardian Name */}
             <div>
               <label
                 htmlFor="guardianName"
@@ -873,7 +912,6 @@ export default function AdmissionForm({
               >
                 Guardian Name
               </label>
-
               <input
                 id="guardianName"
                 {...register("guardianName")}
@@ -882,7 +920,6 @@ export default function AdmissionForm({
               />
             </div>
 
-            {/* Guardian Email */}
             <div>
               <label
                 htmlFor="guardianEmail"
@@ -890,7 +927,6 @@ export default function AdmissionForm({
               >
                 Guardian Email
               </label>
-
               <input
                 id="guardianEmail"
                 type="email"
@@ -898,7 +934,6 @@ export default function AdmissionForm({
                 placeholder="guardian@example.com"
                 className="h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:border-primary"
               />
-
               {errors.guardianEmail && (
                 <p className="mt-1.5 text-xs text-destructive">
                   {errors.guardianEmail.message}
@@ -906,7 +941,6 @@ export default function AdmissionForm({
               )}
             </div>
 
-            {/* Guardian Phone */}
             <div>
               <label
                 htmlFor="guardianPhone"
@@ -914,7 +948,6 @@ export default function AdmissionForm({
               >
                 Guardian Phone
               </label>
-
               <input
                 id="guardianPhone"
                 {...register("guardianPhone")}
@@ -923,7 +956,6 @@ export default function AdmissionForm({
               />
             </div>
 
-            {/* Relationship */}
             <div>
               <label
                 htmlFor="guardianRelationship"
@@ -931,37 +963,21 @@ export default function AdmissionForm({
               >
                 Relationship
               </label>
-
               <select
                 id="guardianRelationship"
                 {...register("guardianRelationship")}
                 className="h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:border-primary"
               >
-                <option value="">
-                  Select relationship
-                </option>
-                <option value="FATHER">
-                  Father
-                </option>
-                <option value="MOTHER">
-                  Mother
-                </option>
-                <option value="BROTHER">
-                  Brother
-                </option>
-                <option value="SISTER">
-                  Sister
-                </option>
-                <option value="GUARDIAN">
-                  Guardian
-                </option>
-                <option value="OTHER">
-                  Other
-                </option>
+                <option value="">Select relationship</option>
+                <option value="FATHER">Father</option>
+                <option value="MOTHER">Mother</option>
+                <option value="BROTHER">Brother</option>
+                <option value="SISTER">Sister</option>
+                <option value="GUARDIAN">Guardian</option>
+                <option value="OTHER">Other</option>
               </select>
             </div>
 
-            {/* NID */}
             <div>
               <label
                 htmlFor="guardianNid"
@@ -969,7 +985,6 @@ export default function AdmissionForm({
               >
                 Guardian NID
               </label>
-
               <input
                 id="guardianNid"
                 {...register("guardianNid")}
@@ -978,7 +993,6 @@ export default function AdmissionForm({
               />
             </div>
 
-            {/* Occupation */}
             <div>
               <label
                 htmlFor="guardianOccupation"
@@ -986,7 +1000,6 @@ export default function AdmissionForm({
               >
                 Occupation
               </label>
-
               <input
                 id="guardianOccupation"
                 {...register("guardianOccupation")}
@@ -995,7 +1008,6 @@ export default function AdmissionForm({
               />
             </div>
 
-            {/* Address */}
             <div className="md:col-span-2">
               <label
                 htmlFor="address"
@@ -1003,7 +1015,6 @@ export default function AdmissionForm({
               >
                 Address
               </label>
-
               <textarea
                 id="address"
                 {...register("address")}
@@ -1011,7 +1022,6 @@ export default function AdmissionForm({
                 rows={4}
                 className="w-full resize-none rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
               />
-
               {errors.address && (
                 <p className="mt-1.5 text-xs text-destructive">
                   {errors.address.message}
@@ -1022,24 +1032,18 @@ export default function AdmissionForm({
         </section>
       )}
 
-      {/* ======================================================
-          STEP 4 - REVIEW
-      ======================================================= */}
-
+      {/* STEP 4 — REVIEW */}
       {step === 4 && (
         <section className="space-y-6">
-          {/* Student Review */}
           <div className="rounded-2xl border bg-background p-6 shadow-sm sm:p-8">
             <div className="mb-5 flex items-center gap-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
                 <User className="h-4 w-4" />
               </div>
-
               <div>
                 <h2 className="font-semibold">
                   Student Information
                 </h2>
-
                 <p className="text-xs text-muted-foreground">
                   Review student details
                 </p>
@@ -1051,32 +1055,26 @@ export default function AdmissionForm({
                 label="Student Name"
                 value={values.studentName}
               />
-
               <ReviewItem
                 label="Student Email"
                 value={values.studentEmail}
               />
-
               <ReviewItem
                 label="Date of Birth"
                 value={values.dateOfBirth}
               />
-
               <ReviewItem
                 label="Gender"
                 value={values.gender}
               />
-
               <ReviewItem
                 label="Blood Group"
                 value={values.bloodGroup}
               />
-
               <ReviewItem
                 label="Previous School"
                 value={values.previousSchool}
               />
-
               <ReviewItem
                 label="Previous Class"
                 value={values.previousClass}
@@ -1084,18 +1082,15 @@ export default function AdmissionForm({
             </div>
           </div>
 
-          {/* Academic Review */}
           <div className="rounded-2xl border bg-background p-6 shadow-sm sm:p-8">
             <div className="mb-5 flex items-center gap-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
                 <FileText className="h-4 w-4" />
               </div>
-
               <div>
                 <h2 className="font-semibold">
                   Academic Information
                 </h2>
-
                 <p className="text-xs text-muted-foreground">
                   Review academic details
                 </p>
@@ -1107,30 +1102,18 @@ export default function AdmissionForm({
                 label="Academic Year"
                 value={values.academicYear}
               />
-
               <ReviewItem
-                label="Class ID"
+                label="Class"
                 value={
-                  values.classId
-                    ? String(values.classId)
+                  selectedClass
+                    ? `${selectedClass.name} (${selectedClass.code})`
                     : undefined
                 }
               />
-
-              <ReviewItem
-                label="Section ID"
-                value={
-                  values.sectionId
-                    ? String(values.sectionId)
-                    : undefined
-                }
-              />
-
               <ReviewItem
                 label="Shift"
                 value={values.shift}
               />
-
               <ReviewItem
                 label="Group"
                 value={values.group}
@@ -1138,18 +1121,15 @@ export default function AdmissionForm({
             </div>
           </div>
 
-          {/* Guardian Review */}
           <div className="rounded-2xl border bg-background p-6 shadow-sm sm:p-8">
             <div className="mb-5 flex items-center gap-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
                 <Users className="h-4 w-4" />
               </div>
-
               <div>
                 <h2 className="font-semibold">
                   Guardian Information
                 </h2>
-
                 <p className="text-xs text-muted-foreground">
                   Review guardian details
                 </p>
@@ -1161,32 +1141,26 @@ export default function AdmissionForm({
                 label="Guardian Name"
                 value={values.guardianName}
               />
-
               <ReviewItem
                 label="Guardian Email"
                 value={values.guardianEmail}
               />
-
               <ReviewItem
                 label="Guardian Phone"
                 value={values.guardianPhone}
               />
-
               <ReviewItem
                 label="Relationship"
                 value={values.guardianRelationship}
               />
-
               <ReviewItem
                 label="Guardian NID"
                 value={values.guardianNid}
               />
-
               <ReviewItem
                 label="Occupation"
                 value={values.guardianOccupation}
               />
-
               <ReviewItem
                 label="Address"
                 value={values.address}
@@ -1194,18 +1168,15 @@ export default function AdmissionForm({
             </div>
           </div>
 
-          {/* Payment */}
           <div className="rounded-2xl border bg-background p-6 shadow-sm sm:p-8">
             <div className="mb-5 flex items-center gap-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
                 <CreditCard className="h-4 w-4" />
               </div>
-
               <div>
                 <h2 className="font-semibold">
                   Payment Method
                 </h2>
-
                 <p className="text-xs text-muted-foreground">
                   Choose how you want to pay.
                 </p>
@@ -1217,7 +1188,6 @@ export default function AdmissionForm({
               control={control}
               render={({ field }) => (
                 <div className="grid gap-4 sm:grid-cols-2">
-                  {/* Online */}
                   <label
                     className={[
                       "cursor-pointer rounded-xl border p-4 transition",
@@ -1229,32 +1199,24 @@ export default function AdmissionForm({
                     <input
                       type="radio"
                       value="ONLINE"
-                      checked={
-                        field.value === "ONLINE"
-                      }
-                      onChange={() =>
-                        field.onChange("ONLINE")
-                      }
+                      checked={field.value === "ONLINE"}
+                      onChange={() => field.onChange("ONLINE")}
                       className="sr-only"
                     />
-
                     <div className="flex items-start gap-3">
                       <CreditCard className="mt-0.5 h-5 w-5 text-primary" />
-
                       <div>
                         <p className="text-sm font-medium">
                           Online Payment
                         </p>
-
                         <p className="mt-1 text-xs text-muted-foreground">
-                          Pay online through the payment
-                          gateway.
+                          Verify your email first, then pay through
+                          the secure payment gateway.
                         </p>
                       </div>
                     </div>
                   </label>
 
-                  {/* Cash */}
                   <label
                     className={[
                       "cursor-pointer rounded-xl border p-4 transition",
@@ -1266,26 +1228,18 @@ export default function AdmissionForm({
                     <input
                       type="radio"
                       value="CASH"
-                      checked={
-                        field.value === "CASH"
-                      }
-                      onChange={() =>
-                        field.onChange("CASH")
-                      }
+                      checked={field.value === "CASH"}
+                      onChange={() => field.onChange("CASH")}
                       className="sr-only"
                     />
-
                     <div className="flex items-start gap-3">
                       <FileText className="mt-0.5 h-5 w-5 text-primary" />
-
                       <div>
                         <p className="text-sm font-medium">
                           Cash Payment
                         </p>
-
                         <p className="mt-1 text-xs text-muted-foreground">
-                          Pay the admission fee directly
-                          at the school.
+                          Pay the admission fee directly at the school.
                         </p>
                       </div>
                     </div>
@@ -1303,25 +1257,18 @@ export default function AdmissionForm({
         </section>
       )}
 
-      {/* ======================================================
-          NAVIGATION
-      ======================================================= */}
-
+      {/* NAVIGATION */}
       <div className="flex items-center justify-between border-t pt-6">
-        {/* Previous */}
         <button
           type="button"
           onClick={previousStep}
-          disabled={
-            step === 1 || isSubmitting
-          }
+          disabled={step === 1 || isSubmitting}
           className="inline-flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition hover:bg-muted disabled:pointer-events-none disabled:opacity-50"
         >
           <ArrowLeft className="h-4 w-4" />
           Previous
         </button>
 
-        {/* Continue */}
         {step < 4 ? (
           <button
             type="button"
@@ -1333,7 +1280,6 @@ export default function AdmissionForm({
             <ArrowRight className="h-4 w-4" />
           </button>
         ) : (
-          /* Submit */
           <button
             type="submit"
             disabled={isSubmitting}
@@ -1342,24 +1288,17 @@ export default function AdmissionForm({
             {isSubmitting ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                {values.paymentMethod ===
-                "ONLINE"
-                  ? "Redirecting..."
-                  : "Submitting..."}
+                Submitting...
               </>
             ) : (
               <>
-                {values.paymentMethod ===
-                "ONLINE" ? (
+                {values.paymentMethod === "ONLINE" ? (
                   <CreditCard className="h-4 w-4" />
                 ) : (
                   <Check className="h-4 w-4" />
                 )}
 
-                {values.paymentMethod ===
-                "ONLINE"
-                  ? "Proceed to Payment"
-                  : "Submit Application"}
+                Submit Application
               </>
             )}
           </button>
@@ -1369,25 +1308,16 @@ export default function AdmissionForm({
   );
 }
 
-// ============================================================
 // REVIEW ITEM
-// ============================================================
-
 interface ReviewItemProps {
   label: string;
   value?: string | number | null;
 }
 
-function ReviewItem({
-  label,
-  value,
-}: ReviewItemProps) {
+function ReviewItem({ label, value }: ReviewItemProps) {
   return (
     <div>
-      <p className="text-xs text-muted-foreground">
-        {label}
-      </p>
-
+      <p className="text-xs text-muted-foreground">{label}</p>
       <p className="mt-1 text-sm font-medium">
         {value !== undefined &&
         value !== null &&

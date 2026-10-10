@@ -1,26 +1,32 @@
 "use client";
 
-import { AlertCircle, ArrowLeft, Loader2 } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowLeft,
+  Loader2,
+} from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
-import { useSchool } from "@/features/schools/hooks";
 import AdmissionForm from "@/components/admissions/admission-form";
+import { useSchool } from "@/features/schools/hooks";
 
 function AdmissionsContent() {
   const searchParams = useSearchParams();
-
-  const schoolId = Number(searchParams.get("schoolId"));
+  const schoolIdParam = searchParams.get("schoolId");
+  const schoolId = Number(schoolIdParam);
 
   const isValidSchoolId =
-    Number.isInteger(schoolId) && schoolId > 0;
+    schoolIdParam !== null &&
+    Number.isInteger(schoolId) &&
+    schoolId > 0;
 
   const {
     data: school,
     isLoading,
     isError,
-  } = useSchool(schoolId);
+  } = useSchool(isValidSchoolId ? schoolId : 0);
 
   if (!isValidSchoolId) {
     return (
@@ -120,6 +126,13 @@ function AdmissionsContent() {
                 View School
               </Link>
             </div>
+
+            <Link
+              href={`/schools/${school.id}`}
+              className="mt-3 inline-block text-sm font-medium text-[#008f87] hover:underline sm:hidden"
+            >
+              View School
+            </Link>
           </div>
         </div>
 
@@ -134,12 +147,12 @@ function AdmissionsContent() {
           </h2>
 
           <p className="mt-3 text-sm leading-6 text-slate-500 sm:text-base">
-            Complete the application form with your student and guardian
-            information.
+            Complete the application form with your student and
+            guardian information.
           </p>
         </div>
 
-        {/* Admission Form */}
+        {/* Admission Form Only — Payment is on a separate page */}
         <AdmissionForm schoolId={school.id} />
       </div>
     </main>

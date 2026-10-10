@@ -45,15 +45,11 @@ export const admissionSchema = z.object({
 
   address: z.string().max(500).optional(),
 
+  // Academic
   classId: z.coerce
     .number()
     .int()
     .positive("Please select a class"),
-
-  sectionId: z.coerce
-    .number()
-    .int()
-    .positive("Please select a section"),
 
   academicYear: z
     .string()
@@ -65,6 +61,7 @@ export const admissionSchema = z.object({
 
   group: z.string().optional(),
 
+  // Documents
   studentPhotoUrl: z
     .string()
     .url("Please enter a valid photo URL")
@@ -83,6 +80,7 @@ export const admissionSchema = z.object({
     .optional()
     .or(z.literal("")),
 
+  // Payment
   paymentMethod: z.enum(["CASH", "ONLINE"]),
 });
 

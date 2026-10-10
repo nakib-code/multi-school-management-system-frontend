@@ -19,6 +19,7 @@ import {
   UserRoundCog,
   X,
   type LucideIcon,
+  ClipboardCheck,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -42,58 +43,58 @@ const navigationByRole: Record<string, NavigationItem[]> = {
   // ==================================================
   // SUPER ADMIN
   // ==================================================
- SUPER_ADMIN: [
-  {
-    label: "Dashboard",
-    href: "/dashboard/super-admin",
-    icon: LayoutDashboard,
-  },
-  {
-    label: "Schools",
-    href: "/dashboard/super-admin/schools",
-    icon: Building2,
-  },
-  {
-    label: "Users",
-    href: "/dashboard/super-admin/users",
-    icon: Users,
-  },
-  {
-    label: "Packages",
-    href: "/dashboard/super-admin/packages",
-    icon: Package,
-  },
-  {
-    label: "Subscriptions",
-    href: "/dashboard/super-admin/subscriptions",
-    icon: CreditCard,
-  },
-  {
-    label: "Payments",
-    href: "/dashboard/super-admin/payments",
-    icon: CreditCard,
-  },
-  {
-    label: "Custom Package Requests",
-    href: "/dashboard/super-admin/custom-package-requests",
-    icon: ClipboardList,
-  },
-  {
-    label: "Reports",
-    href: "/dashboard/super-admin/reports",
-    icon: FileBarChart,
-  },
-  {
-    label: "Audit Logs",
-    href: "/dashboard/super-admin/audit-logs",
-    icon: ShieldCheck,
-  },
-  {
-    label: "Settings",
-    href: "/dashboard/super-admin/settings",
-    icon: Settings,
-  },
-],
+  SUPER_ADMIN: [
+    {
+      label: "Dashboard",
+      href: "/dashboard/super-admin",
+      icon: LayoutDashboard,
+    },
+    {
+      label: "Schools",
+      href: "/dashboard/super-admin/schools",
+      icon: Building2,
+    },
+    {
+      label: "Users",
+      href: "/dashboard/super-admin/users",
+      icon: Users,
+    },
+    {
+      label: "Packages",
+      href: "/dashboard/super-admin/packages",
+      icon: Package,
+    },
+    {
+      label: "Subscriptions",
+      href: "/dashboard/super-admin/subscriptions",
+      icon: CreditCard,
+    },
+    {
+      label: "Payments",
+      href: "/dashboard/super-admin/payments",
+      icon: CreditCard,
+    },
+    {
+      label: "Custom Package Requests",
+      href: "/dashboard/super-admin/custom-package-requests",
+      icon: ClipboardList,
+    },
+    {
+      label: "Reports",
+      href: "/dashboard/super-admin/reports",
+      icon: FileBarChart,
+    },
+    {
+      label: "Audit Logs",
+      href: "/dashboard/super-admin/audit-logs",
+      icon: ShieldCheck,
+    },
+    {
+      label: "Settings",
+      href: "/dashboard/super-admin/settings",
+      icon: Settings,
+    },
+  ],
 
   // ==================================================
   // ADMIN
@@ -103,6 +104,11 @@ const navigationByRole: Record<string, NavigationItem[]> = {
       label: "Dashboard",
       href: "/dashboard/admin",
       icon: LayoutDashboard,
+    },
+    {
+      label: "Admissions",
+      href: "/dashboard/admin/admissions",
+      icon: ClipboardCheck,
     },
     {
       label: "Students",
@@ -120,14 +126,9 @@ const navigationByRole: Record<string, NavigationItem[]> = {
       icon: UserRoundCog,
     },
     {
-      label: "Classes",
+      label: "Classes & Sections",
       href: "/dashboard/admin/classes",
       icon: BookOpen,
-    },
-    {
-      label: "Sections",
-      href: "/dashboard/admin/sections",
-      icon: ClipboardList,
     },
     {
       label: "Subjects",
@@ -292,6 +293,11 @@ const navigationByRole: Record<string, NavigationItem[]> = {
       href: "/dashboard/student/fees",
       icon: CreditCard,
     },
+    {
+      label: "My Profile",
+      href: "/dashboard/student/profile",
+      icon: UserRound,
+    },
   ],
 
   // ==================================================
@@ -349,12 +355,10 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
   const { user, logout } = useAuth();
 
-  const navigation = user
-    ? (navigationByRole[user.role] ?? [])
-    : [];
+  const navigation = user ? (navigationByRole[user.role] ?? []) : [];
 
   const dashboardPath = user
-    ? dashboardPathByRole[user.role] ?? "/dashboard"
+    ? (dashboardPathByRole[user.role] ?? "/dashboard")
     : "/dashboard";
 
   // ==================================================
@@ -435,9 +439,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
               </div>
 
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium">
-                  {user.name}
-                </p>
+                <p className="truncate text-sm font-medium">{user.name}</p>
 
                 <p className="truncate text-xs text-muted-foreground">
                   {user.role.replaceAll("_", " ")}
@@ -452,8 +454,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           <div className="space-y-1">
             {navigation.map((item) => {
               const isActive =
-                pathname === item.href ||
-                pathname.startsWith(`${item.href}/`);
+                pathname === item.href || pathname.startsWith(`${item.href}/`);
 
               return (
                 <SidebarItem
