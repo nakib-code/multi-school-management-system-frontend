@@ -82,7 +82,7 @@ export default function Pricing() {
             </div>
 
             <Link
-              href="/register-school"
+              href="/auth/school-register"
               className="group relative inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-[#00d2c4] px-6 text-sm font-bold text-[#061842] shadow-lg shadow-cyan-500/20 transition hover:bg-[#00bcaf]"
             >
               Get Started

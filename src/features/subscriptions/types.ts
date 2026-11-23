@@ -10,7 +10,8 @@ export interface SubscriptionPackage {
   id: number;
   name: string;
   price: number | string;
-  billingCycle: "MONTHLY" | "YEARLY";
+  billingCycle: "MONTHLY" | "YEARLY" | "CUSTOM";
+  studentLimit?: number;
   isActive: boolean;
   features: SubscriptionFeature[];
 }

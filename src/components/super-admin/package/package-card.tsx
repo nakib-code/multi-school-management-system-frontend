@@ -153,14 +153,14 @@ export function PackageCard({
       {/* Actions */}
       <div className="mt-6 flex items-center gap-2 border-t pt-5">
         <Link
-          href={`/super-admin/packages/${packageData.id}`}
+          href={`/dashboard/super-admin/packages/${packageData.id}`}
           className="flex-1 rounded-lg border px-3 py-2 text-center text-sm font-medium transition hover:bg-muted"
         >
           Details
         </Link>
 
         <Link
-          href={`/super-admin/packages/${packageData.id}?edit=true`}
+          href={`/dashboard/super-admin/packages/${packageData.id}?edit=true`}
           className="flex-1 rounded-lg bg-primary px-3 py-2 text-center text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
         >
           Edit

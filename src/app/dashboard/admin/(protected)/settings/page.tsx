@@ -1,248 +1,149 @@
 "use client";
 
-import {
-  AlertCircle,
-  CheckCircle2,
-  Loader2,
-  Save,
-  Settings,
-} from "lucide-react";
+import { Save, Settings, Smartphone } from "lucide-react";
 import { useEffect, useState } from "react";
-
+import { toast } from "sonner";
+import { FileUpload } from "@/components/shared/file-upload";
+import { LoadingState } from "@/components/shared/loading";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   useAdmissionFee,
   useUpdateAdmissionFee,
 } from "@/features/admin/settings/hooks";
-import { admissionFeeSchema } from "@/features/admin/settings/schema";
+import { getApiErrorMessage } from "@/lib/api";
 import { useAuth } from "@/providers/auth-provider";
 
-export default function AdminSettingsPage() {
+export function SchoolSettingsView() {
   const { user } = useAuth();
+  const schoolId = user?.schoolId ?? 0;
 
-  const schoolId = user?.schoolId ?? null;
-
-  const {
-    data,
-    isLoading,
-    isError,
-    refetch,
-  } = useAdmissionFee(schoolId);
-
+  const { data: setting, isLoading } = useAdmissionFee(schoolId);
   const updateMutation = useUpdateAdmissionFee(schoolId);
 
   const [admissionFee, setAdmissionFee] = useState("");
-  const [validationError, setValidationError] = useState("");
+  const [bkashNumber, setBkashNumber] = useState("");
+  const [nagadNumber, setNagadNumber] = useState("");
+  const [rocketNumber, setRocketNumber] = useState("");
 
   useEffect(() => {
-    if (data) {
-      setAdmissionFee(String(data.admissionFee));
+    if (setting) {
+      setAdmissionFee(String(setting.admissionFee ?? ""));
+      setBkashNumber(setting.bkashNumber ?? "");
+      setNagadNumber(setting.nagadNumber ?? "");
+      setRocketNumber(setting.rocketNumber ?? "");
     }
-  }, [data]);
+  }, [setting]);
 
-  const handleSubmit = async (
-    event: React.FormEvent<HTMLFormElement>,
-  ) => {
-    event.preventDefault();
-
-    setValidationError("");
-
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
     const fee = Number(admissionFee);
-
-    const result = admissionFeeSchema.safeParse({
-      admissionFee: fee,
-    });
-
-    if (!result.success) {
-      setValidationError(
-        result.error.issues[0]?.message ??
-          "Please enter a valid admission fee.",
-      );
+    if (!Number.isFinite(fee) || fee <= 0) {
+      toast.error("Please enter a valid admission fee greater than 0");
       return;
     }
-
     try {
       await updateMutation.mutateAsync({
-        admissionFee: result.data.admissionFee,
+        admissionFee: fee,
+        bkashNumber: bkashNumber.trim() || null,
+        nagadNumber: nagadNumber.trim() || null,
+        rocketNumber: rocketNumber.trim() || null,
       });
-    } catch {
-      // Error is already handled by updateMutation.isError
+      toast.success("Institution fee & mobile banking settings saved");
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to update settings"));
     }
   };
 
-  if (!schoolId) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <div className="text-center">
-          <AlertCircle className="mx-auto h-6 w-6 text-destructive" />
-
-          <h1 className="mt-3 text-lg font-semibold">
-            School information not found
-          </h1>
-
-          <p className="mt-1 text-sm text-muted-foreground">
-            Your account is not connected to a school.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-5 w-5 animate-spin" />
-          Loading settings...
-        </div>
-      </div>
-    );
-  }
-
-  if (isError) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center px-4">
-        <div className="w-full max-w-md rounded-2xl border bg-background p-8 text-center shadow-sm">
-          <AlertCircle className="mx-auto h-6 w-6 text-destructive" />
-
-          <h1 className="mt-4 text-xl font-semibold">
-            Unable to load settings
-          </h1>
-
-          <p className="mt-2 text-sm text-muted-foreground">
-            We could not load your school settings.
-          </p>
-
-          <button
-            type="button"
-            onClick={() => refetch()}
-            className="mt-5 rounded-lg border px-4 py-2 text-sm font-medium transition hover:bg-muted"
-          >
-            Try again
-          </button>
-        </div>
-      </div>
-    );
-  }
+  if (isLoading) return <LoadingState message="Loading settings..." />;
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
+    <div className="mx-auto max-w-2xl space-y-6">
       <div>
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-            <Settings className="h-5 w-5 text-primary" />
-          </div>
-
-          <div>
-            <p className="text-sm text-muted-foreground">
-              School Admin
-            </p>
-
-            <h1 className="text-2xl font-semibold tracking-tight">
-              Settings
-            </h1>
-          </div>
-        </div>
-
-        <p className="mt-2 text-sm text-muted-foreground">
-          Manage settings for your school.
+        <h1 className="text-2xl font-bold tracking-tight">
+          Institution Settings
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Configure your admission fee and bKash, Nagad, and Rocket receiver numbers for student payments.
         </p>
       </div>
 
-      {/* Admission Fee */}
-      <section className="max-w-2xl rounded-2xl border bg-background shadow-sm">
-        <div className="border-b p-6">
-          <h2 className="font-semibold">
-            Admission Fee
-          </h2>
-
-          <p className="mt-1 text-sm text-muted-foreground">
-            Set the admission fee students need to pay when
-            applying to your school.
-          </p>
+      <form onSubmit={handleSave} className="space-y-6 rounded-xl border bg-card p-6">
+        <div className="flex items-center gap-2 border-b pb-3">
+          <Settings className="h-5 w-5 text-primary" />
+          <h2 className="font-semibold">Fee &amp; Payment Receiver Settings</h2>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="space-y-6 p-6"
-        >
-          <div className="max-w-sm">
-            <label
-              htmlFor="admissionFee"
-              className="text-sm font-medium"
-            >
-              Admission Fee
-            </label>
+        <div className="space-y-1.5">
+          <Label htmlFor="admissionFee">Admission Fee (BDT)</Label>
+          <Input
+            id="admissionFee"
+            type="number"
+            min={1}
+            step="0.01"
+            required
+            value={admissionFee}
+            onChange={(e) => setAdmissionFee(e.target.value)}
+            placeholder="e.g. 1500"
+          />
+        </div>
 
-            <div className="relative mt-2">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                ৳
-              </span>
+        <div className="space-y-4 border-t pt-4">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <Smartphone className="h-4 w-4 text-primary" />
+            Manual Mobile Banking Receiver Numbers (Bangladesh)
+          </div>
 
-              <input
-                id="admissionFee"
-                type="number"
-                min="1"
-                max="1000000"
-                step="0.01"
-                value={admissionFee}
-                onChange={(event) => {
-                  setAdmissionFee(event.target.value);
-                  setValidationError("");
-                  updateMutation.reset();
-                }}
-                placeholder="500"
-                className="h-11 w-full rounded-lg border bg-background pl-8 pr-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="bkashNumber">bKash Number</Label>
+              <Input
+                id="bkashNumber"
+                placeholder="01XXXXXXXXX"
+                value={bkashNumber}
+                onChange={(e) => setBkashNumber(e.target.value)}
               />
             </div>
 
-            <p className="mt-2 text-xs text-muted-foreground">
-              Enter the amount in Bangladeshi Taka.
-            </p>
+            <div className="space-y-1.5">
+              <Label htmlFor="nagadNumber">Nagad Number</Label>
+              <Input
+                id="nagadNumber"
+                placeholder="01XXXXXXXXX"
+                value={nagadNumber}
+                onChange={(e) => setNagadNumber(e.target.value)}
+              />
+            </div>
 
-            {validationError && (
-              <p className="mt-2 text-sm text-destructive">
-                {validationError}
-              </p>
-            )}
+            <div className="space-y-1.5">
+              <Label htmlFor="rocketNumber">Rocket Number</Label>
+              <Input
+                id="rocketNumber"
+                placeholder="01XXXXXXXXX"
+                value={rocketNumber}
+                onChange={(e) => setRocketNumber(e.target.value)}
+              />
+            </div>
           </div>
+        </div>
 
-          {updateMutation.isSuccess && (
-            <div className="flex items-center gap-2 rounded-lg bg-green-500/10 px-4 py-3 text-sm text-green-600">
-              <CheckCircle2 className="h-4 w-4" />
-              Admission fee updated successfully.
-            </div>
-          )}
+        <Button type="submit" disabled={updateMutation.isPending} className="gap-2">
+          <Save className="h-4 w-4" />
+          {updateMutation.isPending ? "Saving..." : "Save Settings"}
+        </Button>
+      </form>
 
-          {updateMutation.isError && (
-            <div className="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">
-              Failed to update admission fee. Please try
-              again.
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={
-              updateMutation.isPending ||
-              !admissionFee
-            }
-            className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {updateMutation.isPending ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4" />
-                Save Changes
-              </>
-            )}
-          </button>
-        </form>
-      </section>
+      <div className="rounded-xl border bg-card p-6">
+        <FileUpload
+          category="SCHOOL_LOGO"
+          label="Institution Logo"
+          accept="image/jpeg,image/png,image/webp"
+          maxSizeMb={5}
+        />
+      </div>
     </div>
   );
 }
+
+export default SchoolSettingsView;

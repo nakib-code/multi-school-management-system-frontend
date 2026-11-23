@@ -16,7 +16,9 @@ export type PackageFeature =
   | "PAYMENT_MANAGEMENT"
   | "TEACHER_SALARY"
   | "REPORTS"
-  | "NOTIFICATIONS";
+  | "NOTIFICATIONS"
+  | "KINDERGARTEN_MODULE"
+  | "HEFZ_MODULE";
 
 export interface PackageFeatureConfig {
   id: number;

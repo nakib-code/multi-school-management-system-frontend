@@ -52,8 +52,9 @@ export default function DashboardLayout({
       return;
     }
 
-    // Check role-based access
+    // Check role-based access (shared /dashboard/notifications is allowed for all authenticated roles)
     const isAuthorizedPath =
+      pathname === "/dashboard/notifications" ||
       pathname === expectedPath ||
       pathname.startsWith(`${expectedPath}/`);
 
@@ -115,8 +116,9 @@ export default function DashboardLayout({
     );
   }
 
-  // Check role-based access
+  // Check role-based access (shared /dashboard/notifications is allowed for all authenticated roles)
   const isAuthorizedPath =
+    pathname === "/dashboard/notifications" ||
     pathname === expectedPath ||
     pathname.startsWith(`${expectedPath}/`);
 

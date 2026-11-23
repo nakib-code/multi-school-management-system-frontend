@@ -8,7 +8,7 @@ export default function CreatePackagePage() {
       {/* Header */}
       <div>
         <Link
-          href="/super-admin/packages"
+          href="/dashboard/super-admin/packages"
           className="text-sm text-muted-foreground transition hover:text-foreground"
         >
           ← Back to Packages

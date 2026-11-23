@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Mail, Phone, MapPin, Facebook, Youtube } from 'lucide-react'
+import { Globe, Mail, Phone, MapPin, PlayCircle } from 'lucide-react'
 import type { SchoolPublic } from '@/features/school-site/types'
 
 export function SchoolFooter({ school }: { school: SchoolPublic }) {
@@ -19,7 +19,7 @@ export function SchoolFooter({ school }: { school: SchoolPublic }) {
                 rel="noreferrer"
                 aria-label="Facebook"
               >
-                <Facebook className="w-5 h-5 hover:text-white" />
+                <Globe className="w-5 h-5 hover:text-white" />
               </a>
             )}
             {school.youtubeUrl && (
@@ -29,7 +29,7 @@ export function SchoolFooter({ school }: { school: SchoolPublic }) {
                 rel="noreferrer"
                 aria-label="YouTube"
               >
-                <Youtube className="w-5 h-5 hover:text-white" />
+                <PlayCircle className="w-5 h-5 hover:text-white" />
               </a>
             )}
           </div>

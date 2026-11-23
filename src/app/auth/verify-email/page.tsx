@@ -86,7 +86,7 @@ const onSubmit = async (
     <main className="flex min-h-screen items-center justify-center bg-muted/30 px-4 py-10">
       <div className="w-full max-w-md">
         <Link
-          href="/auth/register"
+          href="/auth/school-register"
           className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -176,7 +176,7 @@ const onSubmit = async (
             </p>
 
             <Link
-              href="/auth/register"
+              href="/auth/school-register"
               className="mt-3 inline-block text-sm font-medium text-primary hover:underline"
             >
               Register again

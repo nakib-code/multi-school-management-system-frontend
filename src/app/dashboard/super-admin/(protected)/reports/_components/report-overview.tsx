@@ -213,7 +213,7 @@ export function ReportOverview() {
           title="Total Revenue"
           value={formatAmount(payments.totalRevenue)}
           icon={<CreditCard className="h-5 w-5" />}
-          description={`${payments.paidPayments} paid payments`}
+          description={`${payments.verifiedPayments} verified payments`}
         />
 
         <StatCard
@@ -394,18 +394,23 @@ export function ReportOverview() {
             />
 
             <BreakdownRow
-              label="Online Revenue"
-              value={formatAmount(payments.onlineRevenue)}
+              label="bKash Revenue"
+              value={formatAmount(payments.bkashRevenue)}
             />
 
             <BreakdownRow
-              label="Cash Revenue"
-              value={formatAmount(payments.cashRevenue)}
+              label="Nagad Revenue"
+              value={formatAmount(payments.nagadRevenue)}
             />
 
             <BreakdownRow
-              label="Pending Cash"
-              value={formatAmount(payments.pendingCashAmount)}
+              label="Rocket Revenue"
+              value={formatAmount(payments.rocketRevenue)}
+            />
+
+            <BreakdownRow
+              label="Pending Verification Amount"
+              value={formatAmount(payments.pendingAmount)}
             />
 
             <BreakdownRow
@@ -414,8 +419,8 @@ export function ReportOverview() {
             />
 
             <BreakdownRow
-              label="Paid Payments"
-              value={payments.paidPayments}
+              label="Verified Payments"
+              value={payments.verifiedPayments}
             />
 
             <BreakdownRow
@@ -424,13 +429,8 @@ export function ReportOverview() {
             />
 
             <BreakdownRow
-              label="Failed Payments"
-              value={payments.failedPayments}
-            />
-
-            <BreakdownRow
-              label="Cancelled Payments"
-              value={payments.cancelledPayments}
+              label="Rejected Payments"
+              value={payments.rejectedPayments}
             />
           </div>
         </div>

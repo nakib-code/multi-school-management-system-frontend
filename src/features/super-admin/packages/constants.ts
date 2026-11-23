@@ -68,4 +68,12 @@ export const PACKAGE_FEATURES: {
     value: "NOTIFICATIONS",
     label: "Notifications",
   },
+  {
+    value: "KINDERGARTEN_MODULE",
+    label: "Kindergarten Module",
+  },
+  {
+    value: "HEFZ_MODULE",
+    label: "Hefz & Najera Module",
+  },
 ];

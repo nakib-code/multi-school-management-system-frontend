@@ -1,458 +1,185 @@
 "use client";
 
 import {
-  AlertCircle,
-  ArrowRight,
-  Banknote,
+  CheckCircle2,
+  Clock,
   CreditCard,
-  DollarSign,
-  Loader2,
-  RefreshCw,
+  History,
+  Smartphone,
   Wallet,
+  XCircle,
 } from "lucide-react";
 import Link from "next/link";
-
+import { EmptyState } from "@/components/shared/empty-state";
+import { ErrorState } from "@/components/shared/error-state";
+import { LoadingState } from "@/components/shared/loading";
 import {
   useSubscriptionPaymentHistory,
   useSubscriptionPaymentSummary,
 } from "@/features/payments/hooks";
+import { getApiErrorMessage } from "@/lib/api";
 
-function formatAmount(amount: number) {
-  return new Intl.NumberFormat("en-BD", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
-}
+const formatBDT = (amount: number) => `৳${Number(amount || 0).toLocaleString("en-BD")}`;
 
-function formatDate(date: string) {
-  return new Date(date).toLocaleDateString("en-BD", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
+export default function SuperAdminPaymentsOverviewPage() {
+  const summaryQuery = useSubscriptionPaymentSummary();
+  const historyQuery = useSubscriptionPaymentHistory();
 
-export default function PaymentsPage() {
-  const {
-    data: summary,
-    isLoading: summaryLoading,
-    isError: summaryError,
-    refetch: refetchSummary,
-  } = useSubscriptionPaymentSummary();
+  if (summaryQuery.isLoading || historyQuery.isLoading) {
+    return <LoadingState message="Loading subscription payment overview..." />;
+  }
 
-  const {
-    data: history,
-    isLoading: historyLoading,
-    isError: historyError,
-    refetch: refetchHistory,
-  } = useSubscriptionPaymentHistory();
-
-  const isLoading = summaryLoading || historyLoading;
-  const hasError = summaryError || historyError;
-
-  const handleRefresh = () => {
-    refetchSummary();
-    refetchHistory();
-  };
-
-  if (isLoading) {
+  if (summaryQuery.isError) {
     return (
-      <div className="flex min-h-[400px] items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-7 w-7 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">
-            Loading payment information...
-          </p>
-        </div>
-      </div>
+      <ErrorState
+        message={getApiErrorMessage(summaryQuery.error, "Failed to load payment summary")}
+        onRetry={() => summaryQuery.refetch()}
+      />
     );
   }
 
-  if (hasError) {
-    return (
-      <div className="flex min-h-[400px] items-center justify-center">
-        <div className="flex max-w-sm flex-col items-center gap-4 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
-            <AlertCircle className="h-6 w-6 text-destructive" />
-          </div>
-
-          <div>
-            <h2 className="font-semibold">Failed to load payments</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Something went wrong while loading payment information.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleRefresh}
-            className="inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition hover:bg-muted"
-          >
-            <RefreshCw className="h-4 w-4" />
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  const recentPayments = history?.slice(0, 5) ?? [];
+  const summary = summaryQuery.data;
+  const recent = (historyQuery.data ?? []).slice(0, 6);
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-sm text-muted-foreground">Super Admin</p>
-
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Payments
+          <h1 className="text-2xl font-bold tracking-tight">
+            Subscription Payments
           </h1>
-
           <p className="mt-1 text-sm text-muted-foreground">
-            Manage subscription payments and payment history.
+            Verify manual bKash, Nagad, and Rocket subscription payments and track platform revenue.
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={handleRefresh}
-          className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border bg-background px-3 text-sm font-medium transition hover:bg-muted"
-        >
-          <RefreshCw className="h-4 w-4" />
-          Refresh
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/dashboard/super-admin/payments/cash"
+            className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            <Clock className="h-4 w-4" />
+            Pending Queue ({summary?.pendingPayments ?? 0})
+          </Link>
+          <Link
+            href="/dashboard/super-admin/payments/history"
+            className="inline-flex h-9 items-center gap-2 rounded-lg border bg-background px-4 text-sm font-medium hover:bg-muted"
+          >
+            <History className="h-4 w-4" />
+            Full History
+          </Link>
+        </div>
       </div>
 
-      {/* Revenue Summary */}
-      <section>
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold">Payment Overview</h2>
-          <p className="text-sm text-muted-foreground">
-            Current subscription payment summary.
-          </p>
-        </div>
-
+      {summary && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {/* Total Revenue */}
-          <div className="rounded-xl border bg-background p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">
-                  Total Revenue
-                </p>
-
-                <p className="mt-2 text-2xl font-semibold">
-                  ৳{formatAmount(summary?.totalRevenue ?? 0)}
-                </p>
-              </div>
-
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                <DollarSign className="h-5 w-5 text-primary" />
-              </div>
+          <div className="rounded-xl border bg-card p-5">
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span className="text-xs font-medium uppercase">Total Revenue</span>
+              <Wallet className="h-4 w-4 text-primary" />
             </div>
-          </div>
-
-          {/* Online Revenue */}
-          <div className="rounded-xl border bg-background p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">
-                  Online Revenue
-                </p>
-
-                <p className="mt-2 text-2xl font-semibold">
-                  ৳{formatAmount(summary?.onlineRevenue ?? 0)}
-                </p>
-              </div>
-
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10">
-                <CreditCard className="h-5 w-5 text-blue-600" />
-              </div>
-            </div>
-          </div>
-
-          {/* Cash Revenue */}
-          <div className="rounded-xl border bg-background p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">
-                  Cash Revenue
-                </p>
-
-                <p className="mt-2 text-2xl font-semibold">
-                  ৳{formatAmount(summary?.cashRevenue ?? 0)}
-                </p>
-              </div>
-
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-500/10">
-                <Banknote className="h-5 w-5 text-green-600" />
-              </div>
-            </div>
-          </div>
-
-          {/* Pending Cash */}
-          <div className="rounded-xl border bg-background p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">
-                  Pending Cash
-                </p>
-
-                <p className="mt-2 text-2xl font-semibold">
-                  ৳{formatAmount(summary?.pendingCashAmount ?? 0)}
-                </p>
-              </div>
-
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-yellow-500/10">
-                <Wallet className="h-5 w-5 text-yellow-600" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Payment Status */}
-      <section>
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold">Payment Status</h2>
-          <p className="text-sm text-muted-foreground">
-            Payment status breakdown.
-          </p>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <StatusCard
-            label="Total Payments"
-            value={summary?.totalPayments ?? 0}
-          />
-
-          <StatusCard
-            label="Paid"
-            value={summary?.paidPayments ?? 0}
-          />
-
-          <StatusCard
-            label="Pending"
-            value={summary?.pendingPayments ?? 0}
-          />
-
-          <StatusCard
-            label="Failed"
-            value={summary?.failedPayments ?? 0}
-          />
-
-          <StatusCard
-            label="Cancelled"
-            value={summary?.cancelledPayments ?? 0}
-          />
-        </div>
-      </section>
-
-      {/* Payment Actions */}
-      <section>
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold">Payment Management</h2>
-          <p className="text-sm text-muted-foreground">
-            Manage and review subscription payments.
-          </p>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-3">
-          <PaymentActionCard
-            title="Cash Payments"
-            description="Review and approve pending cash payments."
-            href="/dashboard/super-admin/payments/cash"
-            icon={Banknote}
-          />
-
-          <PaymentActionCard
-            title="Online Payments"
-            description="View online subscription payment information."
-            href="/dashboard/super-admin/payments/online"
-            icon={CreditCard}
-          />
-
-          <PaymentActionCard
-            title="Payment History"
-            description="View all subscription payment records."
-            href="/dashboard/super-admin/payments/history"
-            icon={Wallet}
-          />
-        </div>
-      </section>
-
-      {/* Recent Payments */}
-      <section>
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-semibold">Recent Payments</h2>
-            <p className="text-sm text-muted-foreground">
-              Latest subscription payment activity.
+            <p className="mt-2 text-2xl font-bold">{formatBDT(summary.totalRevenue)}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {summary.verifiedPayments} verified payments
             </p>
           </div>
 
-          {history && history.length > 5 && (
-            <Link
-              href="/dashboard/super-admin/payments/history"
-              className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
-            >
-              View all
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          )}
+          <div className="rounded-xl border bg-card p-5">
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span className="text-xs font-medium uppercase">bKash Revenue</span>
+              <Smartphone className="h-4 w-4 text-pink-600" />
+            </div>
+            <p className="mt-2 text-2xl font-bold">{formatBDT(summary.bkashRevenue)}</p>
+            <p className="mt-1 text-xs text-muted-foreground">Verified bKash</p>
+          </div>
+
+          <div className="rounded-xl border bg-card p-5">
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span className="text-xs font-medium uppercase">Nagad / Rocket</span>
+              <CreditCard className="h-4 w-4 text-orange-600" />
+            </div>
+            <p className="mt-2 text-2xl font-bold">
+              {formatBDT(summary.nagadRevenue + summary.rocketRevenue)}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Nagad {formatBDT(summary.nagadRevenue)} • Rocket {formatBDT(summary.rocketRevenue)}
+            </p>
+          </div>
+
+          <div className="rounded-xl border bg-card p-5">
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span className="text-xs font-medium uppercase">Pending Verification</span>
+              <Clock className="h-4 w-4 text-amber-600" />
+            </div>
+            <p className="mt-2 text-2xl font-bold">{formatBDT(summary.pendingAmount)}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {summary.pendingPayments} pending • {summary.rejectedPayments} rejected
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className="rounded-xl border bg-card">
+        <div className="flex items-center justify-between border-b px-5 py-4">
+          <h2 className="font-semibold">Recent Subscription Payments</h2>
+          <Link
+            href="/dashboard/super-admin/payments/history"
+            className="text-xs font-medium text-primary hover:underline"
+          >
+            View all
+          </Link>
         </div>
 
-        <div className="overflow-hidden rounded-xl border bg-background">
-          {recentPayments.length === 0 ? (
-            <div className="flex min-h-[180px] items-center justify-center">
-              <p className="text-sm text-muted-foreground">
-                No payment history found.
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="border-b bg-muted/40 text-left text-xs text-muted-foreground">
-                  <tr>
-                    <th className="px-5 py-3 font-medium">School</th>
-                    <th className="px-5 py-3 font-medium">Package</th>
-                    <th className="px-5 py-3 font-medium">Amount</th>
-                    <th className="px-5 py-3 font-medium">Method</th>
-                    <th className="px-5 py-3 font-medium">Status</th>
-                    <th className="px-5 py-3 font-medium">Date</th>
+        {recent.length === 0 ? (
+          <div className="p-6">
+            <EmptyState
+              icon={Wallet}
+              title="No subscription payments yet"
+              description="Manual bKash, Nagad, and Rocket submissions from institutions will appear here."
+            />
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b bg-muted/40 text-xs uppercase text-muted-foreground">
+                <tr>
+                  <th className="px-4 py-3">Institution</th>
+                  <th className="px-4 py-3">Method &amp; TrxID</th>
+                  <th className="px-4 py-3">Sender</th>
+                  <th className="px-4 py-3">Amount</th>
+                  <th className="px-4 py-3">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {recent.map((p) => (
+                  <tr key={p.id}>
+                    <td className="px-4 py-3">
+                      <p className="font-medium">{p.school?.name ?? `School #${p.schoolId}`}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {p.subscription?.package?.name ?? ""}
+                      </p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="font-medium">{p.paymentMethod}</span>
+                      <p className="font-mono text-xs text-muted-foreground">{p.trxId}</p>
+                    </td>
+                    <td className="px-4 py-3 text-xs">{p.senderNumber}</td>
+                    <td className="px-4 py-3 font-medium">{formatBDT(p.paidAmount)}</td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium">
+                        {p.status === "VERIFIED" && <CheckCircle2 className="h-3 w-3 text-emerald-600" />}
+                        {p.status === "PENDING" && <Clock className="h-3 w-3 text-amber-600" />}
+                        {p.status === "REJECTED" && <XCircle className="h-3 w-3 text-rose-600" />}
+                        {p.status}
+                      </span>
+                    </td>
                   </tr>
-                </thead>
-
-                <tbody className="divide-y">
-                  {recentPayments.map((payment) => (
-                    <tr
-                      key={payment.id}
-                      className="transition hover:bg-muted/30"
-                    >
-                      <td className="px-5 py-3">
-                        <div>
-                          <p className="font-medium">
-                            {payment.school.name}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {payment.school.code}
-                          </p>
-                        </div>
-                      </td>
-
-                      <td className="px-5 py-3">
-                        {payment.subscription.package.name}
-                      </td>
-
-                      <td className="px-5 py-3 font-medium">
-                        {payment.currency}{" "}
-                        {formatAmount(payment.amount)}
-                      </td>
-
-                      <td className="px-5 py-3">
-                        {payment.paymentMethod}
-                      </td>
-
-                      <td className="px-5 py-3">
-                        <StatusBadge status={payment.status} />
-                      </td>
-
-                      <td className="px-5 py-3 text-muted-foreground">
-                        {formatDate(payment.createdAt)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </section>
-    </div>
-  );
-}
-
-// ====================================================
-// STATUS CARD
-// ====================================================
-
-function StatusCard({
-  label,
-  value,
-}: {
-  label: string;
-  value: number;
-}) {
-  return (
-    <div className="rounded-xl border bg-background p-5">
-      <p className="text-sm text-muted-foreground">{label}</p>
-
-      <p className="mt-2 text-2xl font-semibold">{value}</p>
-    </div>
-  );
-}
-
-// ====================================================
-// PAYMENT ACTION CARD
-// ====================================================
-
-function PaymentActionCard({
-  title,
-  description,
-  href,
-  icon: Icon,
-}: {
-  title: string;
-  description: string;
-  href: string;
-  icon: typeof Banknote;
-}) {
-  return (
-    <Link
-      href={href}
-      className="group rounded-xl border bg-background p-5 transition hover:border-primary/40 hover:bg-muted/20"
-    >
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-          <Icon className="h-5 w-5 text-primary" />
-        </div>
-
-        <ArrowRight className="h-4 w-4 text-muted-foreground transition group-hover:translate-x-1 group-hover:text-primary" />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
-
-      <h3 className="mt-4 font-semibold">{title}</h3>
-
-      <p className="mt-1 text-sm text-muted-foreground">
-        {description}
-      </p>
-    </Link>
-  );
-}
-
-// ====================================================
-// STATUS BADGE
-// ====================================================
-
-function StatusBadge({ status }: { status: string }) {
-  const normalizedStatus = status.toUpperCase();
-
-  const className =
-    normalizedStatus === "PAID"
-      ? "bg-green-500/10 text-green-600"
-      : normalizedStatus === "PENDING"
-        ? "bg-yellow-500/10 text-yellow-600"
-        : normalizedStatus === "FAILED"
-          ? "bg-red-500/10 text-red-600"
-          : normalizedStatus === "CANCELLED"
-            ? "bg-muted text-muted-foreground"
-            : "bg-muted text-muted-foreground";
-
-  return (
-    <span
-      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${className}`}
-    >
-      {normalizedStatus}
-    </span>
+    </div>
   );
 }

@@ -1,113 +1,83 @@
 import { api } from "@/lib/api";
 import type { ApiResponse } from "@/types/api";
-
 import type {
-  CashPaymentActionResponse,
-  CashPaymentRequestResponse,
-  InitiateSubscriptionPaymentResponse,
-  PendingCashPaymentsResponse,
-  SubscriptionPaymentHistoryResponse,
+  MobilePaymentMethod,
+  PaymentMethodsResponse,
+  SubmitSubscriptionPaymentInput,
+  SubscriptionPaymentRecord,
+  SubscriptionPaymentStatus,
   SubscriptionPaymentSummary,
 } from "./types";
 
-// ====================================================
-// ADMIN - ONLINE SUBSCRIPTION PAYMENT
-// ====================================================
+export const getPaymentMethods = async (): Promise<PaymentMethodsResponse> => {
+  const res = await api.get<ApiResponse<PaymentMethodsResponse>>(
+    "/payments/methods",
+  );
+  return res.data.data;
+};
 
-export const initiateSubscriptionPayment = async (
+export const submitSubscriptionPayment = async (
   subscriptionId: number,
-): Promise<InitiateSubscriptionPaymentResponse> => {
-  const response = await api.post<
-    ApiResponse<InitiateSubscriptionPaymentResponse>
-  >(`/subscriptions/${subscriptionId}/pay`);
-
-  return response.data.data;
+  payload: SubmitSubscriptionPaymentInput,
+): Promise<SubscriptionPaymentRecord> => {
+  const res = await api.post<ApiResponse<SubscriptionPaymentRecord>>(
+    `/subscriptions/${subscriptionId}/payments`,
+    payload,
+  );
+  return res.data.data;
 };
 
-// ====================================================
-// ADMIN - CASH PAYMENT REQUEST
-// ====================================================
-
-export const requestCashPayment = async (
-  subscriptionId: number,
-): Promise<CashPaymentRequestResponse> => {
-  const response = await api.post<
-    ApiResponse<CashPaymentRequestResponse>
-  >(`/subscriptions/${subscriptionId}/cash-payment`);
-
-  return response.data.data;
+export const getPendingSubscriptionPayments = async (): Promise<
+  SubscriptionPaymentRecord[]
+> => {
+  const res = await api.get<ApiResponse<SubscriptionPaymentRecord[]>>(
+    "/payments/subscription/pending",
+  );
+  return res.data.data;
 };
 
-// ====================================================
-// SUPER ADMIN - GET PENDING CASH PAYMENTS
-// ====================================================
-
-export const getPendingCashPayments =
-  async (): Promise<PendingCashPaymentsResponse> => {
-    const response = await api.get<
-      ApiResponse<PendingCashPaymentsResponse>
-    >("/payments/subscription/cash/pending");
-
-    return response.data.data;
-  };
-
-// ====================================================
-// SUPER ADMIN - APPROVE CASH PAYMENT
-// ====================================================
-
-export const approveCashPayment = async (
+export const verifySubscriptionPayment = async (
   paymentId: number,
-  remarks?: string,
-): Promise<CashPaymentActionResponse> => {
-  const response = await api.patch<
-    ApiResponse<CashPaymentActionResponse>
-  >(`/payments/subscription/cash/${paymentId}/approve`, {
-    remarks: remarks?.trim() || undefined,
-  });
-
-  return response.data.data;
+): Promise<{
+  payment: SubscriptionPaymentRecord;
+  subscription: { id: number; status: string };
+}> => {
+  const res = await api.patch<
+    ApiResponse<{
+      payment: SubscriptionPaymentRecord;
+      subscription: { id: number; status: string };
+    }>
+  >(`/payments/subscription/${paymentId}/verify`);
+  return res.data.data;
 };
 
-// ====================================================
-// SUPER ADMIN - REJECT CASH PAYMENT
-// ====================================================
-
-export const rejectCashPayment = async (
+export const rejectSubscriptionPayment = async (
   paymentId: number,
-  remarks?: string,
-): Promise<CashPaymentActionResponse> => {
-  const response = await api.patch<
-    ApiResponse<CashPaymentActionResponse>
-  >(`/payments/subscription/cash/${paymentId}/reject`, {
-    remarks: remarks?.trim() || undefined,
-  });
-
-  return response.data.data;
+  rejectionReason: string,
+): Promise<SubscriptionPaymentRecord> => {
+  const res = await api.patch<ApiResponse<SubscriptionPaymentRecord>>(
+    `/payments/subscription/${paymentId}/reject`,
+    { rejectionReason },
+  );
+  return res.data.data;
 };
-
-
-// ====================================================
-// SUPER ADMIN - PAYMENT SUMMARY
-// ====================================================
 
 export const getSubscriptionPaymentSummary =
   async (): Promise<SubscriptionPaymentSummary> => {
-    const response = await api.get<
-      ApiResponse<SubscriptionPaymentSummary>
-    >("/payments/subscription/summary");
-
-    return response.data.data;
+    const res = await api.get<ApiResponse<SubscriptionPaymentSummary>>(
+      "/payments/subscription/summary",
+    );
+    return res.data.data;
   };
 
-// ====================================================
-// SUPER ADMIN - PAYMENT HISTORY
-// ====================================================
-
-export const getSubscriptionPaymentHistory =
-  async (): Promise<SubscriptionPaymentHistoryResponse> => {
-    const response = await api.get<
-      ApiResponse<SubscriptionPaymentHistoryResponse>
-    >("/payments/subscription/history");
-
-    return response.data.data;
-  };
+export const getSubscriptionPaymentHistory = async (params?: {
+  status?: SubscriptionPaymentStatus;
+  paymentMethod?: MobilePaymentMethod;
+  schoolId?: number;
+}): Promise<SubscriptionPaymentRecord[]> => {
+  const res = await api.get<ApiResponse<SubscriptionPaymentRecord[]>>(
+    "/payments/subscription/history",
+    { params },
+  );
+  return res.data.data;
+};

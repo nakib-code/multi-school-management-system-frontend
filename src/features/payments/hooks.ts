@@ -1,175 +1,115 @@
 "use client";
 
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { subscriptionKeys } from "@/features/subscriptions/hooks";
+import { getApiErrorMessage } from "@/lib/api";
 import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
-
-import {
-  approveCashPayment,
-  getPendingCashPayments,
+  getPaymentMethods,
+  getPendingSubscriptionPayments,
   getSubscriptionPaymentHistory,
   getSubscriptionPaymentSummary,
-  initiateSubscriptionPayment,
-  rejectCashPayment,
-  requestCashPayment,
+  rejectSubscriptionPayment,
+  submitSubscriptionPayment,
+  verifySubscriptionPayment,
 } from "./api";
-
-// ====================================================
-// QUERY KEYS
-// ====================================================
+import type {
+  MobilePaymentMethod,
+  SubmitSubscriptionPaymentInput,
+  SubscriptionPaymentStatus,
+} from "./types";
 
 export const paymentKeys = {
   all: ["payments"] as const,
-
-  pendingCash: () =>
-    [...paymentKeys.all, "pending-cash"] as const,
-
-  summary: () =>
-    [...paymentKeys.all, "summary"] as const,
-
-  history: () =>
-    [...paymentKeys.all, "history"] as const,
+  methods: () => [...paymentKeys.all, "methods"] as const,
+  pending: () => [...paymentKeys.all, "pending"] as const,
+  summary: () => [...paymentKeys.all, "summary"] as const,
+  history: (params?: {
+    status?: SubscriptionPaymentStatus;
+    paymentMethod?: MobilePaymentMethod;
+    schoolId?: number;
+  }) => [...paymentKeys.all, "history", params] as const,
 };
 
-// ====================================================
-// ADMIN - ONLINE PAYMENT
-// ====================================================
-
-export const useInitiateSubscriptionPayment = () => {
-  return useMutation({
-    mutationFn: (subscriptionId: number) =>
-      initiateSubscriptionPayment(subscriptionId),
-
-    onSuccess: (data) => {
-      if (data.paymentUrl) {
-        window.location.href = data.paymentUrl;
-      }
-    },
+export const usePaymentMethods = () =>
+  useQuery({
+    queryKey: paymentKeys.methods(),
+    queryFn: getPaymentMethods,
   });
-};
 
-// ====================================================
-// ADMIN - CASH PAYMENT
-// ====================================================
-
-export const useRequestCashPayment = () => {
+export const useSubmitSubscriptionPayment = () => {
   const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: (subscriptionId: number) =>
-      requestCashPayment(subscriptionId),
-
+    mutationFn: ({
+      subscriptionId,
+      payload,
+    }: {
+      subscriptionId: number;
+      payload: SubmitSubscriptionPaymentInput;
+    }) => submitSubscriptionPayment(subscriptionId, payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: paymentKeys.pendingCash(),
-      });
-
-      queryClient.invalidateQueries({
-        queryKey: paymentKeys.summary(),
-      });
-
-      queryClient.invalidateQueries({
-        queryKey: paymentKeys.history(),
-      });
+      toast.success("Payment submitted and pending Super Admin verification");
+      queryClient.invalidateQueries({ queryKey: subscriptionKeys.me() });
+      queryClient.invalidateQueries({ queryKey: paymentKeys.all });
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, "Failed to submit payment"));
     },
   });
 };
 
-// ====================================================
-// SUPER ADMIN - PENDING CASH PAYMENTS
-// ====================================================
+export const usePendingSubscriptionPayments = () =>
+  useQuery({
+    queryKey: paymentKeys.pending(),
+    queryFn: getPendingSubscriptionPayments,
+  });
 
-export const usePendingCashPayments = () => {
-  return useQuery({
-    queryKey: paymentKeys.pendingCash(),
-    queryFn: getPendingCashPayments,
+export const useVerifySubscriptionPayment = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (paymentId: number) => verifySubscriptionPayment(paymentId),
+    onSuccess: () => {
+      toast.success("Payment verified and subscription activated");
+      queryClient.invalidateQueries({ queryKey: paymentKeys.all });
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, "Failed to verify payment"));
+    },
   });
 };
 
-// ====================================================
-// SUPER ADMIN - APPROVE CASH PAYMENT
-// ====================================================
-
-export const useApproveCashPayment = () => {
+export const useRejectSubscriptionPayment = () => {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: ({
       paymentId,
-      remarks,
+      rejectionReason,
     }: {
       paymentId: number;
-      remarks?: string;
-    }) => approveCashPayment(paymentId, remarks),
-
+      rejectionReason: string;
+    }) => rejectSubscriptionPayment(paymentId, rejectionReason),
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: paymentKeys.pendingCash(),
-      });
-
-      queryClient.invalidateQueries({
-        queryKey: paymentKeys.summary(),
-      });
-
-      queryClient.invalidateQueries({
-        queryKey: paymentKeys.history(),
-      });
+      toast.success("Payment rejected");
+      queryClient.invalidateQueries({ queryKey: paymentKeys.all });
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, "Failed to reject payment"));
     },
   });
 };
 
-// ====================================================
-// SUPER ADMIN - REJECT CASH PAYMENT
-// ====================================================
-
-export const useRejectCashPayment = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({
-      paymentId,
-      remarks,
-    }: {
-      paymentId: number;
-      remarks?: string;
-    }) => rejectCashPayment(paymentId, remarks),
-
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: paymentKeys.pendingCash(),
-      });
-
-      queryClient.invalidateQueries({
-        queryKey: paymentKeys.summary(),
-      });
-
-      queryClient.invalidateQueries({
-        queryKey: paymentKeys.history(),
-      });
-    },
-  });
-};
-
-// ====================================================
-// SUPER ADMIN - PAYMENT SUMMARY
-// ====================================================
-
-export const useSubscriptionPaymentSummary = () => {
-  return useQuery({
+export const useSubscriptionPaymentSummary = () =>
+  useQuery({
     queryKey: paymentKeys.summary(),
     queryFn: getSubscriptionPaymentSummary,
   });
-};
 
-// ====================================================
-// SUPER ADMIN - PAYMENT HISTORY
-// ====================================================
-
-export const useSubscriptionPaymentHistory = () => {
-  return useQuery({
-    queryKey: paymentKeys.history(),
-    queryFn: getSubscriptionPaymentHistory,
+export const useSubscriptionPaymentHistory = (params?: {
+  status?: SubscriptionPaymentStatus;
+  paymentMethod?: MobilePaymentMethod;
+  schoolId?: number;
+}) =>
+  useQuery({
+    queryKey: paymentKeys.history(params),
+    queryFn: () => getSubscriptionPaymentHistory(params),
   });
-};

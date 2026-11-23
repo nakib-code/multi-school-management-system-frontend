@@ -1,5 +1,6 @@
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import CustomPackageRequestDetails from "@/components/super-admin/custom-package-request/custom-package-request-details";
 
 interface CustomPackageRequestDetailsPageProps {
   params: Promise<{
@@ -11,6 +12,7 @@ export default async function CustomPackageRequestDetailsPage({
   params,
 }: CustomPackageRequestDetailsPageProps) {
   const { id } = await params;
+  const numericId = Number(id);
 
   return (
     <div className="space-y-6">
@@ -27,12 +29,19 @@ export default async function CustomPackageRequestDetailsPage({
           <h1 className="text-2xl font-bold tracking-tight">
             Custom Package Request
           </h1>
-
           <p className="mt-1 text-sm text-muted-foreground">
-            Request ID: {id}
+            Review requested limits, features, and approve or reject.
           </p>
         </div>
       </div>
+
+      {Number.isInteger(numericId) && numericId > 0 ? (
+        <CustomPackageRequestDetails id={numericId} />
+      ) : (
+        <div className="rounded-xl border bg-card p-6 text-sm text-destructive">
+          Invalid request ID.
+        </div>
+      )}
     </div>
   );
 }

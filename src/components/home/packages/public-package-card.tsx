@@ -89,7 +89,7 @@ export function PublicPackageCard({
       </ul>
 
       <Link
-        href={`/auth/register?packageId=${pkg.id}`}
+        href={`/auth/school-register?packageId=${pkg.id}`}
         className="mt-6 inline-flex h-11 items-center justify-center rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
       >
         Choose {pkg.name}

@@ -1,25 +1,22 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { GraduationCap, Menu, X } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 
 const navItems = [
   { label: "Home", href: "/#home" },
-  { label: "Admission", href: "/#admission" },
-  { label: "Schools", href: "/#schools" },
-  { label: "Packages", href: "/#pricing" },
+  { label: "Modules", href: "/#modules" },
+  { label: "How It Works", href: "/#how-it-works" },
+  { label: "Pricing", href: "/#pricing" },
 ];
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
-  const pathname = usePathname();
-
   const closeMenu = () => setIsOpen(false);
 
   return (
-   <header className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-[#061842]/95 backdrop-blur-xl">
+    <header className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-[#061842]/95 backdrop-blur-xl">
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link
           href="/"
@@ -32,15 +29,14 @@ export default function Navbar() {
 
           <div>
             <p className="text-lg font-black tracking-tight text-white">
-              School<span className="text-[#00d2c4]">Hub</span>
+              Madrasa<span className="text-[#00d2c4]">OS</span>
             </p>
             <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-white/50">
-              Education Platform
+              Management Platform
             </p>
           </div>
         </Link>
 
-        {/* Desktop Navigation */}
         <nav
           aria-label="Main navigation"
           className="hidden items-center gap-8 md:flex"
@@ -49,14 +45,13 @@ export default function Navbar() {
             <Link
               key={item.label}
               href={item.href}
-              className="relative py-2 text-sm font-medium text-white/70 transition-colors hover:text-[#00d2c4]"
+              className="relative py-2 text-sm font-medium text-white/75 transition-colors hover:text-[#00d2c4]"
             >
               {item.label}
             </Link>
           ))}
         </nav>
 
-        {/* Desktop Actions */}
         <div className="hidden items-center gap-3 md:flex">
           <Link
             href="/auth/login"
@@ -69,11 +64,10 @@ export default function Navbar() {
             href="/auth/school-register"
             className="rounded-full bg-[#00d2c4] px-6 py-2.5 text-sm font-bold text-[#061842] shadow-lg shadow-cyan-500/20 transition hover:bg-[#00bcaf]"
           >
-            Register School
+            Register Institution
           </Link>
         </div>
 
-        {/* Mobile Menu Button */}
         <button
           type="button"
           onClick={() => setIsOpen((value) => !value)}
@@ -81,15 +75,10 @@ export default function Navbar() {
           aria-expanded={isOpen}
           className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-white/15 text-white transition hover:bg-white/10 md:hidden"
         >
-          {isOpen ? (
-            <X className="h-5 w-5" />
-          ) : (
-            <Menu className="h-5 w-5" />
-          )}
+          {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
       </div>
 
-      {/* Mobile Menu */}
       {isOpen && (
         <div className="border-t border-white/10 bg-[#061842] md:hidden">
           <nav
@@ -121,7 +110,7 @@ export default function Navbar() {
                 onClick={closeMenu}
                 className="flex h-11 items-center justify-center rounded-full bg-[#00d2c4] text-sm font-bold text-[#061842] transition hover:bg-[#00bcaf]"
               >
-                Register School
+                Register Institution
               </Link>
             </div>
           </nav>

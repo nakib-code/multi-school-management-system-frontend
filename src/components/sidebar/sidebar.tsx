@@ -1,340 +1,133 @@
 "use client";
 
 import {
+  Award,
   BarChart3,
   BookOpen,
+  BookOpenCheck,
   Building2,
   CalendarCheck,
   ClipboardList,
   CreditCard,
-  FileBarChart,
+  FileCheck,
+  FileText,
   GraduationCap,
+  HeartHandshake,
   LayoutDashboard,
   LogOut,
   Package,
+  ScrollText,
   Settings,
   ShieldCheck,
+  SlidersHorizontal,
+  UserCheck,
+  UserPlus,
   Users,
-  UserRound,
-  UserRoundCog,
+  Wallet,
   X,
-  type LucideIcon,
-  ClipboardCheck,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { toast } from "sonner";
-
-import { SidebarItem } from "@/components/sidebar/sidebar-item";
 import { useAuth } from "@/providers/auth-provider";
+import { SidebarItem } from "./sidebar-item";
 
 interface SidebarProps {
   open: boolean;
   onClose: () => void;
 }
 
-interface NavigationItem {
+interface NavItem {
   label: string;
   href: string;
-  icon: LucideIcon;
+  icon: typeof LayoutDashboard;
+  exact?: boolean;
 }
 
-const navigationByRole: Record<string, NavigationItem[]> = {
-  // ==================================================
-  // SUPER ADMIN
-  // ==================================================
+const navigationByRole: Record<string, NavItem[]> = {
   SUPER_ADMIN: [
-    {
-      label: "Dashboard",
-      href: "/dashboard/super-admin",
-      icon: LayoutDashboard,
-    },
-    {
-      label: "Schools",
-      href: "/dashboard/super-admin/schools",
-      icon: Building2,
-    },
-    {
-      label: "Users",
-      href: "/dashboard/super-admin/users",
-      icon: Users,
-    },
-    {
-      label: "Packages",
-      href: "/dashboard/super-admin/packages",
-      icon: Package,
-    },
-    {
-      label: "Subscriptions",
-      href: "/dashboard/super-admin/subscriptions",
-      icon: CreditCard,
-    },
-    {
-      label: "Payments",
-      href: "/dashboard/super-admin/payments",
-      icon: CreditCard,
-    },
-    {
-      label: "Custom Package Requests",
-      href: "/dashboard/super-admin/custom-package-requests",
-      icon: ClipboardList,
-    },
-    {
-      label: "Reports",
-      href: "/dashboard/super-admin/reports",
-      icon: FileBarChart,
-    },
-    {
-      label: "Audit Logs",
-      href: "/dashboard/super-admin/audit-logs",
-      icon: ShieldCheck,
-    },
-    {
-      label: "Settings",
-      href: "/dashboard/super-admin/settings",
-      icon: Settings,
-    },
+    { label: "Dashboard", href: "/dashboard/super-admin", icon: LayoutDashboard, exact: true },
+    { label: "Institutions", href: "/dashboard/super-admin/schools", icon: Building2 },
+    { label: "Users", href: "/dashboard/super-admin/users", icon: Users },
+    { label: "Packages", href: "/dashboard/super-admin/packages", icon: Package },
+    { label: "Subscriptions", href: "/dashboard/super-admin/subscriptions", icon: CreditCard },
+    { label: "Payments", href: "/dashboard/super-admin/payments", icon: Wallet },
+    { label: "Custom Requests", href: "/dashboard/super-admin/custom-package-requests", icon: SlidersHorizontal },
+    { label: "Reports", href: "/dashboard/super-admin/reports", icon: BarChart3 },
+    { label: "Platform Audit Logs", href: "/dashboard/super-admin/audit-logs", icon: ScrollText },
+    { label: "Settings", href: "/dashboard/super-admin/settings", icon: Settings },
   ],
-
-  // ==================================================
-  // ADMIN
-  // ==================================================
   ADMIN: [
-    {
-      label: "Dashboard",
-      href: "/dashboard/admin",
-      icon: LayoutDashboard,
-    },
-    {
-      label: "Admissions",
-      href: "/dashboard/admin/admissions",
-      icon: ClipboardCheck,
-    },
-    {
-      label: "Students",
-      href: "/dashboard/admin/students",
-      icon: GraduationCap,
-    },
-    {
-      label: "Teachers",
-      href: "/dashboard/admin/teachers",
-      icon: Users,
-    },
-    {
-      label: "Managers",
-      href: "/dashboard/admin/managers",
-      icon: UserRoundCog,
-    },
-    {
-      label: "Classes & Sections",
-      href: "/dashboard/admin/classes",
-      icon: BookOpen,
-    },
-    {
-      label: "Subjects",
-      href: "/dashboard/admin/subjects",
-      icon: BookOpen,
-    },
-    {
-      label: "Attendance",
-      href: "/dashboard/admin/attendance",
-      icon: CalendarCheck,
-    },
-    {
-      label: "Subscription",
-      href: "/dashboard/admin/subscription/payment",
-      icon: CreditCard,
-    },
-    {
-      label: "Exams",
-      href: "/dashboard/admin/exams",
-      icon: ClipboardList,
-    },
-    {
-      label: "Results",
-      href: "/dashboard/admin/results",
-      icon: BarChart3,
-    },
-    {
-      label: "Fees & Payments",
-      href: "/dashboard/admin/fees",
-      icon: CreditCard,
-    },
-    {
-      label: "Reports",
-      href: "/dashboard/admin/reports",
-      icon: FileBarChart,
-    },
-    {
-      label: "Settings",
-      href: "/dashboard/admin/settings",
-      icon: Settings,
-    },
+    { label: "Dashboard", href: "/dashboard/admin", icon: LayoutDashboard, exact: true },
+    { label: "Admissions", href: "/dashboard/admin/admissions", icon: UserPlus },
+    { label: "Students", href: "/dashboard/admin/students", icon: GraduationCap },
+    { label: "Enrollments", href: "/dashboard/admin/enrollments", icon: FileCheck },
+    { label: "Teachers", href: "/dashboard/admin/teachers", icon: Users },
+    { label: "Managers", href: "/dashboard/admin/managers", icon: ShieldCheck },
+    { label: "Guardians", href: "/dashboard/admin/guardians", icon: HeartHandshake },
+    { label: "Classes & Sections", href: "/dashboard/admin/classes", icon: BookOpen },
+    { label: "Class Routine", href: "/dashboard/admin/routine", icon: CalendarCheck },
+    { label: "Subjects", href: "/dashboard/admin/subjects", icon: ClipboardList },
+    { label: "Attendance", href: "/dashboard/admin/attendance", icon: CalendarCheck },
+    { label: "Exams", href: "/dashboard/admin/exams", icon: FileText },
+    { label: "Results", href: "/dashboard/admin/results", icon: Award },
+    { label: "Fees & Payments", href: "/dashboard/admin/fees", icon: CreditCard },
+    { label: "Teacher Salaries", href: "/dashboard/admin/salaries", icon: Wallet },
+    { label: "Hefz & Najera", href: "/dashboard/admin/hefz", icon: BookOpenCheck },
+    { label: "Audit Logs", href: "/dashboard/admin/audit-logs", icon: ScrollText },
+    { label: "Subscription", href: "/dashboard/admin/subscription/payment", icon: Package },
+    { label: "Custom Plan", href: "/dashboard/admin/custom-package", icon: SlidersHorizontal },
+    { label: "Settings", href: "/dashboard/admin/settings", icon: Settings },
   ],
-
-  // ==================================================
-  // MANAGER
-  // ==================================================
   MANAGER: [
-    {
-      label: "Dashboard",
-      href: "/dashboard/manager",
-      icon: LayoutDashboard,
-    },
-    {
-      label: "Students",
-      href: "/dashboard/manager/students",
-      icon: GraduationCap,
-    },
-    {
-      label: "Teachers",
-      href: "/dashboard/manager/teachers",
-      icon: Users,
-    },
-    {
-      label: "Classes",
-      href: "/dashboard/manager/classes",
-      icon: BookOpen,
-    },
-    {
-      label: "Attendance",
-      href: "/dashboard/manager/attendance",
-      icon: CalendarCheck,
-    },
-    {
-      label: "Exams",
-      href: "/dashboard/manager/exams",
-      icon: ClipboardList,
-    },
-    {
-      label: "Results",
-      href: "/dashboard/manager/results",
-      icon: BarChart3,
-    },
-    {
-      label: "Fees",
-      href: "/dashboard/manager/fees",
-      icon: CreditCard,
-    },
-    {
-      label: "Reports",
-      href: "/dashboard/manager/reports",
-      icon: FileBarChart,
-    },
+    { label: "Dashboard", href: "/dashboard/manager", icon: LayoutDashboard, exact: true },
+    { label: "Admissions", href: "/dashboard/manager/admissions", icon: UserPlus },
+    { label: "Students", href: "/dashboard/manager/students", icon: GraduationCap },
+    { label: "Enrollments", href: "/dashboard/manager/enrollments", icon: FileCheck },
+    { label: "Teachers", href: "/dashboard/manager/teachers", icon: Users },
+    { label: "Guardians", href: "/dashboard/manager/guardians", icon: HeartHandshake },
+    { label: "Classes & Sections", href: "/dashboard/manager/classes", icon: BookOpen },
+    { label: "Class Routine", href: "/dashboard/manager/routine", icon: CalendarCheck },
+    { label: "Subjects", href: "/dashboard/manager/subjects", icon: ClipboardList },
+    { label: "Attendance", href: "/dashboard/manager/attendance", icon: CalendarCheck },
+    { label: "Exams", href: "/dashboard/manager/exams", icon: FileText },
+    { label: "Results", href: "/dashboard/manager/results", icon: Award },
+    { label: "Fees & Payments", href: "/dashboard/manager/fees", icon: CreditCard },
+    { label: "Teacher Salaries", href: "/dashboard/manager/salaries", icon: Wallet },
+    { label: "Hefz & Najera", href: "/dashboard/manager/hefz", icon: BookOpenCheck },
+    { label: "Settings", href: "/dashboard/manager/settings", icon: Settings },
   ],
-
-  // ==================================================
-  // TEACHER
-  // ==================================================
   TEACHER: [
-    {
-      label: "Dashboard",
-      href: "/dashboard/teacher",
-      icon: LayoutDashboard,
-    },
-    {
-      label: "My Students",
-      href: "/dashboard/teacher/students",
-      icon: GraduationCap,
-    },
-    {
-      label: "My Classes",
-      href: "/dashboard/teacher/classes",
-      icon: BookOpen,
-    },
-    {
-      label: "Attendance",
-      href: "/dashboard/teacher/attendance",
-      icon: CalendarCheck,
-    },
-    {
-      label: "Exams",
-      href: "/dashboard/teacher/exams",
-      icon: ClipboardList,
-    },
-    {
-      label: "Results",
-      href: "/dashboard/teacher/results",
-      icon: BarChart3,
-    },
+    { label: "Dashboard", href: "/dashboard/teacher", icon: LayoutDashboard, exact: true },
+    { label: "My Classes", href: "/dashboard/teacher/classes", icon: BookOpen },
+    { label: "My Timetable", href: "/dashboard/teacher/routine", icon: CalendarCheck },
+    { label: "Students", href: "/dashboard/teacher/students", icon: GraduationCap },
+    { label: "Attendance", href: "/dashboard/teacher/attendance", icon: CalendarCheck },
+    { label: "Exams", href: "/dashboard/teacher/exams", icon: FileText },
+    { label: "Results", href: "/dashboard/teacher/results", icon: Award },
+    { label: "My Salaries", href: "/dashboard/teacher/salaries", icon: Wallet },
+    { label: "Hefz & Najera", href: "/dashboard/teacher/hefz", icon: BookOpenCheck },
   ],
-
-  // ==================================================
-  // STUDENT
-  // ==================================================
   STUDENT: [
-    {
-      label: "Dashboard",
-      href: "/dashboard/student",
-      icon: LayoutDashboard,
-    },
-    {
-      label: "My Classes",
-      href: "/dashboard/student/classes",
-      icon: BookOpen,
-    },
-    {
-      label: "Attendance",
-      href: "/dashboard/student/attendance",
-      icon: CalendarCheck,
-    },
-    {
-      label: "Exams",
-      href: "/dashboard/student/exams",
-      icon: ClipboardList,
-    },
-    {
-      label: "Results",
-      href: "/dashboard/student/results",
-      icon: BarChart3,
-    },
-    {
-      label: "Fees & Payments",
-      href: "/dashboard/student/fees",
-      icon: CreditCard,
-    },
-    {
-      label: "My Profile",
-      href: "/dashboard/student/profile",
-      icon: UserRound,
-    },
+    { label: "Dashboard", href: "/dashboard/student", icon: LayoutDashboard, exact: true },
+    { label: "My Profile", href: "/dashboard/student/profile", icon: UserCheck },
+    { label: "Class Routine", href: "/dashboard/student/routine", icon: CalendarCheck },
+    { label: "Attendance", href: "/dashboard/student/attendance", icon: CalendarCheck },
+    { label: "Exams", href: "/dashboard/student/exams", icon: FileText },
+    { label: "Results", href: "/dashboard/student/results", icon: Award },
+    { label: "Fees & Payments", href: "/dashboard/student/fees", icon: CreditCard },
+    { label: "Hefz Progress", href: "/dashboard/student/hefz", icon: BookOpenCheck },
   ],
-
-  // ==================================================
-  // GUARDIAN
-  // ==================================================
   GUARDIAN: [
-    {
-      label: "Dashboard",
-      href: "/dashboard/guardian",
-      icon: LayoutDashboard,
-    },
-    {
-      label: "My Children",
-      href: "/dashboard/guardian/children",
-      icon: UserRound,
-    },
-    {
-      label: "Attendance",
-      href: "/dashboard/guardian/attendance",
-      icon: CalendarCheck,
-    },
-    {
-      label: "Results",
-      href: "/dashboard/guardian/results",
-      icon: BarChart3,
-    },
-    {
-      label: "Fees & Payments",
-      href: "/dashboard/guardian/fees",
-      icon: CreditCard,
-    },
+    { label: "Dashboard", href: "/dashboard/guardian", icon: LayoutDashboard, exact: true },
+    { label: "Class Routine", href: "/dashboard/guardian/routine", icon: CalendarCheck },
+    { label: "Attendance", href: "/dashboard/guardian/attendance", icon: CalendarCheck },
+    { label: "Exams", href: "/dashboard/guardian/exams", icon: FileText },
+    { label: "Results", href: "/dashboard/guardian/results", icon: Award },
+    { label: "Fees & Payments", href: "/dashboard/guardian/fees", icon: CreditCard },
+    { label: "Hefz Progress", href: "/dashboard/guardian/hefz", icon: BookOpenCheck },
   ],
 };
-
-// ==================================================
-// Dashboard paths
-// ==================================================
 
 const dashboardPathByRole: Record<string, string> = {
   SUPER_ADMIN: "/dashboard/super-admin",
@@ -345,45 +138,28 @@ const dashboardPathByRole: Record<string, string> = {
   GUARDIAN: "/dashboard/guardian",
 };
 
-// ==================================================
-// Component
-// ==================================================
-
 export function Sidebar({ open, onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-
   const { user, logout } = useAuth();
 
   const navigation = user ? (navigationByRole[user.role] ?? []) : [];
-
   const dashboardPath = user
     ? (dashboardPathByRole[user.role] ?? "/dashboard")
     : "/dashboard";
 
-  // ==================================================
-  // Logout
-  // ==================================================
-
   const handleLogout = async () => {
     try {
       await logout();
-
       toast.success("Logged out successfully");
-
       router.replace("/auth/login");
     } catch {
       toast.error("Logout failed");
     }
   };
 
-  // ==================================================
-  // Render
-  // ==================================================
-
   return (
     <>
-      {/* Mobile overlay */}
       {open && (
         <button
           type="button"
@@ -393,13 +169,11 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         />
       )}
 
-      {/* Sidebar */}
       <aside
         className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r bg-background transition-transform duration-200 lg:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        {/* Header */}
         <div className="flex h-16 items-center justify-between border-b px-4">
           <Link
             href={dashboardPath}
@@ -409,17 +183,14 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               <GraduationCap className="h-5 w-5" />
             </div>
-
             <div>
-              <p className="text-sm font-bold">SchoolHub</p>
-
+              <p className="text-sm font-bold">MadrasaOS</p>
               <p className="text-[11px] text-muted-foreground">
                 Management System
               </p>
             </div>
           </Link>
 
-          {/* Mobile close button */}
           <button
             type="button"
             onClick={onClose}
@@ -430,17 +201,14 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           </button>
         </div>
 
-        {/* User info */}
         <div className="border-b px-4 py-4">
           {user && (
             <div className="flex items-center gap-3">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
                 {user.name.charAt(0).toUpperCase()}
               </div>
-
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium">{user.name}</p>
-
                 <p className="truncate text-xs text-muted-foreground">
                   {user.role.replaceAll("_", " ")}
                 </p>
@@ -449,12 +217,13 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           )}
         </div>
 
-        {/* Navigation */}
         <nav className="flex-1 overflow-y-auto p-3">
           <div className="space-y-1">
             {navigation.map((item) => {
-              const isActive =
-                pathname === item.href || pathname.startsWith(`${item.href}/`);
+              const isActive = item.exact
+                ? pathname === item.href
+                : pathname === item.href ||
+                  pathname.startsWith(`${item.href}/`);
 
               return (
                 <SidebarItem
@@ -470,7 +239,6 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           </div>
         </nav>
 
-        {/* Logout */}
         <div className="border-t p-3">
           <button
             type="button"

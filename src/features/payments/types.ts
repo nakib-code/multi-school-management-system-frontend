@@ -1,122 +1,74 @@
-export interface InitiateSubscriptionPaymentResponse {
-  paymentId: number;
-  subscriptionId: number;
-  transactionId: string;
-  amount: number;
-  currency: string;
-  paymentUrl: string;
+export type MobilePaymentMethod = "BKASH" | "NAGAD" | "ROCKET";
+export type SubscriptionPaymentStatus = "PENDING" | "VERIFIED" | "REJECTED";
+
+export interface PaymentMethodsResponse {
+  supportedMethods: MobilePaymentMethod[];
+  receiverNumbers: Record<MobilePaymentMethod, string | null>;
 }
 
-export interface CashPaymentRequestResponse {
-  paymentId: number;
-  subscriptionId: number;
-  status: string;
-  paymentMethod: string;
+export interface SubmitSubscriptionPaymentInput {
+  paymentMethod: MobilePaymentMethod;
+  senderNumber: string;
+  receiverNumber?: string;
+  trxId: string;
+  paidAmount: number;
+  paidAt?: string;
+  remarks?: string;
 }
 
-export interface PendingCashPayment {
+export interface SubscriptionPaymentRecord {
   id: number;
   subscriptionId: number;
   schoolId: number;
-  amount: number;
+  paymentMethod: MobilePaymentMethod;
+  senderNumber: string;
+  receiverNumber: string | null;
+  trxId: string;
+  paidAmount: number;
   currency: string;
-  status: string;
-  paymentMethod: string;
-  transactionId?: string | null;
+  status: SubscriptionPaymentStatus;
+  paidAt: string;
+  verifiedById?: number | null;
+  verifiedAt?: string | null;
+  rejectionReason?: string | null;
+  remarks?: string | null;
   createdAt: string;
-
-  school: {
+  school?: {
     id: number;
     name: string;
     code: string;
-    adminName: string;
-    adminEmail: string;
-    adminPhone: string | null;
+    adminName?: string | null;
+    adminEmail?: string | null;
+    adminPhone?: string | null;
   };
-
-  subscription: {
+  subscription?: {
     id: number;
     status: string;
-
-    package: {
+    price?: number | string;
+    startDate?: string;
+    endDate?: string;
+    package?: {
       id: number;
       name: string;
-      price: number;
+      price: number | string;
       billingCycle: "MONTHLY" | "YEARLY" | "CUSTOM";
     };
   };
+  verifiedBy?: {
+    id: number;
+    name: string;
+    email: string;
+  } | null;
 }
-
-export type PendingCashPaymentsResponse = PendingCashPayment[];
-
-export interface CashPaymentActionResponse {
-  paymentId: number;
-  subscriptionId: number;
-  schoolId: number;
-  amount: number;
-  currency: string;
-  status: string;
-  paymentMethod: string;
-  paidAt?: string | null;
-  remarks?: string | null;
-}
-
-// ====================================================
-// PAYMENT SUMMARY
-// ====================================================
 
 export interface SubscriptionPaymentSummary {
   totalRevenue: number;
-  onlineRevenue: number;
-  cashRevenue: number;
-  pendingCashAmount: number;
-
+  bkashRevenue: number;
+  nagadRevenue: number;
+  rocketRevenue: number;
+  pendingAmount: number;
   totalPayments: number;
-  paidPayments: number;
+  verifiedPayments: number;
   pendingPayments: number;
-  failedPayments: number;
-  cancelledPayments: number;
+  rejectedPayments: number;
 }
-
-// ====================================================
-// PAYMENT HISTORY
-// ====================================================
-
-export interface SubscriptionPaymentHistoryItem {
-  id: number;
-  subscriptionId: number;
-  schoolId: number;
-
-  amount: number;
-  currency: string;
-
-  status: string;
-  paymentMethod: string;
-
-  transactionId: string | null;
-  validationId: string | null;
-
-  paidAt: string | null;
-  createdAt: string;
-
-  school: {
-    id: number;
-    name: string;
-    code: string;
-  };
-
-  subscription: {
-    id: number;
-    status: string;
-
-    package: {
-      id: number;
-      name: string;
-      price: number;
-      billingCycle: string;
-    };
-  };
-}
-
-export type SubscriptionPaymentHistoryResponse =
-  SubscriptionPaymentHistoryItem[];

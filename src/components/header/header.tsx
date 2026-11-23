@@ -10,29 +10,52 @@ interface HeaderProps {
   onMenuClick?: () => void;
 }
 
-const pageTitles: Record<string, string> = {
-  "/dashboard/super-admin": "Super Admin Dashboard",
-  "/dashboard/admin": "Admin Dashboard",
-  "/dashboard/manager": "Manager Dashboard",
-  "/dashboard/teacher": "Teacher Dashboard",
-  "/dashboard/student": "Student Dashboard",
-  "/dashboard/guardian": "Guardian Dashboard",
+const segmentTitles: Record<string, string> = {
+  "super-admin": "Super Admin Dashboard",
+  admin: "Institution Admin Dashboard",
+  manager: "Manager Dashboard",
+  teacher: "Teacher Dashboard",
+  student: "Student Portal",
+  guardian: "Guardian Portal",
+  schools: "Institutions",
+  users: "Users",
+  packages: "Packages",
+  subscriptions: "Subscriptions",
+  subscription: "Subscription & Billing",
+  "custom-package-requests": "Custom Package Requests",
+  "custom-package": "Custom Plan Request",
+  payments: "Payments",
+  reports: "Reports & Analytics",
+  admissions: "Admissions",
+  students: "Students",
+  enrollments: "Enrollments",
+  teachers: "Teachers & Assignments",
+  managers: "Managers",
+  guardians: "Guardians",
+  classes: "Classes & Sections",
+  routine: "Class Routine & Timetable",
+  notifications: "Notifications",
+  subjects: "Subjects",
+  attendance: "Attendance",
+  exams: "Examinations",
+  results: "Results & Grades",
+  fees: "Fees & Payments",
+  salaries: "Teacher Salaries",
+  hefz: "Hefz & Najera",
+  "audit-logs": "Audit Logs",
+  settings: "Settings",
+  profile: "My Profile",
 };
 
-export function Header({
-  onMenuClick,
-}: HeaderProps) {
+export function Header({ onMenuClick }: HeaderProps) {
   const pathname = usePathname();
   const { user } = useAuth();
 
-  const basePath = user
-    ? `/dashboard/${user.role
-        .toLowerCase()
-        .replace("_", "-")}`
-    : "";
-
-  const title =
-    pageTitles[basePath] ?? "School Management System";
+  const segments = pathname.split("/").filter(Boolean);
+  const lastSegment = segments[segments.length - 1] ?? "";
+  const secondLast = segments[segments.length - 2] ?? "";
+  const key = /^\d+$/.test(lastSegment) ? secondLast : lastSegment;
+  const title = segmentTitles[key] ?? "Madrasa Management System";
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center border-b bg-background/95 px-4 backdrop-blur sm:px-6">
@@ -46,12 +69,9 @@ export function Header({
       </button>
 
       <div className="min-w-0 flex-1">
-        <h1 className="truncate text-sm font-semibold sm:text-base">
-          {title}
-        </h1>
-
+        <h1 className="truncate text-sm font-semibold sm:text-base">{title}</h1>
         <p className="hidden text-xs text-muted-foreground sm:block">
-          Manage your school efficiently
+          {user ? `${user.role.replaceAll("_", " ")} Workspace` : "Madrasa Management System"}
         </p>
       </div>
 

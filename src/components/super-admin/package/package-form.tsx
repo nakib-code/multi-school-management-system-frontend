@@ -122,7 +122,7 @@ export function PackageForm({
         });
       }
 
-      router.push("/super-admin/packages");
+      router.push("/dashboard/super-admin/packages");
       router.refresh();
     } catch {
       // Global API error handling can be added here.

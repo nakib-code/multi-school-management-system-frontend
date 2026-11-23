@@ -1,0 +1,97 @@
+"use client";
+
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { getApiErrorMessage } from "@/lib/api";
+import {
+  createTeacher,
+  createTeacherAssignment,
+  deactivateTeacher,
+  deleteTeacherAssignment,
+  getTeacherAssignments,
+  getTeachers,
+  verifyTeacherEmail,
+} from "./api";
+import type { CreateTeacherAssignmentInput, CreateTeacherInput } from "./types";
+
+export const teacherKeys = {
+  all: ["teachers"] as const,
+  list: (schoolId: number, search?: string) => [...teacherKeys.all, schoolId, search] as const,
+  assignments: (schoolId: number) => ["teacher-assignments", schoolId] as const,
+};
+
+export const useTeachers = (schoolId: number, search?: string) =>
+  useQuery({
+    queryKey: teacherKeys.list(schoolId, search),
+    queryFn: () => getTeachers(schoolId, search),
+    enabled: schoolId > 0,
+  });
+
+export const useCreateTeacher = (schoolId: number) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: CreateTeacherInput) => createTeacher(schoolId, payload),
+    onSuccess: () => {
+      toast.success("Teacher created! Verification code emailed to teacher.");
+      qc.invalidateQueries({ queryKey: teacherKeys.all });
+    },
+    onError: (err) => toast.error(getApiErrorMessage(err, "Failed to create teacher")),
+  });
+};
+
+export const useVerifyTeacherEmail = (schoolId: number) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ teacherId, code }: { teacherId: number; code: string }) =>
+      verifyTeacherEmail(schoolId, teacherId, code),
+    onSuccess: () => {
+      toast.success("Teacher email verified & activated");
+      qc.invalidateQueries({ queryKey: teacherKeys.all });
+    },
+    onError: (err) => toast.error(getApiErrorMessage(err, "Verification failed")),
+  });
+};
+
+export const useDeactivateTeacher = (schoolId: number) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (teacherId: number) => deactivateTeacher(schoolId, teacherId),
+    onSuccess: () => {
+      toast.success("Teacher deactivated");
+      qc.invalidateQueries({ queryKey: teacherKeys.all });
+    },
+    onError: (err) => toast.error(getApiErrorMessage(err, "Failed to deactivate teacher")),
+  });
+};
+
+export const useTeacherAssignments = (schoolId: number) =>
+  useQuery({
+    queryKey: teacherKeys.assignments(schoolId),
+    queryFn: () => getTeacherAssignments(schoolId),
+    enabled: schoolId > 0,
+  });
+
+export const useCreateTeacherAssignment = (schoolId: number) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: CreateTeacherAssignmentInput) =>
+      createTeacherAssignment(schoolId, payload),
+    onSuccess: () => {
+      toast.success("Teacher assigned to class/subject");
+      qc.invalidateQueries({ queryKey: teacherKeys.assignments(schoolId) });
+    },
+    onError: (err) => toast.error(getApiErrorMessage(err, "Failed to assign teacher")),
+  });
+};
+
+export const useDeleteTeacherAssignment = (schoolId: number) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => deleteTeacherAssignment(schoolId, id),
+    onSuccess: () => {
+      toast.success("Assignment removed");
+      qc.invalidateQueries({ queryKey: teacherKeys.assignments(schoolId) });
+    },
+    onError: (err) => toast.error(getApiErrorMessage(err, "Failed to remove assignment")),
+  });
+};

@@ -18,7 +18,7 @@ export default function PackagesPage() {
         </div>
 
         <Link
-          href="/super-admin/packages/create"
+          href="/dashboard/super-admin/packages/create"
           className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
         >
           + Create Package

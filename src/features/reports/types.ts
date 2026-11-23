@@ -27,14 +27,14 @@ export interface ReportOverview {
 
   payments: {
     totalRevenue: number;
-    onlineRevenue: number;
-    cashRevenue: number;
-    pendingCashAmount: number;
+    bkashRevenue: number;
+    nagadRevenue: number;
+    rocketRevenue: number;
+    pendingAmount: number;
     totalPayments: number;
-    paidPayments: number;
+    verifiedPayments: number;
     pendingPayments: number;
-    failedPayments: number;
-    cancelledPayments: number;
+    rejectedPayments: number;
   };
 
   packages: {
