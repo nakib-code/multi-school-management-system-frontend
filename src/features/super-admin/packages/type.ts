@@ -1,33 +1,4 @@
-export type BillingCycle = "MONTHLY" | "YEARLY" | "CUSTOM";
-
-export type PackageFeature =
-  | "SCHOOL_MANAGEMENT"
-  | "USER_MANAGEMENT"
-  | "STUDENT_MANAGEMENT"
-  | "TEACHER_MANAGEMENT"
-  | "GUARDIAN_MANAGEMENT"
-  | "ADMISSION"
-  | "ATTENDANCE"
-  | "CLASS_MANAGEMENT"
-  | "SUBJECT_MANAGEMENT"
-  | "EXAM_MANAGEMENT"
-  | "RESULT_MANAGEMENT"
-  | "FEES_MANAGEMENT"
-  | "PAYMENT_MANAGEMENT"
-  | "TEACHER_SALARY"
-  | "REPORTS"
-  | "NOTIFICATIONS"
-  | "KINDERGARTEN_MODULE"
-  | "HEFZ_MODULE";
-
-export interface PackageFeatureConfig {
-  id: number;
-  packageId: number;
-  feature: PackageFeature;
-  enabled: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
+export type BillingCycle = "MONTHLY" | "YEARLY";
 
 export interface Package {
   id: number;
@@ -36,9 +7,7 @@ export interface Package {
   price: number | string;
   billingCycle: BillingCycle;
   studentLimit: number;
-  isCustom: boolean;
   isActive: boolean;
-  features: PackageFeatureConfig[];
   createdAt: string;
   updatedAt: string;
 }
@@ -49,12 +18,7 @@ export interface CreatePackagePayload {
   price: number;
   billingCycle: BillingCycle;
   studentLimit: number;
-  isCustom?: boolean;
   isActive?: boolean;
-  features: {
-    feature: PackageFeature;
-    enabled: boolean;
-  }[];
 }
 
 export interface UpdatePackagePayload {
@@ -64,10 +28,6 @@ export interface UpdatePackagePayload {
   billingCycle?: BillingCycle;
   studentLimit?: number;
   isActive?: boolean;
-  features?: {
-    feature: PackageFeature;
-    enabled: boolean;
-  }[];
 }
 
 export interface PackageListResponse {

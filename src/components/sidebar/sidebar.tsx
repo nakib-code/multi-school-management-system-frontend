@@ -19,7 +19,6 @@ import {
   ScrollText,
   Settings,
   ShieldCheck,
-  SlidersHorizontal,
   UserCheck,
   UserPlus,
   Users,
@@ -42,90 +41,301 @@ interface NavItem {
   href: string;
   icon: typeof LayoutDashboard;
   exact?: boolean;
+  featureKey?:
+    | "hasGeneralSection"
+    | "hasHefzSection"
+    | "hasPublicWebsite"
+    | "hasOnlineAdmission"
+    | "hasTeacherPayroll"
+    | "smsEnabled";
 }
 
 const navigationByRole: Record<string, NavItem[]> = {
   SUPER_ADMIN: [
-    { label: "Dashboard", href: "/dashboard/super-admin", icon: LayoutDashboard, exact: true },
-    { label: "Institutions", href: "/dashboard/super-admin/schools", icon: Building2 },
+    {
+      label: "Dashboard",
+      href: "/dashboard/super-admin",
+      icon: LayoutDashboard,
+      exact: true,
+    },
+    {
+      label: "Institutions",
+      href: "/dashboard/super-admin/schools",
+      icon: Building2,
+    },
     { label: "Users", href: "/dashboard/super-admin/users", icon: Users },
-    { label: "Packages", href: "/dashboard/super-admin/packages", icon: Package },
-    { label: "Subscriptions", href: "/dashboard/super-admin/subscriptions", icon: CreditCard },
-    { label: "Payments", href: "/dashboard/super-admin/payments", icon: Wallet },
-    { label: "Custom Requests", href: "/dashboard/super-admin/custom-package-requests", icon: SlidersHorizontal },
-    { label: "Reports", href: "/dashboard/super-admin/reports", icon: BarChart3 },
-    { label: "Platform Audit Logs", href: "/dashboard/super-admin/audit-logs", icon: ScrollText },
-    { label: "Settings", href: "/dashboard/super-admin/settings", icon: Settings },
+    {
+      label: "Packages",
+      href: "/dashboard/super-admin/packages",
+      icon: Package,
+    },
+    {
+      label: "Subscriptions",
+      href: "/dashboard/super-admin/subscriptions",
+      icon: CreditCard,
+    },
+    {
+      label: "Payments",
+      href: "/dashboard/super-admin/payments",
+      icon: Wallet,
+    },
+    {
+      label: "Reports",
+      href: "/dashboard/super-admin/reports",
+      icon: BarChart3,
+    },
+    {
+      label: "Platform Audit Logs",
+      href: "/dashboard/super-admin/audit-logs",
+      icon: ScrollText,
+    },
+    {
+      label: "Settings",
+      href: "/dashboard/super-admin/settings",
+      icon: Settings,
+    },
   ],
   ADMIN: [
-    { label: "Dashboard", href: "/dashboard/admin", icon: LayoutDashboard, exact: true },
-    { label: "Admissions", href: "/dashboard/admin/admissions", icon: UserPlus },
-    { label: "Students", href: "/dashboard/admin/students", icon: GraduationCap },
-    { label: "Enrollments", href: "/dashboard/admin/enrollments", icon: FileCheck },
+    {
+      label: "Dashboard",
+      href: "/dashboard/admin",
+      icon: LayoutDashboard,
+      exact: true,
+    },
+    {
+      label: "Admissions",
+      href: "/dashboard/admin/admissions",
+      icon: UserPlus,
+    },
+    {
+      label: "Students",
+      href: "/dashboard/admin/students",
+      icon: GraduationCap,
+    },
+    {
+      label: "Enrollments",
+      href: "/dashboard/admin/enrollments",
+      icon: FileCheck,
+    },
     { label: "Teachers", href: "/dashboard/admin/teachers", icon: Users },
     { label: "Managers", href: "/dashboard/admin/managers", icon: ShieldCheck },
-    { label: "Guardians", href: "/dashboard/admin/guardians", icon: HeartHandshake },
-    { label: "Classes & Sections", href: "/dashboard/admin/classes", icon: BookOpen },
-    { label: "Class Routine", href: "/dashboard/admin/routine", icon: CalendarCheck },
-    { label: "Subjects", href: "/dashboard/admin/subjects", icon: ClipboardList },
-    { label: "Attendance", href: "/dashboard/admin/attendance", icon: CalendarCheck },
+    {
+      label: "Guardians",
+      href: "/dashboard/admin/guardians",
+      icon: HeartHandshake,
+    },
+    {
+      label: "Classes & Sections",
+      href: "/dashboard/admin/classes",
+      icon: BookOpen,
+    },
+    {
+      label: "Class Routine",
+      href: "/dashboard/admin/routine",
+      icon: CalendarCheck,
+    },
+    {
+      label: "Subjects",
+      href: "/dashboard/admin/subjects",
+      icon: ClipboardList,
+    },
+    {
+      label: "Attendance",
+      href: "/dashboard/admin/attendance",
+      icon: CalendarCheck,
+    },
     { label: "Exams", href: "/dashboard/admin/exams", icon: FileText },
     { label: "Results", href: "/dashboard/admin/results", icon: Award },
-    { label: "Fees & Payments", href: "/dashboard/admin/fees", icon: CreditCard },
-    { label: "Teacher Salaries", href: "/dashboard/admin/salaries", icon: Wallet },
-    { label: "Hefz & Najera", href: "/dashboard/admin/hefz", icon: BookOpenCheck },
-    { label: "Audit Logs", href: "/dashboard/admin/audit-logs", icon: ScrollText },
-    { label: "Subscription", href: "/dashboard/admin/subscription/payment", icon: Package },
-    { label: "Custom Plan", href: "/dashboard/admin/custom-package", icon: SlidersHorizontal },
+    {
+      label: "Fees & Payments",
+      href: "/dashboard/admin/fees",
+      icon: CreditCard,
+    },
+    {
+      label: "Teacher Salaries",
+      href: "/dashboard/admin/salaries",
+      icon: Wallet,
+    },
+    {
+      label: "Hefz & Najera",
+      href: "/dashboard/admin/hefz",
+      icon: BookOpenCheck,
+    },
+    {
+      label: "Audit Logs",
+      href: "/dashboard/admin/audit-logs",
+      icon: ScrollText,
+    },
+    {
+      label: "Subscription",
+      href: "/dashboard/admin/subscription/payment",
+      icon: Package,
+    },
     { label: "Settings", href: "/dashboard/admin/settings", icon: Settings },
   ],
   MANAGER: [
-    { label: "Dashboard", href: "/dashboard/manager", icon: LayoutDashboard, exact: true },
-    { label: "Admissions", href: "/dashboard/manager/admissions", icon: UserPlus },
-    { label: "Students", href: "/dashboard/manager/students", icon: GraduationCap },
-    { label: "Enrollments", href: "/dashboard/manager/enrollments", icon: FileCheck },
+    {
+      label: "Dashboard",
+      href: "/dashboard/manager",
+      icon: LayoutDashboard,
+      exact: true,
+    },
+    {
+      label: "Admissions",
+      href: "/dashboard/manager/admissions",
+      icon: UserPlus,
+    },
+    {
+      label: "Students",
+      href: "/dashboard/manager/students",
+      icon: GraduationCap,
+    },
+    {
+      label: "Enrollments",
+      href: "/dashboard/manager/enrollments",
+      icon: FileCheck,
+    },
     { label: "Teachers", href: "/dashboard/manager/teachers", icon: Users },
-    { label: "Guardians", href: "/dashboard/manager/guardians", icon: HeartHandshake },
-    { label: "Classes & Sections", href: "/dashboard/manager/classes", icon: BookOpen },
-    { label: "Class Routine", href: "/dashboard/manager/routine", icon: CalendarCheck },
-    { label: "Subjects", href: "/dashboard/manager/subjects", icon: ClipboardList },
-    { label: "Attendance", href: "/dashboard/manager/attendance", icon: CalendarCheck },
+    {
+      label: "Guardians",
+      href: "/dashboard/manager/guardians",
+      icon: HeartHandshake,
+    },
+    {
+      label: "Classes & Sections",
+      href: "/dashboard/manager/classes",
+      icon: BookOpen,
+    },
+    {
+      label: "Class Routine",
+      href: "/dashboard/manager/routine",
+      icon: CalendarCheck,
+    },
+    {
+      label: "Subjects",
+      href: "/dashboard/manager/subjects",
+      icon: ClipboardList,
+    },
+    {
+      label: "Attendance",
+      href: "/dashboard/manager/attendance",
+      icon: CalendarCheck,
+    },
     { label: "Exams", href: "/dashboard/manager/exams", icon: FileText },
     { label: "Results", href: "/dashboard/manager/results", icon: Award },
-    { label: "Fees & Payments", href: "/dashboard/manager/fees", icon: CreditCard },
-    { label: "Teacher Salaries", href: "/dashboard/manager/salaries", icon: Wallet },
-    { label: "Hefz & Najera", href: "/dashboard/manager/hefz", icon: BookOpenCheck },
+    {
+      label: "Fees & Payments",
+      href: "/dashboard/manager/fees",
+      icon: CreditCard,
+    },
+    {
+      label: "Teacher Salaries",
+      href: "/dashboard/manager/salaries",
+      icon: Wallet,
+    },
+    {
+      label: "Hefz & Najera",
+      href: "/dashboard/manager/hefz",
+      icon: BookOpenCheck,
+    },
     { label: "Settings", href: "/dashboard/manager/settings", icon: Settings },
   ],
   TEACHER: [
-    { label: "Dashboard", href: "/dashboard/teacher", icon: LayoutDashboard, exact: true },
+    {
+      label: "Dashboard",
+      href: "/dashboard/teacher",
+      icon: LayoutDashboard,
+      exact: true,
+    },
     { label: "My Classes", href: "/dashboard/teacher/classes", icon: BookOpen },
-    { label: "My Timetable", href: "/dashboard/teacher/routine", icon: CalendarCheck },
-    { label: "Students", href: "/dashboard/teacher/students", icon: GraduationCap },
-    { label: "Attendance", href: "/dashboard/teacher/attendance", icon: CalendarCheck },
+    {
+      label: "My Timetable",
+      href: "/dashboard/teacher/routine",
+      icon: CalendarCheck,
+    },
+    {
+      label: "Students",
+      href: "/dashboard/teacher/students",
+      icon: GraduationCap,
+    },
+    {
+      label: "Attendance",
+      href: "/dashboard/teacher/attendance",
+      icon: CalendarCheck,
+    },
     { label: "Exams", href: "/dashboard/teacher/exams", icon: FileText },
     { label: "Results", href: "/dashboard/teacher/results", icon: Award },
     { label: "My Salaries", href: "/dashboard/teacher/salaries", icon: Wallet },
-    { label: "Hefz & Najera", href: "/dashboard/teacher/hefz", icon: BookOpenCheck },
+    {
+      label: "Hefz & Najera",
+      href: "/dashboard/teacher/hefz",
+      icon: BookOpenCheck,
+    },
   ],
   STUDENT: [
-    { label: "Dashboard", href: "/dashboard/student", icon: LayoutDashboard, exact: true },
-    { label: "My Profile", href: "/dashboard/student/profile", icon: UserCheck },
-    { label: "Class Routine", href: "/dashboard/student/routine", icon: CalendarCheck },
-    { label: "Attendance", href: "/dashboard/student/attendance", icon: CalendarCheck },
+    {
+      label: "Dashboard",
+      href: "/dashboard/student",
+      icon: LayoutDashboard,
+      exact: true,
+    },
+    {
+      label: "My Profile",
+      href: "/dashboard/student/profile",
+      icon: UserCheck,
+    },
+    {
+      label: "Class Routine",
+      href: "/dashboard/student/routine",
+      icon: CalendarCheck,
+    },
+    {
+      label: "Attendance",
+      href: "/dashboard/student/attendance",
+      icon: CalendarCheck,
+    },
     { label: "Exams", href: "/dashboard/student/exams", icon: FileText },
     { label: "Results", href: "/dashboard/student/results", icon: Award },
-    { label: "Fees & Payments", href: "/dashboard/student/fees", icon: CreditCard },
-    { label: "Hefz Progress", href: "/dashboard/student/hefz", icon: BookOpenCheck },
+    {
+      label: "Fees & Payments",
+      href: "/dashboard/student/fees",
+      icon: CreditCard,
+    },
+    {
+      label: "Hefz Progress",
+      href: "/dashboard/student/hefz",
+      icon: BookOpenCheck,
+    },
   ],
   GUARDIAN: [
-    { label: "Dashboard", href: "/dashboard/guardian", icon: LayoutDashboard, exact: true },
-    { label: "Class Routine", href: "/dashboard/guardian/routine", icon: CalendarCheck },
-    { label: "Attendance", href: "/dashboard/guardian/attendance", icon: CalendarCheck },
+    {
+      label: "Dashboard",
+      href: "/dashboard/guardian",
+      icon: LayoutDashboard,
+      exact: true,
+    },
+    {
+      label: "Class Routine",
+      href: "/dashboard/guardian/routine",
+      icon: CalendarCheck,
+    },
+    {
+      label: "Attendance",
+      href: "/dashboard/guardian/attendance",
+      icon: CalendarCheck,
+    },
     { label: "Exams", href: "/dashboard/guardian/exams", icon: FileText },
     { label: "Results", href: "/dashboard/guardian/results", icon: Award },
-    { label: "Fees & Payments", href: "/dashboard/guardian/fees", icon: CreditCard },
-    { label: "Hefz Progress", href: "/dashboard/guardian/hefz", icon: BookOpenCheck },
+    {
+      label: "Fees & Payments",
+      href: "/dashboard/guardian/fees",
+      icon: CreditCard,
+    },
+    {
+      label: "Hefz Progress",
+      href: "/dashboard/guardian/hefz",
+      icon: BookOpenCheck,
+    },
   ],
 };
 
@@ -143,7 +353,19 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   const router = useRouter();
   const { user, logout } = useAuth();
 
-  const navigation = user ? (navigationByRole[user.role] ?? []) : [];
+  const rawNavigation = user ? (navigationByRole[user.role] ?? []) : [];
+  const navigation = rawNavigation.filter((item) => {
+    const settings = user?.schoolSetting;
+    if (!settings) return true;
+    if (item.href.endsWith("/hefz") && !settings.hasHefzSection) return false;
+    if (item.href.endsWith("/admissions") && !settings.hasOnlineAdmission)
+      return false;
+    if (item.href.endsWith("/salaries") && !settings.hasTeacherPayroll)
+      return false;
+    if (item.href.endsWith("/website") && !settings.hasPublicWebsite)
+      return false;
+    return true;
+  });
   const dashboardPath = user
     ? (dashboardPathByRole[user.role] ?? "/dashboard")
     : "/dashboard";

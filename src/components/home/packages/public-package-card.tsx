@@ -1,8 +1,8 @@
 "use client";
 
-import type { PublicPackage } from "@/features/public/types";
 import { Check } from "lucide-react";
 import Link from "next/link";
+import type { PublicPackage } from "@/features/public/types";
 
 interface PublicPackageCardProps {
   package: PublicPackage;
@@ -18,28 +18,25 @@ const formatPrice = (price: string | number) => {
   return new Intl.NumberFormat("en-BD").format(numericPrice);
 };
 
-const getBillingLabel = (
-  billingCycle: PublicPackage["billingCycle"],
-) => {
+const getBillingLabel = (billingCycle: PublicPackage["billingCycle"]) => {
   switch (billingCycle) {
     case "MONTHLY":
       return "/ month";
     case "YEARLY":
       return "/ year";
-    case "CUSTOM":
-      return "Custom";
     default:
       return "";
   }
 };
 
-export function PublicPackageCard({
-  package: pkg,
-}: PublicPackageCardProps) {
-  const enabledFeatures = pkg.features.filter(
-    (feature) => feature.enabled,
-  );
+const INCLUDED_HIGHLIGHTS = [
+  "Full Student, Teacher & Guardian Portals",
+  "Admissions, Attendance, Exams & Results",
+  "Fees, Teacher Salaries & Mobile Banking Billing",
+  "Hefz & Najera Tracking + School Website",
+];
 
+export function PublicPackageCard({ package: pkg }: PublicPackageCardProps) {
   return (
     <div className="flex h-full flex-col rounded-2xl border border-border bg-card p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
       <div>
@@ -54,9 +51,7 @@ export function PublicPackageCard({
 
       <div className="mt-6">
         <div className="flex items-end gap-2">
-          <span className="text-3xl font-bold">
-            ৳{formatPrice(pkg.price)}
-          </span>
+          <span className="text-3xl font-bold">৳{formatPrice(pkg.price)}</span>
 
           <span className="mb-1 text-sm text-muted-foreground">
             {getBillingLabel(pkg.billingCycle)}
@@ -71,19 +66,13 @@ export function PublicPackageCard({
       <div className="my-6 h-px bg-border" />
 
       <ul className="flex flex-1 flex-col gap-3">
-        {enabledFeatures.map((item) => (
+        {INCLUDED_HIGHLIGHTS.map((item) => (
           <li
-            key={item.feature}
+            key={item}
             className="flex items-start gap-2 text-sm text-muted-foreground"
           >
             <Check className="mt-0.5 size-4 shrink-0 text-primary" />
-
-            <span>
-              {item.feature
-                .replaceAll("_", " ")
-                .toLowerCase()
-                .replace(/\b\w/g, (char) => char.toUpperCase())}
-            </span>
+            <span>{item}</span>
           </li>
         ))}
       </ul>

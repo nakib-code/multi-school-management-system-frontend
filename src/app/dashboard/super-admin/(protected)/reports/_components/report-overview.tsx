@@ -1,18 +1,15 @@
 "use client";
 
-import { useReportOverview } from "@/features/reports/hooks";
 import {
   AlertCircle,
   Building2,
   CheckCircle2,
   CreditCard,
-  FileCheck2,
   Package,
   RefreshCw,
-  UserRound,
   Users,
 } from "lucide-react";
-
+import { useReportOverview } from "@/features/reports/hooks";
 
 const formatAmount = (amount: number) => {
   return new Intl.NumberFormat("en-BD", {
@@ -29,25 +26,16 @@ interface StatCardProps {
   description?: string;
 }
 
-function StatCard({
-  title,
-  value,
-  icon,
-  description,
-}: StatCardProps) {
+function StatCard({ title, value, icon, description }: StatCardProps) {
   return (
     <div className="rounded-xl border bg-background p-5">
       <div className="flex items-start justify-between">
         <div>
           <p className="text-sm text-muted-foreground">{title}</p>
-          <p className="mt-2 text-2xl font-semibold tracking-tight">
-            {value}
-          </p>
+          <p className="mt-2 text-2xl font-semibold tracking-tight">{value}</p>
 
           {description && (
-            <p className="mt-1 text-xs text-muted-foreground">
-              {description}
-            </p>
+            <p className="mt-1 text-xs text-muted-foreground">{description}</p>
           )}
         </div>
 
@@ -75,13 +63,7 @@ function BreakdownRow({ label, value }: BreakdownRowProps) {
 }
 
 export function ReportOverview() {
-  const {
-    data,
-    isLoading,
-    isError,
-    isFetching,
-    refetch,
-  } = useReportOverview();
+  const { data, isLoading, isError, isFetching, refetch } = useReportOverview();
 
   if (isLoading) {
     return (
@@ -94,29 +76,19 @@ export function ReportOverview() {
 
         {/* Stats Skeleton */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[
-            "schools",
-            "users",
-            "subscriptions",
-            "revenue",
-            "packages",
-            "requests",
-          ].map((item) => (
-            <div
-              key={item}
-              className="h-28 animate-pulse rounded-xl border bg-muted/40"
-            />
-          ))}
+          {["schools", "users", "subscriptions", "revenue", "packages"].map(
+            (item) => (
+              <div
+                key={item}
+                className="h-28 animate-pulse rounded-xl border bg-muted/40"
+              />
+            ),
+          )}
         </div>
 
         {/* Breakdown Skeleton */}
         <div className="grid gap-6 lg:grid-cols-2">
-          {[
-            "schools",
-            "users",
-            "subscriptions",
-            "payments",
-          ].map((item) => (
+          {["schools", "users", "subscriptions", "payments"].map((item) => (
             <div
               key={item}
               className="h-72 animate-pulse rounded-xl border bg-muted/40"
@@ -153,17 +125,14 @@ export function ReportOverview() {
     );
   }
 
-  const { schools, users, subscriptions, payments, packages, customPackageRequests } =
-    data;
+  const { schools, users, subscriptions, payments, packages } = data;
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Reports
-          </h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Reports</h1>
 
           <p className="mt-1 text-sm text-muted-foreground">
             View overall system statistics and financial reports.
@@ -177,9 +146,7 @@ export function ReportOverview() {
           className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border bg-background px-3 text-sm font-medium transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
         >
           <RefreshCw
-            className={`h-4 w-4 ${
-              isFetching ? "animate-spin" : ""
-            }`}
+            className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`}
           />
 
           {isFetching ? "Refreshing..." : "Refresh"}
@@ -222,13 +189,6 @@ export function ReportOverview() {
           icon={<Package className="h-5 w-5" />}
           description={`${packages.active} active packages`}
         />
-
-        <StatCard
-          title="Custom Requests"
-          value={customPackageRequests.total}
-          icon={<FileCheck2 className="h-5 w-5" />}
-          description={`${customPackageRequests.pending} pending requests`}
-        />
       </div>
 
       {/* Reports Breakdown */}
@@ -249,30 +209,15 @@ export function ReportOverview() {
           </div>
 
           <div>
-            <BreakdownRow
-              label="Total"
-              value={schools.total}
-            />
+            <BreakdownRow label="Total" value={schools.total} />
 
-            <BreakdownRow
-              label="Active"
-              value={schools.active}
-            />
+            <BreakdownRow label="Active" value={schools.active} />
 
-            <BreakdownRow
-              label="Pending"
-              value={schools.pending}
-            />
+            <BreakdownRow label="Pending" value={schools.pending} />
 
-            <BreakdownRow
-              label="Blocked"
-              value={schools.blocked}
-            />
+            <BreakdownRow label="Blocked" value={schools.blocked} />
 
-            <BreakdownRow
-              label="Rejected"
-              value={schools.rejected}
-            />
+            <BreakdownRow label="Rejected" value={schools.rejected} />
           </div>
         </div>
 
@@ -285,47 +230,24 @@ export function ReportOverview() {
 
             <div>
               <h2 className="font-semibold">Users</h2>
-              <p className="text-xs text-muted-foreground">
-                Users by role
-              </p>
+              <p className="text-xs text-muted-foreground">Users by role</p>
             </div>
           </div>
 
           <div>
-            <BreakdownRow
-              label="Total Users"
-              value={users.total}
-            />
+            <BreakdownRow label="Total Users" value={users.total} />
 
-            <BreakdownRow
-              label="Super Admin"
-              value={users.superAdmin}
-            />
+            <BreakdownRow label="Super Admin" value={users.superAdmin} />
 
-            <BreakdownRow
-              label="Admin"
-              value={users.admin}
-            />
+            <BreakdownRow label="Admin" value={users.admin} />
 
-            <BreakdownRow
-              label="Manager"
-              value={users.manager}
-            />
+            <BreakdownRow label="Manager" value={users.manager} />
 
-            <BreakdownRow
-              label="Teacher"
-              value={users.teacher}
-            />
+            <BreakdownRow label="Teacher" value={users.teacher} />
 
-            <BreakdownRow
-              label="Student"
-              value={users.student}
-            />
+            <BreakdownRow label="Student" value={users.student} />
 
-            <BreakdownRow
-              label="Guardian"
-              value={users.guardian}
-            />
+            <BreakdownRow label="Guardian" value={users.guardian} />
           </div>
         </div>
 
@@ -345,30 +267,15 @@ export function ReportOverview() {
           </div>
 
           <div>
-            <BreakdownRow
-              label="Total"
-              value={subscriptions.total}
-            />
+            <BreakdownRow label="Total" value={subscriptions.total} />
 
-            <BreakdownRow
-              label="Active"
-              value={subscriptions.active}
-            />
+            <BreakdownRow label="Active" value={subscriptions.active} />
 
-            <BreakdownRow
-              label="Pending"
-              value={subscriptions.pending}
-            />
+            <BreakdownRow label="Pending" value={subscriptions.pending} />
 
-            <BreakdownRow
-              label="Expired"
-              value={subscriptions.expired}
-            />
+            <BreakdownRow label="Expired" value={subscriptions.expired} />
 
-            <BreakdownRow
-              label="Cancelled"
-              value={subscriptions.cancelled}
-            />
+            <BreakdownRow label="Cancelled" value={subscriptions.cancelled} />
           </div>
         </div>
 
@@ -444,78 +351,16 @@ export function ReportOverview() {
 
             <div>
               <h2 className="font-semibold">Packages</h2>
-              <p className="text-xs text-muted-foreground">
-                Package overview
-              </p>
+              <p className="text-xs text-muted-foreground">Package overview</p>
             </div>
           </div>
 
           <div>
-            <BreakdownRow
-              label="Total Packages"
-              value={packages.total}
-            />
+            <BreakdownRow label="Total Packages" value={packages.total} />
 
-            <BreakdownRow
-              label="Active"
-              value={packages.active}
-            />
+            <BreakdownRow label="Active" value={packages.active} />
 
-            <BreakdownRow
-              label="Inactive"
-              value={packages.inactive}
-            />
-
-            <BreakdownRow
-              label="Custom Packages"
-              value={packages.custom}
-            />
-          </div>
-        </div>
-
-        {/* Custom Package Requests */}
-        <div className="rounded-xl border bg-background p-5">
-          <div className="mb-4 flex items-center gap-3">
-            <div className="rounded-lg bg-primary/10 p-2 text-primary">
-              <FileCheck2 className="h-5 w-5" />
-            </div>
-
-            <div>
-              <h2 className="font-semibold">
-                Custom Package Requests
-              </h2>
-
-              <p className="text-xs text-muted-foreground">
-                Custom package request status
-              </p>
-            </div>
-          </div>
-
-          <div>
-            <BreakdownRow
-              label="Total"
-              value={customPackageRequests.total}
-            />
-
-            <BreakdownRow
-              label="Pending"
-              value={customPackageRequests.pending}
-            />
-
-            <BreakdownRow
-              label="Approved"
-              value={customPackageRequests.approved}
-            />
-
-            <BreakdownRow
-              label="Rejected"
-              value={customPackageRequests.rejected}
-            />
-
-            <BreakdownRow
-              label="Cancelled"
-              value={customPackageRequests.cancelled}
-            />
+            <BreakdownRow label="Inactive" value={packages.inactive} />
           </div>
         </div>
       </div>

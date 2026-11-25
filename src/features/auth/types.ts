@@ -8,6 +8,24 @@ export type UserRole =
 
 export type UserStatus = "ACTIVE" | "INACTIVE";
 
+export type MobileAccountType = "PERSONAL" | "MERCHANT" | "AGENT";
+
+export interface UserSchoolSetting {
+  hasGeneralSection: boolean;
+  hasHefzSection: boolean;
+  hasPublicWebsite: boolean;
+  hasOnlineAdmission: boolean;
+  hasTeacherPayroll: boolean;
+  smsEnabled: boolean;
+  bkashNumber: string | null;
+  bkashType: MobileAccountType;
+  nagadNumber: string | null;
+  nagadType: MobileAccountType;
+  rocketNumber: string | null;
+  rocketType: MobileAccountType;
+  feePaymentInstruction: string | null;
+}
+
 export interface User {
   id: number;
   name: string;
@@ -17,6 +35,7 @@ export interface User {
   status: UserStatus;
   schoolId: number | null;
   mustChangePassword: boolean;
+  schoolSetting?: UserSchoolSetting | null;
 }
 
 export interface LoginPayload {

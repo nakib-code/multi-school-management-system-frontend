@@ -1,6 +1,13 @@
 "use client";
 
-import { CheckCircle2, CreditCard, Plus, Smartphone, Trash2, XCircle } from "lucide-react";
+import {
+  CheckCircle2,
+  CreditCard,
+  Plus,
+  Smartphone,
+  Trash2,
+  XCircle,
+} from "lucide-react";
 import { useState } from "react";
 import { Modal } from "@/components/modals/modal";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -22,6 +29,7 @@ import {
 } from "@/features/fees/hooks";
 import type { FeeType, StudentFeeRecord } from "@/features/fees/types";
 import type { MobilePaymentMethod } from "@/features/payments/types";
+import { useSchoolPaymentMethods } from "@/features/school-settings/hooks";
 import { getApiErrorMessage } from "@/lib/api";
 import { useAuth } from "@/providers/auth-provider";
 
@@ -55,6 +63,9 @@ export function FeesWorkspace() {
 
   const feesQuery = useStudentFees(schoolId);
   const paymentsQuery = useStudentPayments(schoolId);
+  const { data: schoolPaymentMethods } = useSchoolPaymentMethods(
+    schoolId > 0 ? schoolId : undefined,
+  );
   const { data: enrollments = [] } = useEnrollments(canManage ? schoolId : 0);
 
   const createFeeMut = useCreateStudentFee(schoolId);
@@ -63,7 +74,8 @@ export function FeesWorkspace() {
   const verifyPayMut = useVerifyStudentPayment(schoolId);
   const rejectPayMut = useRejectStudentPayment(schoolId);
 
-  if (feesQuery.isLoading) return <LoadingState message="Loading fees & payments..." />;
+  if (feesQuery.isLoading)
+    return <LoadingState message="Loading fees & payments..." />;
   if (feesQuery.isError) {
     return (
       <ErrorState
@@ -78,7 +90,9 @@ export function FeesWorkspace() {
 
   const handleCreateFee = async (e: React.FormEvent) => {
     e.preventDefault();
-    const en = enrollments.find((item) => item.id === Number(feeForm.enrollmentId));
+    const en = enrollments.find(
+      (item) => item.id === Number(feeForm.enrollmentId),
+    );
     if (!en) return;
     await createFeeMut.mutateAsync({
       studentId: en.studentId,
@@ -89,7 +103,13 @@ export function FeesWorkspace() {
       dueDate: feeForm.dueDate,
     });
     setCreateOpen(false);
-    setFeeForm({ enrollmentId: "", feeType: "MONTHLY", title: "", amount: "", dueDate: "" });
+    setFeeForm({
+      enrollmentId: "",
+      feeType: "MONTHLY",
+      title: "",
+      amount: "",
+      dueDate: "",
+    });
   };
 
   const handlePaySubmit = async (e: React.FormEvent) => {
@@ -105,12 +125,21 @@ export function FeesWorkspace() {
       ...(payForm.remarks.trim() ? { remarks: payForm.remarks.trim() } : {}),
     });
     setPayFee(null);
-    setPayForm({ paymentMethod: "BKASH", senderNumber: "", trxId: "", paidAmount: "", remarks: "" });
+    setPayForm({
+      paymentMethod: "BKASH",
+      senderNumber: "",
+      trxId: "",
+      paidAmount: "",
+      remarks: "",
+    });
   };
 
   const handleReject = async () => {
     if (!rejectId || rejectReason.trim().length < 3) return;
-    await rejectPayMut.mutateAsync({ id: rejectId, rejectionReason: rejectReason.trim() });
+    await rejectPayMut.mutateAsync({
+      id: rejectId,
+      rejectionReason: rejectReason.trim(),
+    });
     setRejectId(null);
     setRejectReason("");
   };
@@ -123,7 +152,8 @@ export function FeesWorkspace() {
             Student Fees &amp; Mobile Payments
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Manage fee invoices and manual bKash, Nagad, and Rocket fee payments.
+            Manage fee invoices and manual bKash, Nagad, and Rocket fee
+            payments.
           </p>
         </div>
         {canManage && (
@@ -189,7 +219,9 @@ export function FeesWorkspace() {
                     </td>
                     <td className="px-4 py-3">
                       <p className="font-medium">{f.title}</p>
-                      <p className="text-xs text-muted-foreground">{f.feeType}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {f.feeType}
+                      </p>
                     </td>
                     <td className="px-4 py-3 font-medium">
                       ৳{Number(f.amount).toLocaleString()}
@@ -265,13 +297,19 @@ export function FeesWorkspace() {
                     {p.student
                       ? `${p.student.firstName} ${p.student.lastName ?? ""}`
                       : `Student #${p.studentId}`}
-                    <p className="text-xs text-muted-foreground">{p.fee?.title ?? ""}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {p.fee?.title ?? ""}
+                    </p>
                   </td>
                   <td className="px-4 py-3">
                     <span className="font-medium">{p.paymentMethod}</span>
-                    <p className="font-mono text-xs text-muted-foreground">{p.trxId}</p>
+                    <p className="font-mono text-xs text-muted-foreground">
+                      {p.trxId}
+                    </p>
                   </td>
-                  <td className="px-4 py-3 font-mono text-xs">{p.senderNumber}</td>
+                  <td className="px-4 py-3 font-mono text-xs">
+                    {p.senderNumber}
+                  </td>
                   <td className="px-4 py-3 font-medium">
                     ৳{Number(p.paidAmount).toLocaleString()}
                   </td>
@@ -304,7 +342,9 @@ export function FeesWorkspace() {
                           </Button>
                         </div>
                       ) : (
-                        <span className="text-xs text-muted-foreground">Reviewed</span>
+                        <span className="text-xs text-muted-foreground">
+                          Reviewed
+                        </span>
                       )}
                     </td>
                   )}
@@ -315,14 +355,20 @@ export function FeesWorkspace() {
         </div>
       )}
 
-      <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Create Student Fee">
+      <Modal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        title="Create Student Fee"
+      >
         <form onSubmit={handleCreateFee} className="space-y-4">
           <div className="space-y-1">
             <Label>Enrolled Student</Label>
             <select
               required
               value={feeForm.enrollmentId}
-              onChange={(e) => setFeeForm({ ...feeForm, enrollmentId: e.target.value })}
+              onChange={(e) =>
+                setFeeForm({ ...feeForm, enrollmentId: e.target.value })
+              }
               className="h-9 w-full rounded-md border bg-background px-3 text-sm"
             >
               <option value="">Select enrollment...</option>
@@ -340,7 +386,9 @@ export function FeesWorkspace() {
               <Label>Fee Type</Label>
               <select
                 value={feeForm.feeType}
-                onChange={(e) => setFeeForm({ ...feeForm, feeType: e.target.value as FeeType })}
+                onChange={(e) =>
+                  setFeeForm({ ...feeForm, feeType: e.target.value as FeeType })
+                }
                 className="h-9 w-full rounded-md border bg-background px-3 text-sm"
               >
                 <option value="MONTHLY">Monthly Tuition</option>
@@ -358,7 +406,9 @@ export function FeesWorkspace() {
                 min={1}
                 required
                 value={feeForm.amount}
-                onChange={(e) => setFeeForm({ ...feeForm, amount: e.target.value })}
+                onChange={(e) =>
+                  setFeeForm({ ...feeForm, amount: e.target.value })
+                }
               />
             </div>
           </div>
@@ -369,7 +419,9 @@ export function FeesWorkspace() {
                 required
                 placeholder="November Tuition Fee"
                 value={feeForm.title}
-                onChange={(e) => setFeeForm({ ...feeForm, title: e.target.value })}
+                onChange={(e) =>
+                  setFeeForm({ ...feeForm, title: e.target.value })
+                }
               />
             </div>
             <div className="space-y-1">
@@ -378,12 +430,18 @@ export function FeesWorkspace() {
                 type="date"
                 required
                 value={feeForm.dueDate}
-                onChange={(e) => setFeeForm({ ...feeForm, dueDate: e.target.value })}
+                onChange={(e) =>
+                  setFeeForm({ ...feeForm, dueDate: e.target.value })
+                }
               />
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setCreateOpen(false)}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={createFeeMut.isPending}>
@@ -397,15 +455,83 @@ export function FeesWorkspace() {
         open={!!payFee}
         onClose={() => setPayFee(null)}
         title="Submit Manual Fee Payment"
-        description={payFee ? `${payFee.title} — ৳${Number(payFee.amount).toLocaleString()}` : ""}
+        description={
+          payFee
+            ? `${payFee.title} — ৳${Number(payFee.amount).toLocaleString()}`
+            : ""
+        }
       >
         <form onSubmit={handlePaySubmit} className="space-y-4">
+          {schoolPaymentMethods && (
+            <div className="space-y-2 rounded-xl border bg-muted/30 p-3">
+              <p className="text-xs font-semibold text-foreground">
+                School Mobile Banking Receiver Numbers
+              </p>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {(
+                  [
+                    {
+                      method: "BKASH" as const,
+                      label: "bKash",
+                      number: schoolPaymentMethods.bkashNumber,
+                      type: schoolPaymentMethods.bkashType,
+                    },
+                    {
+                      method: "NAGAD" as const,
+                      label: "Nagad",
+                      number: schoolPaymentMethods.nagadNumber,
+                      type: schoolPaymentMethods.nagadType,
+                    },
+                    {
+                      method: "ROCKET" as const,
+                      label: "Rocket",
+                      number: schoolPaymentMethods.rocketNumber,
+                      type: schoolPaymentMethods.rocketType,
+                    },
+                  ] as const
+                ).map((item) => (
+                  <button
+                    key={item.method}
+                    type="button"
+                    onClick={() =>
+                      setPayForm({ ...payForm, paymentMethod: item.method })
+                    }
+                    className={`rounded-lg border bg-background p-2 text-left transition ${
+                      payForm.paymentMethod === item.method
+                        ? "border-primary ring-1 ring-primary"
+                        : "hover:bg-muted/50"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-xs font-semibold">
+                        {item.label}
+                      </span>
+                      <span className="rounded bg-muted px-1 py-0.5 text-[9px] text-muted-foreground">
+                        {item.type}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">
+                      {item.number ?? "Not configured"}
+                    </p>
+                  </button>
+                ))}
+              </div>
+              {schoolPaymentMethods.feePaymentInstruction && (
+                <p className="text-[11px] leading-4 text-muted-foreground">
+                  {schoolPaymentMethods.feePaymentInstruction}
+                </p>
+              )}
+            </div>
+          )}
           <div className="space-y-1">
             <Label>Payment Method</Label>
             <select
               value={payForm.paymentMethod}
               onChange={(e) =>
-                setPayForm({ ...payForm, paymentMethod: e.target.value as MobilePaymentMethod })
+                setPayForm({
+                  ...payForm,
+                  paymentMethod: e.target.value as MobilePaymentMethod,
+                })
               }
               className="h-9 w-full rounded-md border bg-background px-3 text-sm"
             >
@@ -421,7 +547,9 @@ export function FeesWorkspace() {
                 required
                 placeholder="01XXXXXXXXX"
                 value={payForm.senderNumber}
-                onChange={(e) => setPayForm({ ...payForm, senderNumber: e.target.value })}
+                onChange={(e) =>
+                  setPayForm({ ...payForm, senderNumber: e.target.value })
+                }
               />
             </div>
             <div className="space-y-1">
@@ -430,7 +558,9 @@ export function FeesWorkspace() {
                 required
                 placeholder="e.g. 9K2L8M4N"
                 value={payForm.trxId}
-                onChange={(e) => setPayForm({ ...payForm, trxId: e.target.value })}
+                onChange={(e) =>
+                  setPayForm({ ...payForm, trxId: e.target.value })
+                }
               />
             </div>
           </div>
@@ -441,11 +571,17 @@ export function FeesWorkspace() {
               min={1}
               required
               value={payForm.paidAmount}
-              onChange={(e) => setPayForm({ ...payForm, paidAmount: e.target.value })}
+              onChange={(e) =>
+                setPayForm({ ...payForm, paidAmount: e.target.value })
+              }
             />
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={() => setPayFee(null)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setPayFee(null)}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={submitPayMut.isPending}>
@@ -455,7 +591,11 @@ export function FeesWorkspace() {
         </form>
       </Modal>
 
-      <Modal open={!!rejectId} onClose={() => setRejectId(null)} title="Reject Payment">
+      <Modal
+        open={!!rejectId}
+        onClose={() => setRejectId(null)}
+        title="Reject Payment"
+      >
         <div className="space-y-4">
           <Textarea
             value={rejectReason}
@@ -470,7 +610,9 @@ export function FeesWorkspace() {
             <Button
               variant="destructive"
               onClick={handleReject}
-              disabled={rejectReason.trim().length < 3 || rejectPayMut.isPending}
+              disabled={
+                rejectReason.trim().length < 3 || rejectPayMut.isPending
+              }
             >
               Confirm Reject
             </Button>

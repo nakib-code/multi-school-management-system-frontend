@@ -1,19 +1,18 @@
 import type {
   AdminAdmissionDetails,
+  ApproveAdmissionResponse,
+  ConfirmCashPaymentInput,
   CreateAdmissionInput,
   CreateAdmissionResponse,
-  ConfirmCashPaymentInput,
   GetAdmissionsParams,
   GetAdmissionsResponse,
   RejectAdmissionInput,
   TrackAdmissionInput,
   TrackAdmissionResponse,
-  ApproveAdmissionResponse,
 } from "./types";
 
 const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ??
-  "http://localhost:5001/api/v1";
+  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001/api/v1";
 
 // ==================================================
 // Create Admission (Public)
@@ -38,8 +37,7 @@ export async function createAdmission(
 
   if (!response.ok) {
     throw new Error(
-      result?.message ??
-        "Failed to submit admission application",
+      result?.message ?? "Failed to submit admission application",
     );
   }
 
@@ -51,9 +49,16 @@ export async function createAdmission(
 // ==================================================
 
 export interface InitiateAdmissionPaymentResponse {
-  transactionId: string;
+  admissionId: number;
+  schoolId: number;
   amount: number;
-  paymentUrl: string;
+  supportedMethods: ("BKASH" | "NAGAD" | "ROCKET")[];
+  receiverNumbers: {
+    BKASH: string | null;
+    NAGAD: string | null;
+    ROCKET: string | null;
+  };
+  message: string;
 }
 
 export async function initiateAdmissionPayment(
@@ -74,10 +79,7 @@ export async function initiateAdmissionPayment(
   const result = await response.json();
 
   if (!response.ok) {
-    throw new Error(
-      result?.message ??
-        "Failed to initiate online payment",
-    );
+    throw new Error(result?.message ?? "Failed to initiate online payment");
   }
 
   return result.data;
@@ -90,24 +92,18 @@ export async function initiateAdmissionPayment(
 export async function trackAdmission(
   input: TrackAdmissionInput,
 ): Promise<TrackAdmissionResponse> {
-  const response = await fetch(
-    `${API_URL}/admissions/track`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(input),
+  const response = await fetch(`${API_URL}/admissions/track`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
     },
-  );
+    body: JSON.stringify(input),
+  });
 
   const result = await response.json();
 
   if (!response.ok) {
-    throw new Error(
-      result?.message ??
-        "Failed to track admission application",
-    );
+    throw new Error(result?.message ?? "Failed to track admission application");
   }
 
   return result.data;
@@ -156,9 +152,7 @@ export async function getAdmissions(
   const result = await response.json();
 
   if (!response.ok) {
-    throw new Error(
-      result?.message ?? "Failed to fetch admissions",
-    );
+    throw new Error(result?.message ?? "Failed to fetch admissions");
   }
 
   return result.data;
@@ -183,10 +177,7 @@ export async function getAdmissionById(
   const result = await response.json();
 
   if (!response.ok) {
-    throw new Error(
-      result?.message ??
-        "Failed to fetch admission details",
-    );
+    throw new Error(result?.message ?? "Failed to fetch admission details");
   }
 
   return result.data;
@@ -211,10 +202,7 @@ export async function approveAdmission(
   const result = await response.json();
 
   if (!response.ok) {
-    throw new Error(
-      result?.message ??
-        "Failed to approve admission",
-    );
+    throw new Error(result?.message ?? "Failed to approve admission");
   }
 
   return result.data;
@@ -244,10 +232,7 @@ export async function rejectAdmission(
   const result = await response.json();
 
   if (!response.ok) {
-    throw new Error(
-      result?.message ??
-        "Failed to reject admission",
-    );
+    throw new Error(result?.message ?? "Failed to reject admission");
   }
 
   return result.data;
@@ -277,15 +262,11 @@ export async function confirmCashPayment(
   const result = await response.json();
 
   if (!response.ok) {
-    throw new Error(
-      result?.message ??
-        "Failed to confirm cash payment",
-    );
+    throw new Error(result?.message ?? "Failed to confirm cash payment");
   }
 
   return result.data;
 }
-
 
 // Verify Student Email OTP
 export interface VerifyStudentEmailResponse {
@@ -310,9 +291,7 @@ export async function verifyStudentEmail(
   const result = await response.json();
 
   if (!response.ok) {
-    throw new Error(
-      result?.message ?? "Failed to verify email",
-    );
+    throw new Error(result?.message ?? "Failed to verify email");
   }
 
   return result.data;

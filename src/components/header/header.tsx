@@ -22,8 +22,6 @@ const segmentTitles: Record<string, string> = {
   packages: "Packages",
   subscriptions: "Subscriptions",
   subscription: "Subscription & Billing",
-  "custom-package-requests": "Custom Package Requests",
-  "custom-package": "Custom Plan Request",
   payments: "Payments",
   reports: "Reports & Analytics",
   admissions: "Admissions",
@@ -71,7 +69,9 @@ export function Header({ onMenuClick }: HeaderProps) {
       <div className="min-w-0 flex-1">
         <h1 className="truncate text-sm font-semibold sm:text-base">{title}</h1>
         <p className="hidden text-xs text-muted-foreground sm:block">
-          {user ? `${user.role.replaceAll("_", " ")} Workspace` : "Madrasa Management System"}
+          {user
+            ? `${user.role.replaceAll("_", " ")} Workspace`
+            : "Madrasa Management System"}
         </p>
       </div>
 

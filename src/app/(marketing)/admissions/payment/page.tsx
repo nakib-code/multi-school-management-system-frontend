@@ -3,22 +3,19 @@
 import {
   AlertCircle,
   ArrowLeft,
-  CreditCard,
   Loader2,
-  ShieldCheck,
+  Search,
+  Smartphone,
 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import {
-  Suspense,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { initiateAdmissionPayment } from "@/features/admissions/api";
+import {
+  type InitiateAdmissionPaymentResponse,
+  initiateAdmissionPayment,
+} from "@/features/admissions/api";
 
 function PaymentContent() {
   const searchParams = useSearchParams();
@@ -37,62 +34,41 @@ function PaymentContent() {
     Number.isInteger(admissionId) &&
     admissionId > 0;
 
-  const [isPaying, setIsPaying] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [paymentInfo, setPaymentInfo] =
+    useState<InitiateAdmissionPaymentResponse | null>(null);
 
-  // Prevent repeated automatic initiation within this mounted component.
   const startedRef = useRef(false);
 
-  const startPayment = useCallback(async () => {
-    if (!isValid || isPaying) return;
+  const loadPaymentDetails = useCallback(async () => {
+    if (!isValid || isLoading) return;
 
-    setIsPaying(true);
+    setIsLoading(true);
     setError("");
 
     try {
-      const payment = await initiateAdmissionPayment(
-        schoolId,
-        admissionId,
-      );
-
-      if (!payment.paymentUrl) {
-        throw new Error(
-          "Payment gateway URL was not returned.",
-        );
-      }
-
-      // Only allow HTTPS payment URLs.
-      let paymentUrl: URL;
-
-      try {
-        paymentUrl = new URL(payment.paymentUrl);
-      } catch {
-        throw new Error("Invalid payment gateway URL.");
-      }
-
-      if (paymentUrl.protocol !== "https:") {
-        throw new Error("Invalid payment gateway URL.");
-      }
-
-      window.location.assign(paymentUrl.toString());
+      const data = await initiateAdmissionPayment(schoolId, admissionId);
+      setPaymentInfo(data);
     } catch (err) {
       const message =
         err instanceof Error
           ? err.message
-          : "Unable to start the payment.";
+          : "Unable to load mobile banking payment details.";
 
       setError(message);
       toast.error(message);
-      setIsPaying(false);
+    } finally {
+      setIsLoading(false);
     }
-  }, [isValid, isPaying, schoolId, admissionId]);
+  }, [isValid, isLoading, schoolId, admissionId]);
 
   useEffect(() => {
     if (!isValid || startedRef.current) return;
 
     startedRef.current = true;
-    void startPayment();
-  }, [isValid, startPayment]);
+    void loadPaymentDetails();
+  }, [isValid, loadPaymentDetails]);
 
   if (!isValid) {
     return (
@@ -122,23 +98,20 @@ function PaymentContent() {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12">
-      <div className="w-full max-w-lg rounded-2xl border bg-white p-8 text-center shadow-sm">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-teal-50">
-          <CreditCard className="h-8 w-8 text-[#008f87]" />
-        </div>
+      <div className="w-full max-w-lg rounded-2xl border bg-white p-8 shadow-sm">
+        <div className="text-center">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-teal-50">
+            <Smartphone className="h-8 w-8 text-[#008f87]" />
+          </div>
 
-        <h1 className="mt-5 text-2xl font-bold text-[#061842]">
-          Admission Payment
-        </h1>
+          <h1 className="mt-5 text-2xl font-bold text-[#061842]">
+            Admission Mobile Banking Payment
+          </h1>
 
-        <p className="mt-3 text-sm leading-6 text-slate-500">
-          We are connecting you to the secure payment gateway
-          to complete your admission payment.
-        </p>
-
-        <div className="mt-6 flex items-center justify-center gap-2 text-xs text-slate-500">
-          <ShieldCheck className="h-4 w-4 text-[#008f87]" />
-          Secure payment processing
+          <p className="mt-2 text-sm leading-6 text-slate-500">
+            {paymentInfo?.message ??
+              "Send your admission fee via bKash, Nagad, or Rocket using the school account numbers below."}
+          </p>
         </div>
 
         {error ? (
@@ -152,30 +125,66 @@ function PaymentContent() {
 
             <button
               type="button"
-              onClick={() => void startPayment()}
-              disabled={isPaying}
+              onClick={() => void loadPaymentDetails()}
+              disabled={isLoading}
               className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#008f87] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#00776f] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isPaying && (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              )}
-              Retry Payment
+              {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+              Retry
             </button>
           </div>
-        ) : (
+        ) : isLoading || !paymentInfo ? (
           <div className="mt-7 flex items-center justify-center gap-2 text-sm text-slate-500">
             <Loader2 className="h-5 w-5 animate-spin text-[#008f87]" />
-            Connecting to payment gateway...
+            Loading payment instructions...
+          </div>
+        ) : (
+          <div className="mt-6 space-y-5">
+            <div className="rounded-xl bg-slate-50 p-4 text-center">
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                Admission Fee Amount
+              </p>
+              <p className="mt-1 text-2xl font-bold text-[#061842]">
+                ৳{Number(paymentInfo.amount).toLocaleString("en-BD")}
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                Admission ID: #{paymentInfo.admissionId}
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              {paymentInfo.supportedMethods.map((method) => (
+                <div
+                  key={method}
+                  className="rounded-xl border border-slate-200 p-3 text-center"
+                >
+                  <p className="text-xs font-bold text-[#061842]">{method}</p>
+                  <p className="mt-1 font-mono text-xs text-slate-600">
+                    {paymentInfo.receiverNumbers[method] ?? "Contact school"}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Link
+                href="/admissions/track"
+                className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-[#008f87] px-4 text-sm font-semibold text-white transition hover:bg-[#00776f]"
+              >
+                <Search className="h-4 w-4" />
+                Track Application
+              </Link>
+
+              <Link
+                href="/schools"
+                className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-lg border border-slate-200 px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to Schools
+              </Link>
+            </div>
           </div>
         )}
-
-        <Link
-          href="/schools"
-          className="mt-6 inline-flex items-center gap-2 text-sm text-slate-500 hover:text-[#008f87]"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Schools
-        </Link>
       </div>
     </main>
   );

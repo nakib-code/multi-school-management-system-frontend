@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import {
   ArrowLeft,
   Building2,
@@ -12,9 +11,11 @@ import {
   Package,
   XCircle,
 } from "lucide-react";
-import { useSubscription, useUpdateSubscriptionStatus } from "@/features/super-admin/subscriptions/use-subscriptions";
-
-
+import Link from "next/link";
+import {
+  useSubscription,
+  useUpdateSubscriptionStatus,
+} from "@/features/super-admin/subscriptions/use-subscriptions";
 
 interface SubscriptionDetailsProps {
   id: number;
@@ -28,9 +29,7 @@ const formatDate = (date: string) => {
   }).format(new Date(date));
 };
 
-export default function SubscriptionDetails({
-  id,
-}: SubscriptionDetailsProps) {
+export default function SubscriptionDetails({ id }: SubscriptionDetailsProps) {
   const { data, isLoading, isError } = useSubscription(id);
 
   const updateStatus = useUpdateSubscriptionStatus();
@@ -57,9 +56,7 @@ export default function SubscriptionDetails({
       <div className="rounded-xl border p-10 text-center">
         <XCircle className="mx-auto mb-3 size-10 text-destructive" />
 
-        <h2 className="font-semibold">
-          Subscription not found
-        </h2>
+        <h2 className="font-semibold">Subscription not found</h2>
 
         <p className="mt-1 text-sm text-muted-foreground">
           The subscription could not be loaded.
@@ -110,7 +107,6 @@ export default function SubscriptionDetails({
               ) : (
                 <CheckCircle2 className="size-4" />
               )}
-
               Activate
             </button>
           )}
@@ -127,7 +123,6 @@ export default function SubscriptionDetails({
               ) : (
                 <XCircle className="size-4" />
               )}
-
               Cancel
             </button>
           )}
@@ -139,35 +134,19 @@ export default function SubscriptionDetails({
           <div className="mb-5 flex items-center gap-3">
             <Package className="size-5 text-primary" />
 
-            <h2 className="font-semibold">
-              Package Information
-            </h2>
+            <h2 className="font-semibold">Package Information</h2>
           </div>
 
           <div className="grid gap-5 sm:grid-cols-2">
-            <InfoItem
-              label="Package"
-              value={data.package.name}
-            />
+            <InfoItem label="Package" value={data.package.name} />
 
-            <InfoItem
-              label="Billing Cycle"
-              value={data.package.billingCycle}
-            />
+            <InfoItem label="Billing Cycle" value={data.package.billingCycle} />
 
-            <InfoItem
-              label="Price"
-              value={`${data.price}`}
-            />
+            <InfoItem label="Price" value={`${data.price}`} />
 
             <InfoItem
               label="Student Limit"
               value={data.package.studentLimit.toLocaleString()}
-            />
-
-            <InfoItem
-              label="Package Type"
-              value={data.package.isCustom ? "Custom" : "Standard"}
             />
 
             <InfoItem
@@ -181,26 +160,15 @@ export default function SubscriptionDetails({
           <div className="mb-5 flex items-center gap-3">
             <Building2 className="size-5 text-primary" />
 
-            <h2 className="font-semibold">
-              School
-            </h2>
+            <h2 className="font-semibold">School</h2>
           </div>
 
           <div className="space-y-4">
-            <InfoItem
-              label="School Name"
-              value={data.school.name}
-            />
+            <InfoItem label="School Name" value={data.school.name} />
 
-            <InfoItem
-              label="School Code"
-              value={data.school.code}
-            />
+            <InfoItem label="School Code" value={data.school.code} />
 
-            <InfoItem
-              label="School Status"
-              value={data.school.status}
-            />
+            <InfoItem label="School Status" value={data.school.status} />
           </div>
         </div>
       </div>
@@ -209,39 +177,23 @@ export default function SubscriptionDetails({
         <div className="mb-5 flex items-center gap-3">
           <CalendarDays className="size-5 text-primary" />
 
-          <h2 className="font-semibold">
-            Subscription Period
-          </h2>
+          <h2 className="font-semibold">Subscription Period</h2>
         </div>
 
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          <InfoItem
-            label="Start Date"
-            value={formatDate(data.startDate)}
-          />
+          <InfoItem label="Start Date" value={formatDate(data.startDate)} />
 
-          <InfoItem
-            label="End Date"
-            value={formatDate(data.endDate)}
-          />
+          <InfoItem label="End Date" value={formatDate(data.endDate)} />
 
-          <InfoItem
-            label="Status"
-            value={data.status}
-          />
+          <InfoItem label="Status" value={data.status} />
 
-          <InfoItem
-            label="Created At"
-            value={formatDate(data.createdAt)}
-          />
+          <InfoItem label="Created At" value={formatDate(data.createdAt)} />
         </div>
       </div>
 
       {data.notes && (
         <div className="rounded-xl border bg-card p-6">
-          <h2 className="mb-3 font-semibold">
-            Notes
-          </h2>
+          <h2 className="mb-3 font-semibold">Notes</h2>
 
           <p className="text-sm leading-6 text-muted-foreground">
             {data.notes}
@@ -253,9 +205,7 @@ export default function SubscriptionDetails({
         <div className="mb-5 flex items-center gap-3">
           <GraduationCap className="size-5 text-primary" />
 
-          <h2 className="font-semibold">
-            Subscription Summary
-          </h2>
+          <h2 className="font-semibold">Subscription Summary</h2>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-3">
@@ -264,15 +214,9 @@ export default function SubscriptionDetails({
             value={data.package.studentLimit.toLocaleString()}
           />
 
-          <SummaryCard
-            label="Subscription Price"
-            value={`${data.price}`}
-          />
+          <SummaryCard label="Subscription Price" value={`${data.price}`} />
 
-          <SummaryCard
-            label="Billing"
-            value={data.package.billingCycle}
-          />
+          <SummaryCard label="Billing" value={data.package.billingCycle} />
         </div>
       </div>
 
@@ -284,42 +228,24 @@ export default function SubscriptionDetails({
   );
 }
 
-function InfoItem({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | number;
-}) {
+function InfoItem({ label, value }: { label: string; value: string | number }) {
   return (
     <div>
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
         {label}
       </p>
 
-      <p className="mt-1 font-medium">
-        {value}
-      </p>
+      <p className="mt-1 font-medium">{value}</p>
     </div>
   );
 }
 
-function SummaryCard({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
+function SummaryCard({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg border bg-muted/30 p-4">
-      <p className="text-sm text-muted-foreground">
-        {label}
-      </p>
+      <p className="text-sm text-muted-foreground">{label}</p>
 
-      <p className="mt-1 text-lg font-semibold">
-        {value}
-      </p>
+      <p className="mt-1 text-lg font-semibold">{value}</p>
     </div>
   );
 }

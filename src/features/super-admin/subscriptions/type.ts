@@ -1,10 +1,6 @@
-import { BillingCycle } from "../packages/type";
+import type { BillingCycle } from "../packages/type";
 
-export type SubscriptionStatus =
-  | "ACTIVE"
-  | "EXPIRED"
-  | "CANCELLED"
-  | "PENDING";
+export type SubscriptionStatus = "ACTIVE" | "EXPIRED" | "CANCELLED" | "PENDING";
 
 export interface SubscriptionPackage {
   id: number;
@@ -13,7 +9,6 @@ export interface SubscriptionPackage {
   price: number | string;
   billingCycle: BillingCycle;
   studentLimit: number;
-  isCustom: boolean;
   isActive: boolean;
 }
 

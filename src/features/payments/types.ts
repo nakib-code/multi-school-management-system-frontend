@@ -1,9 +1,14 @@
 export type MobilePaymentMethod = "BKASH" | "NAGAD" | "ROCKET";
+export type MobileAccountType = "PERSONAL" | "MERCHANT" | "AGENT";
 export type SubscriptionPaymentStatus = "PENDING" | "VERIFIED" | "REJECTED";
 
 export interface PaymentMethodsResponse {
+  platformName?: string;
+  supportPhone?: string | null;
   supportedMethods: MobilePaymentMethod[];
   receiverNumbers: Record<MobilePaymentMethod, string | null>;
+  accountTypes?: Record<MobilePaymentMethod, MobileAccountType>;
+  paymentInstruction?: string | null;
 }
 
 export interface SubmitSubscriptionPaymentInput {
@@ -51,7 +56,7 @@ export interface SubscriptionPaymentRecord {
       id: number;
       name: string;
       price: number | string;
-      billingCycle: "MONTHLY" | "YEARLY" | "CUSTOM";
+      billingCycle: "MONTHLY" | "YEARLY";
     };
   };
   verifiedBy?: {

@@ -5,11 +5,19 @@ import {
   ChevronRight,
   Lock,
   Shield,
+  Smartphone,
   User,
 } from "lucide-react";
 import Link from "next/link";
 
 const settingsItems = [
+  {
+    title: "Platform Payment Settings",
+    description:
+      "Configure Super Admin bKash, Nagad, and Rocket accounts for SaaS subscriptions.",
+    icon: Smartphone,
+    href: "/dashboard/super-admin/settings/payments",
+  },
   {
     title: "Profile",
     description: "View and manage your Super Admin profile.",
@@ -35,13 +43,9 @@ export default function SuperAdminSettingsPage() {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <p className="text-sm text-muted-foreground">
-          Super Admin
-        </p>
+        <p className="text-sm text-muted-foreground">Super Admin</p>
 
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Settings
-        </h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
 
         <p className="mt-1 text-sm text-muted-foreground">
           Manage your account and dashboard preferences.
@@ -68,9 +72,7 @@ export default function SuperAdminSettingsPage() {
       {/* Settings */}
       <section>
         <div className="mb-4">
-          <h2 className="text-lg font-semibold">
-            Account Settings
-          </h2>
+          <h2 className="text-lg font-semibold">Account Settings</h2>
 
           <p className="text-sm text-muted-foreground">
             Choose a setting to manage.
@@ -86,9 +88,7 @@ export default function SuperAdminSettingsPage() {
                 key={item.title}
                 href={item.href}
                 className={`flex items-center gap-4 p-5 transition hover:bg-muted/40 ${
-                  index !== settingsItems.length - 1
-                    ? "border-b"
-                    : ""
+                  index !== settingsItems.length - 1 ? "border-b" : ""
                 }`}
               >
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
@@ -96,9 +96,7 @@ export default function SuperAdminSettingsPage() {
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  <h3 className="font-medium">
-                    {item.title}
-                  </h3>
+                  <h3 className="font-medium">{item.title}</h3>
 
                   <p className="mt-1 text-sm text-muted-foreground">
                     {item.description}
@@ -115,9 +113,7 @@ export default function SuperAdminSettingsPage() {
       {/* System Information */}
       <section>
         <div className="mb-4">
-          <h2 className="text-lg font-semibold">
-            System
-          </h2>
+          <h2 className="text-lg font-semibold">System</h2>
 
           <p className="text-sm text-muted-foreground">
             General information about your dashboard.
@@ -146,9 +142,7 @@ export default function SuperAdminSettingsPage() {
               </p>
             </div>
 
-            <span className="text-sm text-muted-foreground">
-              v1.0
-            </span>
+            <span className="text-sm text-muted-foreground">v1.0</span>
           </div>
         </div>
       </section>

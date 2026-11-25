@@ -1,26 +1,13 @@
-export interface SubscriptionFeature {
-  id: number;
-  name: string;
-  key: string;
-  description?: string | null;
-  value?: string | number | boolean | null;
-}
-
 export interface SubscriptionPackage {
   id: number;
   name: string;
   price: number | string;
-  billingCycle: "MONTHLY" | "YEARLY" | "CUSTOM";
+  billingCycle: "MONTHLY" | "YEARLY";
   studentLimit?: number;
   isActive: boolean;
-  features: SubscriptionFeature[];
 }
 
-export type SubscriptionStatus =
-  | "PENDING"
-  | "ACTIVE"
-  | "CANCELLED"
-  | "EXPIRED";
+export type SubscriptionStatus = "PENDING" | "ACTIVE" | "CANCELLED" | "EXPIRED";
 
 export interface MySubscription {
   id: number;

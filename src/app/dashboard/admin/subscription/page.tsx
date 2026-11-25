@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  Check,
-  CreditCard,
-  Loader2,
-  RefreshCw,
-} from "lucide-react";
+import { Check, CreditCard, Loader2, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -23,42 +18,34 @@ const formatPrice = (price: string | number) => {
   return new Intl.NumberFormat("en-BD").format(numericPrice);
 };
 
-const getBillingLabel = (
-  billingCycle: "MONTHLY" | "YEARLY" | "CUSTOM",
-) => {
+const getBillingLabel = (billingCycle: "MONTHLY" | "YEARLY") => {
   switch (billingCycle) {
     case "MONTHLY":
       return "/ month";
     case "YEARLY":
       return "/ year";
-    case "CUSTOM":
-      return "Custom";
     default:
       return "";
   }
 };
 
-const formatFeatureName = (feature: string) => {
-  return feature
-    .replaceAll("_", " ")
-    .toLowerCase()
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-};
+const INCLUDED_HIGHLIGHTS = [
+  "Full Student, Teacher & Guardian Management",
+  "Admissions, Attendance, Exams & Results",
+  "Fees, Salaries & Manual Mobile Banking Billing",
+  "Hefz & Najera Tracking + School Portal",
+];
 
 export default function AdminSubscriptionPage() {
   const router = useRouter();
 
-  const {
-    data: packages,
-    isLoading,
-    isError,
-    refetch,
-  } = usePublicPackages();
+  const { data: packages, isLoading, isError, refetch } = usePublicPackages();
 
   const selectPackageMutation = useSelectPackage();
 
-  const [selectedPackageId, setSelectedPackageId] =
-    useState<number | null>(null);
+  const [selectedPackageId, setSelectedPackageId] = useState<number | null>(
+    null,
+  );
 
   const handleSelectPackage = async (packageId: number) => {
     setSelectedPackageId(packageId);
@@ -68,7 +55,7 @@ export default function AdminSubscriptionPage() {
 
       toast.success("Package selected", {
         description:
-          "Your subscription has been created. Please complete the payment.",
+          "Your subscription has been created. Please complete the payment via bKash, Nagad, or Rocket.",
       });
 
       router.push("/dashboard/admin/subscription/payment");
@@ -110,8 +97,8 @@ export default function AdminSubscriptionPage() {
           </h2>
 
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            We could not load the available subscription packages.
-            Please try again.
+            We could not load the available subscription packages. Please try
+            again.
           </p>
 
           <button
@@ -135,13 +122,11 @@ export default function AdminSubscriptionPage() {
             <CreditCard className="h-6 w-6 text-muted-foreground" />
           </div>
 
-          <h2 className="mt-4 text-lg font-semibold">
-            No packages available
-          </h2>
+          <h2 className="mt-4 text-lg font-semibold">No packages available</h2>
 
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            There are currently no subscription packages available.
-            Please contact the Super Admin.
+            There are currently no subscription packages available. Please
+            contact the Super Admin.
           </p>
         </div>
       </div>
@@ -161,8 +146,8 @@ export default function AdminSubscriptionPage() {
         </h1>
 
         <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-          Select the package that best fits your school. You can
-          complete the payment after choosing a package.
+          Select the package that best fits your school. You can complete the
+          payment via bKash, Nagad, or Rocket after choosing a package.
         </p>
       </div>
 
@@ -170,12 +155,7 @@ export default function AdminSubscriptionPage() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {packages.map((pkg) => {
           const isSelecting =
-            selectPackageMutation.isPending &&
-            selectedPackageId === pkg.id;
-
-          const enabledFeatures = pkg.features.filter(
-            (feature) => feature.enabled,
-          );
+            selectPackageMutation.isPending && selectedPackageId === pkg.id;
 
           return (
             <div
@@ -184,9 +164,7 @@ export default function AdminSubscriptionPage() {
             >
               {/* Package Info */}
               <div>
-                <h2 className="text-xl font-semibold">
-                  {pkg.name}
-                </h2>
+                <h2 className="text-xl font-semibold">{pkg.name}</h2>
 
                 {pkg.description && (
                   <p className="mt-2 text-sm leading-6 text-muted-foreground">
@@ -214,34 +192,23 @@ export default function AdminSubscriptionPage() {
 
               <div className="my-6 h-px bg-border" />
 
-              {/* Features */}
+              {/* Highlights */}
               <div className="flex-1">
-                <p className="text-sm font-semibold">
-                  Included Features
-                </p>
+                <p className="text-sm font-semibold">What&apos;s Included</p>
 
-                {enabledFeatures.length > 0 ? (
-                  <ul className="mt-4 space-y-3">
-                    {enabledFeatures.map((item) => (
-                      <li
-                        key={item.feature}
-                        className="flex items-start gap-2 text-sm text-muted-foreground"
-                      >
-                        <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/10">
-                          <Check className="h-3.5 w-3.5 text-emerald-600" />
-                        </span>
-
-                        <span>
-                          {formatFeatureName(item.feature)}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="mt-4 text-sm text-muted-foreground">
-                    No additional features listed.
-                  </p>
-                )}
+                <ul className="mt-4 space-y-3">
+                  {INCLUDED_HIGHLIGHTS.map((item) => (
+                    <li
+                      key={item}
+                      className="flex items-start gap-2 text-sm text-muted-foreground"
+                    >
+                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/10">
+                        <Check className="h-3.5 w-3.5 text-emerald-600" />
+                      </span>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
 
               {/* Select */}
@@ -266,18 +233,6 @@ export default function AdminSubscriptionPage() {
             </div>
           );
         })}
-      </div>
-
-      {/* Custom Package Note */}
-      <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-center">
-        <p className="text-sm font-semibold">
-          Need a custom package?
-        </p>
-
-        <p className="mt-1 text-sm text-muted-foreground">
-          Contact the Super Admin for a custom package based on
-          your school&apos;s requirements.
-        </p>
       </div>
     </div>
   );

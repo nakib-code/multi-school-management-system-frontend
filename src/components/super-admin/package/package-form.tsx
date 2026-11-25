@@ -1,20 +1,14 @@
 "use client";
 
-import {
-  Package,
-  PackageFeature,
-} from "@/features/super-admin/packages/type";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import type { Package } from "@/features/super-admin/packages/type";
 import {
   useCreatePackage,
   useUpdatePackage,
 } from "@/features/super-admin/packages/use-packages";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-
-import { PackageFeatureSelector } from "./package-feature-selector";
 
 const packageFormSchema = z.object({
   name: z.string().min(2, "Package name is required"),
@@ -24,15 +18,9 @@ const packageFormSchema = z.object({
     .max(500, "Description cannot exceed 500 characters")
     .optional(),
 
-  price: z.coerce
-    .number()
-    .min(0, "Price cannot be negative"),
+  price: z.coerce.number().min(0, "Price cannot be negative"),
 
-  billingCycle: z.enum([
-    "MONTHLY",
-    "YEARLY",
-    "CUSTOM",
-  ]),
+  billingCycle: z.enum(["MONTHLY", "YEARLY"]),
 
   studentLimit: z.coerce
     .number()
@@ -49,77 +37,42 @@ interface PackageFormProps {
   packageData?: Package;
 }
 
-export function PackageForm({
-  packageData,
-}: PackageFormProps) {
+export function PackageForm({ packageData }: PackageFormProps) {
   const router = useRouter();
-
-  const [features, setFeatures] = useState<PackageFeature[]>(
-    packageData?.features
-      .filter((item) => item.enabled)
-      .map((item) => item.feature) ?? [],
-  );
 
   const createPackage = useCreatePackage();
   const updatePackage = useUpdatePackage();
 
   const isEdit = Boolean(packageData);
 
-  const isPending =
-    createPackage.isPending ||
-    updatePackage.isPending;
+  const isPending = createPackage.isPending || updatePackage.isPending;
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<
-    PackageFormInput,
-    unknown,
-    PackageFormValues
-  >({
+  } = useForm<PackageFormInput, unknown, PackageFormValues>({
     resolver: zodResolver(packageFormSchema),
 
     defaultValues: {
       name: packageData?.name ?? "",
       description: packageData?.description ?? "",
       price: Number(packageData?.price ?? 0),
-      billingCycle:
-        packageData?.billingCycle ?? "MONTHLY",
-      studentLimit:
-        packageData?.studentLimit ?? 300,
-      isActive:
-        packageData?.isActive ?? true,
+      billingCycle: packageData?.billingCycle ?? "MONTHLY",
+      studentLimit: packageData?.studentLimit ?? 300,
+      isActive: packageData?.isActive ?? true,
     },
   });
 
-  const onSubmit = async (
-    values: PackageFormValues,
-  ) => {
-    if (features.length === 0) {
-      return;
-    }
-
-    const featurePayload = features.map((feature) => ({
-      feature,
-      enabled: true,
-    }));
-
+  const onSubmit = async (values: PackageFormValues) => {
     try {
       if (packageData) {
         await updatePackage.mutateAsync({
           id: packageData.id,
-          payload: {
-            ...values,
-            features: featurePayload,
-          },
+          payload: values,
         });
       } else {
-        await createPackage.mutateAsync({
-          ...values,
-          isCustom: false,
-          features: featurePayload,
-        });
+        await createPackage.mutateAsync(values);
       }
 
       router.push("/dashboard/super-admin/packages");
@@ -130,16 +83,11 @@ export function PackageForm({
   };
 
   return (
-    <form
-      onSubmit={handleSubmit(onSubmit)}
-      className="space-y-8"
-    >
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
       {/* Basic Information */}
       <div className="rounded-2xl border bg-card p-6">
         <div className="mb-6">
-          <h2 className="text-lg font-semibold">
-            Basic Information
-          </h2>
+          <h2 className="text-lg font-semibold">Basic Information</h2>
 
           <p className="mt-1 text-sm text-muted-foreground">
             Configure the package pricing and student limit.
@@ -149,10 +97,7 @@ export function PackageForm({
         <div className="grid gap-5 md:grid-cols-2">
           {/* Name */}
           <div className="space-y-2">
-            <label
-              htmlFor="name"
-              className="text-sm font-medium"
-            >
+            <label htmlFor="name" className="text-sm font-medium">
               Package Name
             </label>
 
@@ -164,18 +109,13 @@ export function PackageForm({
             />
 
             {errors.name && (
-              <p className="text-xs text-destructive">
-                {errors.name.message}
-              </p>
+              <p className="text-xs text-destructive">{errors.name.message}</p>
             )}
           </div>
 
           {/* Price */}
           <div className="space-y-2">
-            <label
-              htmlFor="price"
-              className="text-sm font-medium"
-            >
+            <label htmlFor="price" className="text-sm font-medium">
               Price
             </label>
 
@@ -190,18 +130,13 @@ export function PackageForm({
             />
 
             {errors.price && (
-              <p className="text-xs text-destructive">
-                {errors.price.message}
-              </p>
+              <p className="text-xs text-destructive">{errors.price.message}</p>
             )}
           </div>
 
           {/* Billing */}
           <div className="space-y-2">
-            <label
-              htmlFor="billingCycle"
-              className="text-sm font-medium"
-            >
+            <label htmlFor="billingCycle" className="text-sm font-medium">
               Billing Cycle
             </label>
 
@@ -212,16 +147,12 @@ export function PackageForm({
             >
               <option value="MONTHLY">Monthly</option>
               <option value="YEARLY">Yearly</option>
-              <option value="CUSTOM">Custom</option>
             </select>
           </div>
 
           {/* Student Limit */}
           <div className="space-y-2">
-            <label
-              htmlFor="studentLimit"
-              className="text-sm font-medium"
-            >
+            <label htmlFor="studentLimit" className="text-sm font-medium">
               Student Limit
             </label>
 
@@ -244,10 +175,7 @@ export function PackageForm({
 
         {/* Description */}
         <div className="mt-5 space-y-2">
-          <label
-            htmlFor="description"
-            className="text-sm font-medium"
-          >
+          <label htmlFor="description" className="text-sm font-medium">
             Description
           </label>
 
@@ -274,34 +202,15 @@ export function PackageForm({
             className="size-4 rounded border"
           />
 
-          <span className="text-sm font-medium">
-            Package is active
-          </span>
+          <span className="text-sm font-medium">Package is active</span>
         </label>
-      </div>
-
-      {/* Features */}
-      <div className="rounded-2xl border bg-card p-6">
-        <PackageFeatureSelector
-          value={features}
-          onChange={setFeatures}
-          disabled={isPending}
-        />
-
-        {features.length === 0 && (
-          <p className="mt-4 text-xs text-destructive">
-            Please select at least one feature.
-          </p>
-        )}
       </div>
 
       {/* Actions */}
       <div className="flex items-center justify-end gap-3">
         <button
           type="button"
-          onClick={() =>
-            router.push("/super-admin/packages")
-          }
+          onClick={() => router.push("/dashboard/super-admin/packages")}
           disabled={isPending}
           className="rounded-lg border px-5 py-2.5 text-sm font-medium transition hover:bg-muted disabled:opacity-50"
         >
@@ -310,7 +219,7 @@ export function PackageForm({
 
         <button
           type="submit"
-          disabled={isPending || features.length === 0}
+          disabled={isPending}
           className="rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isPending

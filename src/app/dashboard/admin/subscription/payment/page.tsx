@@ -42,7 +42,10 @@ export default function AdminSubscriptionPaymentPage() {
     return (
       <DashboardShell>
         <ErrorState
-          message={getApiErrorMessage(subQuery.error, "Failed to load subscription")}
+          message={getApiErrorMessage(
+            subQuery.error,
+            "Failed to load subscription",
+          )}
           onRetry={() => subQuery.refetch()}
         />
       </DashboardShell>
@@ -81,7 +84,8 @@ export default function AdminSubscriptionPaymentPage() {
               Subscription &amp; Billing
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Manage your active package and submit manual bKash, Nagad, or Rocket payments.
+              Manage your active package and submit manual bKash, Nagad, or
+              Rocket payments.
             </p>
           </div>
           <Link
@@ -97,7 +101,8 @@ export default function AdminSubscriptionPaymentPage() {
             <CreditCard className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
             <h2 className="text-lg font-semibold">No Subscription Selected</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Choose a subscription package to activate your institution workspace.
+              Choose a subscription package to activate your institution
+              workspace.
             </p>
             <Link
               href="/dashboard/admin/subscription"
@@ -115,7 +120,8 @@ export default function AdminSubscriptionPaymentPage() {
                     Current Plan
                   </p>
                   <h2 className="mt-1 text-xl font-bold">
-                    {subscription.package?.name ?? `Package #${subscription.packageId}`}
+                    {subscription.package?.name ??
+                      `Package #${subscription.packageId}`}
                   </h2>
                   <p className="mt-1 text-sm text-muted-foreground">
                     ৳{Number(subscription.price).toLocaleString()} •{" "}
@@ -129,8 +135,8 @@ export default function AdminSubscriptionPaymentPage() {
                 </span>
               </div>
               <p className="mt-3 text-xs text-muted-foreground">
-                Period: {new Date(subscription.startDate).toLocaleDateString()} –{" "}
-                {new Date(subscription.endDate).toLocaleDateString()}
+                Period: {new Date(subscription.startDate).toLocaleDateString()}{" "}
+                – {new Date(subscription.endDate).toLocaleDateString()}
               </p>
             </div>
 
@@ -144,24 +150,46 @@ export default function AdminSubscriptionPaymentPage() {
                 </div>
 
                 {methods && (
-                  <div className="mb-6 grid gap-3 sm:grid-cols-3">
-                    {methods.supportedMethods.map((m) => (
-                      <button
-                        key={m}
-                        type="button"
-                        onClick={() => setPaymentMethod(m)}
-                        className={`rounded-xl border p-3 text-left transition ${
-                          paymentMethod === m
-                            ? "border-primary bg-primary/5 ring-1 ring-primary"
-                            : "hover:bg-muted/40"
-                        }`}
-                      >
-                        <p className="text-sm font-semibold">{m}</p>
-                        <p className="mt-1 font-mono text-xs text-muted-foreground">
-                          {methods.receiverNumbers[m] ?? "Contact support"}
-                        </p>
-                      </button>
-                    ))}
+                  <div className="mb-6 space-y-3">
+                    {methods.paymentInstruction && (
+                      <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs leading-5 text-foreground">
+                        {methods.paymentInstruction}
+                      </div>
+                    )}
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      {methods.supportedMethods.map((m) => (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => setPaymentMethod(m)}
+                          className={`rounded-xl border p-3 text-left transition ${
+                            paymentMethod === m
+                              ? "border-primary bg-primary/5 ring-1 ring-primary"
+                              : "hover:bg-muted/40"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-sm font-semibold">{m}</p>
+                            {methods.accountTypes?.[m] && (
+                              <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                                {methods.accountTypes[m]}
+                              </span>
+                            )}
+                          </div>
+                          <p className="mt-1 font-mono text-xs text-muted-foreground">
+                            {methods.receiverNumbers[m] ?? "Contact support"}
+                          </p>
+                        </button>
+                      ))}
+                    </div>
+                    {methods.supportPhone && (
+                      <p className="text-xs text-muted-foreground">
+                        Billing Support:{" "}
+                        <span className="font-mono font-medium text-foreground">
+                          {methods.supportPhone}
+                        </span>
+                      </p>
+                    )}
                   </div>
                 )}
 
