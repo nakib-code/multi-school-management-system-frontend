@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Pin } from 'lucide-react'
+import { formatDate } from '@/lib/format-date'
 import type { SchoolNotice } from '@/features/school-site/types'
 
 export function NoticeList({ notices }: { notices: SchoolNotice[] }) {
@@ -30,7 +31,7 @@ export function NoticeList({ notices }: { notices: SchoolNotice[] }) {
               </p>
             </div>
             <span className="text-xs text-gray-400 whitespace-nowrap">
-              {new Date(n.publishedAt).toLocaleDateString()}
+              {formatDate(n.publishedAt)}
             </span>
           </div>
         </Link>

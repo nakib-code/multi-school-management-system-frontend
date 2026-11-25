@@ -7,7 +7,9 @@ export default async function NoticePage() {
   const school = await getSchoolFromHost()
   if (!school) notFound()
 
-  const { notices } = await schoolSiteApi.notices(school.id)
+  const { notices } = await schoolSiteApi
+    .notices(school.id)
+    .catch(() => ({ notices: [], meta: undefined }))
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-16">

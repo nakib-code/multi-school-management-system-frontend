@@ -14,7 +14,6 @@ export interface SchoolPublic {
   facebookUrl: string | null
   youtubeUrl: string | null
   mapEmbedUrl: string | null
-  schoolType: string
 }
 
 export interface SchoolNotice {

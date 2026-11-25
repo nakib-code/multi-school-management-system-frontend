@@ -1,4 +1,5 @@
 import { getSchoolFromHost } from '@/lib/get-school'
+import { sanitizeHtmlContent } from '@/lib/sanitize'
 import { schoolSiteApi } from '@/features/school-site/api'
 import { notFound } from 'next/navigation'
 
@@ -10,6 +11,10 @@ export default async function AboutPage() {
     .pageContent(school.id, 'about')
     .catch(() => null)
 
+  const safeContent = content?.content
+    ? sanitizeHtmlContent(content.content)
+    : null
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-16">
       <h1
@@ -19,10 +24,10 @@ export default async function AboutPage() {
         {content?.title || 'About Us'}
       </h1>
 
-      {content?.content ? (
+      {safeContent ? (
         <div
           className="prose prose-lg max-w-none"
-          dangerouslySetInnerHTML={{ __html: content.content }}
+          dangerouslySetInnerHTML={{ __html: safeContent }}
         />
       ) : (
         <p className="text-gray-600">

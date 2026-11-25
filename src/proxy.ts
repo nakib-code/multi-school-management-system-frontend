@@ -100,7 +100,9 @@ function getSchoolIdentifier(hostname: string): string | null {
 // ============================================
 
 export function proxy(req: NextRequest) {
-  const hostname = normalizeHostname(req.nextUrl.hostname);
+  const hostname = normalizeHostname(
+    req.headers.get("host") || req.nextUrl.hostname
+  );
   const pathname = req.nextUrl.pathname;
 
   // ------------------------------------------
@@ -111,7 +113,7 @@ export function proxy(req: NextRequest) {
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||
     pathname.match(
-      /\.(png|jpg|jpeg|svg|ico|css|js|woff2?|webp|gif|avif|webmanifest)$/i
+      /\.(png|jpg|jpeg|svg|ico|css|js|woff2?|webp|gif|avif|webmanifest|txt|xml)$/i
     )
   ) {
     return NextResponse.next();

@@ -36,7 +36,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className="h-full antialiased">
+    <html lang="en" suppressHydrationWarning className="h-full antialiased">
       <body className="h-full">
         <QueryProvider>
           <AuthProvider>{children}</AuthProvider>

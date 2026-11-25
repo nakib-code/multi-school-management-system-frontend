@@ -1,4 +1,6 @@
 import { getSchoolFromHost } from '@/lib/get-school'
+import { formatDate } from '@/lib/format-date'
+import { sanitizeHtmlContent } from '@/lib/sanitize'
 import { schoolSiteApi } from '@/features/school-site/api'
 import { notFound } from 'next/navigation'
 
@@ -11,8 +13,15 @@ export default async function NoticeDetailPage({
   const school = await getSchoolFromHost()
   if (!school) notFound()
 
-  const notice = await schoolSiteApi.noticeById(school.id, Number(id))
+  const noticeId = Number(id)
+  if (!Number.isInteger(noticeId) || noticeId <= 0) notFound()
+
+  const notice = await schoolSiteApi
+    .noticeById(school.id, noticeId)
+    .catch(() => null)
   if (!notice) notFound()
+
+  const safeContent = sanitizeHtmlContent(notice.content)
 
   return (
     <article className="max-w-3xl mx-auto px-4 py-16">
@@ -23,11 +32,11 @@ export default async function NoticeDetailPage({
         {notice.title}
       </h1>
       <p className="text-sm text-gray-500 mb-6">
-        {new Date(notice.publishedAt).toLocaleDateString()}
+        {formatDate(notice.publishedAt)}
       </p>
       <div
         className="prose prose-lg max-w-none"
-        dangerouslySetInnerHTML={{ __html: notice.content }}
+        dangerouslySetInnerHTML={{ __html: safeContent }}
       />
     </article>
   )
