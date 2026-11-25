@@ -1,6 +1,7 @@
-// src/lib/get-school.ts (reference)
+// src/lib/get-school.ts
 import { headers } from 'next/headers'
 import { cache } from 'react'
+import { env } from '@/config/env'
 import type { SchoolPublic } from '@/features/school-site/types'
 
 export const getSchoolFromHost = cache(async (): Promise<SchoolPublic | null> => {
@@ -17,12 +18,17 @@ export const getSchoolFromHost = cache(async (): Promise<SchoolPublic | null> =>
   }
   if (!identifier) return null
 
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/public/schools/resolve?identifier=${encodeURIComponent(identifier)}`,
-    { next: { revalidate: 300 } }
-  )
-  if (!res.ok) return null
+  try {
+    const res = await fetch(
+      `${env.apiUrl}/public/schools/resolve?identifier=${encodeURIComponent(identifier)}`,
+      { next: { revalidate: 300 } }
+    )
+    if (!res.ok) return null
 
-  const json = await res.json()
-  return json.school
+    const json = await res.json()
+    return json.data ?? json.school ?? null
+  } catch (err) {
+    console.error('[getSchoolFromHost] Failed to resolve school:', err)
+    return null
+  }
 })

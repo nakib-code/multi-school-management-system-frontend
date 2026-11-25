@@ -60,7 +60,9 @@ function isMainDomain(hostname: string): boolean {
     hostname === ROOT_DOMAIN ||
     hostname === `www.${ROOT_DOMAIN}` ||
     hostname === "localhost" ||
-    hostname === "127.0.0.1"
+    hostname === "127.0.0.1" ||
+    // Temporary: treat Vercel preview/default domains as the main site until a custom ROOT_DOMAIN is configured
+    hostname.endsWith(".vercel.app")
   );
 }
 
@@ -109,7 +111,7 @@ export function proxy(req: NextRequest) {
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||
     pathname.match(
-      /\.(png|jpg|jpeg|svg|ico|css|js|woff2?|webp|gif|avif)$/i
+      /\.(png|jpg|jpeg|svg|ico|css|js|woff2?|webp|gif|avif|webmanifest)$/i
     )
   ) {
     return NextResponse.next();

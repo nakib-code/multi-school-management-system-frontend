@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { env } from '@/config/env'
 
 export function ContactForm({ schoolId }: { schoolId: number }) {
   const [loading, setLoading] = useState(false)
@@ -25,7 +26,7 @@ export function ContactForm({ schoolId }: { schoolId: number }) {
 
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/public/schools/${schoolId}/contact`,
+        `${env.apiUrl}/public/schools/${schoolId}/contact`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

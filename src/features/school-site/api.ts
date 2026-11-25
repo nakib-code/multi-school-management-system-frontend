@@ -1,4 +1,5 @@
 // src/features/school-site/api.ts
+import { env } from '@/config/env'
 import type {
   SchoolPublic,
   SchoolNotice,
@@ -7,42 +8,44 @@ import type {
   SchoolStats,
 } from './types'
 
-const BASE = process.env.NEXT_PUBLIC_BACKEND_URL
+const BASE = env.apiUrl
 
 async function getJson<T>(path: string, revalidate = 120): Promise<T> {
   const res = await fetch(`${BASE}${path}`, { next: { revalidate } })
   if (!res.ok) throw new Error(`API error: ${res.status}`)
-  return res.json()
+  const json = await res.json()
+  return (json.data !== undefined ? json.data : json) as T
 }
 
 export const schoolSiteApi = {
   resolveSchool: (identifier: string) =>
-    getJson<{ school: SchoolPublic }>(
-      `/api/public/schools/resolve?identifier=${encodeURIComponent(identifier)}`,
+    getJson<SchoolPublic>(
+      `/public/schools/resolve?identifier=${encodeURIComponent(identifier)}`,
       300
-    ).then((r) => r.school),
-
-  stats: (schoolId: number) =>
-    getJson<{ stats: SchoolStats }>(`/api/public/schools/${schoolId}/stats`)
-      .then((r) => r.stats),
-
-  notices: (schoolId: number, page = 1, limit = 10) =>
-    getJson<{ notices: SchoolNotice[]; meta: any }>(
-      `/api/public/schools/${schoolId}/notices?page=${page}&limit=${limit}`
     ),
 
+  stats: (schoolId: number) =>
+    getJson<SchoolStats>(`/public/schools/${schoolId}/stats`),
+
+  notices: async (schoolId: number, page = 1, limit = 10) => {
+    const res = await fetch(
+      `${BASE}/public/schools/${schoolId}/notices?page=${page}&limit=${limit}`,
+      { next: { revalidate: 120 } }
+    )
+    if (!res.ok) throw new Error(`API error: ${res.status}`)
+    const json = await res.json()
+    return {
+      notices: (json.data !== undefined ? json.data : json.notices ?? []) as SchoolNotice[],
+      meta: json.meta,
+    }
+  },
+
   noticeById: (schoolId: number, id: number) =>
-    getJson<{ notice: SchoolNotice }>(
-      `/api/public/schools/${schoolId}/notices/${id}`
-    ).then((r) => r.notice),
+    getJson<SchoolNotice>(`/public/schools/${schoolId}/notices/${id}`),
 
   gallery: (schoolId: number) =>
-    getJson<{ images: SchoolGalleryImage[] }>(
-      `/api/public/schools/${schoolId}/gallery`
-    ).then((r) => r.images),
+    getJson<SchoolGalleryImage[]>(`/public/schools/${schoolId}/gallery`),
 
   pageContent: (schoolId: number, slug: string) =>
-    getJson<{ content: SchoolPageContent | null }>(
-      `/api/public/schools/${schoolId}/page/${slug}`
-    ).then((r) => r.content),
+    getJson<SchoolPageContent | null>(`/public/schools/${schoolId}/page/${slug}`),
 }
