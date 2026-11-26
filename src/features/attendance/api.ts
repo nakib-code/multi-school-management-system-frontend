@@ -4,7 +4,15 @@ import type { AttendanceRecord, BulkAttendanceInput } from "./types";
 
 export const getAttendances = async (
   schoolId: number,
-  params?: { studentId?: number; enrollmentId?: number; status?: string; fromDate?: string; toDate?: string },
+  params?: {
+    studentId?: number;
+    enrollmentId?: number;
+    classId?: number;
+    sectionId?: number;
+    status?: string;
+    fromDate?: string;
+    toDate?: string;
+  },
 ): Promise<AttendanceRecord[]> => {
   const res = await api.get<ApiResponse<AttendanceRecord[]>>(
     `/schools/${schoolId}/attendances`,

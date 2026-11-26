@@ -1,9 +1,11 @@
-export type AdmissionPaymentMethod = "CASH" | "ONLINE";
+export type AdmissionPaymentMethod =
+  | "CASH"
+  | "ONLINE"
+  | "BKASH"
+  | "NAGAD"
+  | "ROCKET";
 
-export type AdmissionStatus =
-  | "PENDING"
-  | "APPROVED"
-  | "REJECTED";
+export type AdmissionStatus = "PENDING" | "APPROVED" | "REJECTED";
 
 export type AdmissionPaymentStatus =
   | "PENDING"
@@ -11,57 +13,85 @@ export type AdmissionPaymentStatus =
   | "FAILED"
   | "CANCELLED";
 
+export type ResidentialType = "NON_RESIDENTIAL" | "RESIDENTIAL" | "DAY_CARE";
+export type AcademicGroup = "SCIENCE" | "ARTS" | "COMMERCE";
+export type HefzWing = "NOORANI" | "QAIDA" | "AMPARA" | "NAJERA" | "HEFZ";
+
 export interface CreateAdmissionInput {
   schoolId: number;
 
-  // Student
+  // Stage 1 — Required
   studentName: string;
-  studentEmail: string;
-  password: string;
-  dateOfBirth?: string;
-  gender?: string;
+  dateOfBirth: string;
+  gender: "MALE" | "FEMALE" | "OTHER";
+  residentialType: ResidentialType;
+  classId: number;
+  academicYear: string;
+  guardianName: string;
+  guardianPhone: string;
+
+  // Stage 1 — Optional
+  sectionId?: number;
+  shift?: "MORNING" | "DAY" | "EVENING";
+  guardianRelationship?: string;
+  guardianEmail?: string;
+  guardianNid?: string;
+  guardianOccupation?: string;
+  academicGroup?: AcademicGroup;
+  group?: string;
+  quranWing?: HefzWing;
+
+  // Optional Student Login (NOT required)
+  studentEmail?: string;
+  password?: string;
+
+  // Stage 2 — Optional
+  nameBangla?: string;
+  birthRegNo?: string;
   bloodGroup?: string;
   previousSchool?: string;
   previousClass?: string;
-
-  // Guardian
-  guardianName?: string;
-  guardianEmail?: string;
-  guardianPhone?: string;
-  guardianRelationship?: string;
-  guardianNid?: string;
-  guardianOccupation?: string;
-
-  // Address
+  fatherName?: string;
+  motherName?: string;
   address?: string;
-
-  // Academic
-  classId: number;
-  academicYear: string;
-  shift?: string;
-  group?: string;
+  presentAddress?: string;
+  permanentAddress?: string;
 
   // Documents
   studentPhotoUrl?: string;
   birthCertificateUrl?: string;
   previousCertificateUrl?: string;
+  guardianNidUrl?: string;
+  previousTcUrl?: string;
+  marksheetUrl?: string;
 
-  // Payment
-  paymentMethod: AdmissionPaymentMethod;
+  // Optional Payment
+  paymentMethod?: AdmissionPaymentMethod;
 }
 
 export interface CreateAdmissionResponse {
   id: number;
+  schoolId: number;
   applicationNo: string;
-  studentEmail: string;
-  paymentMethod: AdmissionPaymentMethod;
-  paymentStatus: "PENDING";
+  studentName: string;
+  studentEmail: string | null;
+  guardianName: string | null;
+  guardianPhone: string | null;
+  paymentMethod: AdmissionPaymentMethod | null;
+  paymentStatus: AdmissionPaymentStatus | null;
   emailVerificationRequired: boolean;
+  payment: {
+    id: number;
+    amount: number;
+    paymentMethod: AdmissionPaymentMethod;
+    status: AdmissionPaymentStatus;
+  } | null;
 }
 
 export interface TrackAdmissionInput {
   applicationNo: string;
-  studentEmail: string;
+  guardianPhone?: string;
+  studentEmail?: string;
 }
 
 export interface TrackAdmissionResponse {
@@ -70,7 +100,10 @@ export interface TrackAdmissionResponse {
 
   student: {
     name: string;
-    email: string;
+    email: string | null;
+    guardianName?: string | null;
+    guardianPhone?: string | null;
+    residentialType?: ResidentialType;
     emailVerified: boolean;
   };
 
@@ -81,19 +114,13 @@ export interface TrackAdmissionResponse {
   };
 
   academic: {
-  year: string;
-  class: {
-    id: number;
-    name: string;
-    code: string;
-  } | null;
-  section: {
-    id: number;
-    name: string;
-  } | null;
-  shift: string | null;
-  group: string | null;
-};
+    year: string;
+    class: { id: number; name: string; code: string } | null;
+    section: { id: number; name: string; code?: string } | null;
+    shift: string | null;
+    group: string | null;
+    quranWing?: HefzWing | null;
+  };
 
   status: string;
   rejectionReason: string | null;
@@ -113,10 +140,6 @@ export interface TrackAdmissionResponse {
   updatedAt: string;
 }
 
-// ==================================================
-// Admin Admission List
-// ==================================================
-
 export interface GetAdmissionsParams {
   page?: number;
   limit?: number;
@@ -129,22 +152,27 @@ export interface AdminAdmission {
   id: number;
   applicationNo: string;
   studentName: string;
-  studentEmail: string;
+  nameBangla?: string | null;
+  studentEmail: string | null;
+  dateOfBirth?: string | null;
+  gender?: string | null;
+  residentialType?: ResidentialType;
   guardianName: string | null;
   guardianPhone: string | null;
+  guardianRelationship?: string | null;
   academicYear: string;
   shift: string | null;
   group: string | null;
+  academicGroup?: AcademicGroup | null;
+  quranWing?: HefzWing | null;
+  studentPhotoUrl?: string | null;
   status: AdmissionStatus;
   studentEmailVerified: boolean;
   createdAt: string;
   updatedAt: string;
 
-  class: {
-    id: number;
-    name: string;
-    code: string;
-  };
+  class: { id: number; name: string; code: string };
+  section?: { id: number; name: string; code: string } | null;
 
   payment: {
     id: number;
@@ -168,10 +196,6 @@ export interface GetAdmissionsResponse {
   meta: AdmissionsMeta;
 }
 
-// ==================================================
-// Admin Admission Details
-// ==================================================
-
 export interface AdminAdmissionDetails {
   id: number;
   applicationNo: string;
@@ -180,10 +204,13 @@ export interface AdminAdmissionDetails {
   sectionId: number | null;
 
   studentName: string;
-  studentEmail: string;
+  nameBangla: string | null;
+  studentEmail: string | null;
   dateOfBirth: string | null;
   gender: string | null;
   bloodGroup: string | null;
+  birthRegNo: string | null;
+  residentialType: ResidentialType;
   previousSchool: string | null;
   previousClass: string | null;
 
@@ -193,16 +220,25 @@ export interface AdminAdmissionDetails {
   guardianRelationship: string | null;
   guardianNid: string | null;
   guardianOccupation: string | null;
+  fatherName: string | null;
+  motherName: string | null;
 
   address: string | null;
+  presentAddress: string | null;
+  permanentAddress: string | null;
 
   academicYear: string;
   shift: string | null;
   group: string | null;
+  academicGroup: AcademicGroup | null;
+  quranWing: HefzWing | null;
 
   studentPhotoUrl: string | null;
   birthCertificateUrl: string | null;
   previousCertificateUrl: string | null;
+  guardianNidUrl: string | null;
+  previousTcUrl: string | null;
+  marksheetUrl: string | null;
 
   status: AdmissionStatus;
   studentEmailVerified: boolean;
@@ -213,16 +249,8 @@ export interface AdminAdmissionDetails {
   createdAt: string;
   updatedAt: string;
 
-  class: {
-    id: number;
-    name: string;
-    code: string;
-  };
-
-  section: {
-    id: number;
-    name: string;
-  } | null;
+  class: { id: number; name: string; code: string };
+  section: { id: number; name: string; code?: string } | null;
 
   payment: {
     id: number;
@@ -235,10 +263,6 @@ export interface AdminAdmissionDetails {
   } | null;
 }
 
-// ==================================================
-// Admin Actions
-// ==================================================
-
 export interface RejectAdmissionInput {
   rejectionReason: string;
 }
@@ -250,9 +274,10 @@ export interface ConfirmCashPaymentInput {
 export interface ApproveAdmissionResponse {
   admissionId: number;
   applicationNo: string;
-  studentId: number;
+  studentId: string;
+  studentRecordId: number;
   studentName: string;
-  studentEmail: string;
+  studentEmail: string | null;
   enrollmentId: number;
   classId: number;
   sectionId: number | null;
@@ -260,5 +285,3 @@ export interface ApproveAdmissionResponse {
   status: AdmissionStatus;
   reviewedAt: string;
 }
-
-

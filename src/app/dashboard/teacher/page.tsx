@@ -39,7 +39,7 @@ export default function TeacherDashboardPage() {
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4">
         <DashboardCard
           title="Class Assignments"
           value={assignmentsQuery.data?.length ?? 0}
@@ -50,28 +50,31 @@ export default function TeacherDashboardPage() {
           value={examsQuery.data?.length ?? 0}
           icon={FileText}
         />
-        <DashboardCard
-          title="Salary Records"
-          value={salariesQuery.data?.length ?? 0}
-          icon={Wallet}
-        />
+        <div className="col-span-2 sm:col-span-1">
+          <DashboardCard
+            title="Salary Records"
+            value={salariesQuery.data?.length ?? 0}
+            icon={Wallet}
+          />
+        </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
         {[
+          { label: "Daily Class Diary", href: "/dashboard/teacher/diary", icon: BookOpen },
           { label: "Mark Attendance", href: "/dashboard/teacher/attendance", icon: CalendarCheck },
+          { label: "My Classes & Alerts", href: "/dashboard/teacher/classes", icon: BookOpen },
           { label: "Record Exam Results", href: "/dashboard/teacher/results", icon: Award },
           { label: "Hefz Daily Sobok", href: "/dashboard/teacher/hefz", icon: BookOpenCheck },
-          { label: "My Classes & Subjects", href: "/dashboard/teacher/classes", icon: BookOpen },
         ].map((item) => {
           const Icon = item.icon;
           return (
             <Link
               key={item.href}
               href={item.href}
-              className="flex items-center gap-3 rounded-xl border bg-card p-4 text-sm font-medium transition hover:border-primary/40 hover:bg-muted/30"
+              className="flex min-h-[52px] items-center gap-3 rounded-[11px] border bg-card px-3.5 py-3 text-sm font-medium transition hover:border-primary/40 hover:bg-muted/30"
             >
-              <Icon className="h-5 w-5 text-primary" />
+              <Icon className="h-5 w-5 shrink-0 text-primary" />
               <span>{item.label}</span>
             </Link>
           );

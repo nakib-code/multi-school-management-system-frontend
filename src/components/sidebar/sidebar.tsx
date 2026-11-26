@@ -144,6 +144,11 @@ const navigationByRole: Record<string, NavItem[]> = {
       href: "/dashboard/admin/attendance",
       icon: CalendarCheck,
     },
+    {
+      label: "Daily Diary",
+      href: "/dashboard/admin/diary",
+      icon: BookOpen,
+    },
     { label: "Exams", href: "/dashboard/admin/exams", icon: FileText },
     { label: "Results", href: "/dashboard/admin/results", icon: Award },
     {
@@ -221,6 +226,11 @@ const navigationByRole: Record<string, NavItem[]> = {
       href: "/dashboard/manager/attendance",
       icon: CalendarCheck,
     },
+    {
+      label: "Daily Diary",
+      href: "/dashboard/manager/diary",
+      icon: BookOpen,
+    },
     { label: "Exams", href: "/dashboard/manager/exams", icon: FileText },
     { label: "Results", href: "/dashboard/manager/results", icon: Award },
     {
@@ -263,6 +273,11 @@ const navigationByRole: Record<string, NavItem[]> = {
       href: "/dashboard/teacher/attendance",
       icon: CalendarCheck,
     },
+    {
+      label: "Daily Diary",
+      href: "/dashboard/teacher/diary",
+      icon: BookOpen,
+    },
     { label: "Exams", href: "/dashboard/teacher/exams", icon: FileText },
     { label: "Results", href: "/dashboard/teacher/results", icon: Award },
     { label: "My Salaries", href: "/dashboard/teacher/salaries", icon: Wallet },
@@ -294,6 +309,11 @@ const navigationByRole: Record<string, NavItem[]> = {
       href: "/dashboard/student/attendance",
       icon: CalendarCheck,
     },
+    {
+      label: "Daily Diary",
+      href: "/dashboard/student/diary",
+      icon: BookOpen,
+    },
     { label: "Exams", href: "/dashboard/student/exams", icon: FileText },
     { label: "Results", href: "/dashboard/student/results", icon: Award },
     {
@@ -323,6 +343,11 @@ const navigationByRole: Record<string, NavItem[]> = {
       label: "Attendance",
       href: "/dashboard/guardian/attendance",
       icon: CalendarCheck,
+    },
+    {
+      label: "Daily Diary",
+      href: "/dashboard/guardian/diary",
+      icon: BookOpen,
     },
     { label: "Exams", href: "/dashboard/guardian/exams", icon: FileText },
     { label: "Results", href: "/dashboard/guardian/results", icon: Award },

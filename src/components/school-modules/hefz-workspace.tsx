@@ -42,9 +42,161 @@ export function HefzWorkspace() {
   return <StaffHefzView schoolId={schoolId} canEnroll={role === "ADMIN" || role === "MANAGER"} />;
 }
 
+interface HefzProgressReport {
+  student: {
+    id: number;
+    studentId: string;
+    firstName: string;
+    lastName: string | null;
+  };
+  enrollments: Array<{
+    id: number;
+    wing: HefzWing;
+    currentPara: number | null;
+    currentSurah: string | null;
+    status: string;
+    ustad?: { firstName: string; lastName: string | null; employeeId: string };
+  }>;
+  summary: {
+    totalLogs: number;
+    attendance: { present: number; absent: number; late: number };
+    sobokQuality: { good: number; average: number; weak: number; revise: number };
+  };
+  recentLogs: Array<{
+    id: number;
+    logDate: string;
+    sobok: string;
+    sobokQuality: SobokQuality;
+    manzil: string | null;
+    attendanceStatus: HefzAttendanceStatus;
+    ustadNote: string | null;
+  }>;
+}
+
+function HefzProgressCard({ report }: { report: HefzProgressReport }) {
+  return (
+    <div className="space-y-4 rounded-2xl border bg-card p-5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 className="text-lg font-semibold">
+            {report.student.firstName} {report.student.lastName ?? ""}
+          </h2>
+          <p className="font-mono text-xs text-muted-foreground">
+            {report.student.studentId}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2 text-xs">
+          <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 font-medium text-emerald-700">
+            Present: {report.summary.attendance.present}
+          </span>
+          <span className="rounded-full bg-amber-500/10 px-2.5 py-1 font-medium text-amber-700">
+            Late: {report.summary.attendance.late}
+          </span>
+          <span className="rounded-full bg-red-500/10 px-2.5 py-1 font-medium text-red-700">
+            Absent: {report.summary.attendance.absent}
+          </span>
+        </div>
+      </div>
+
+      {report.enrollments.length > 0 && (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {report.enrollments.map((en) => (
+            <div
+              key={en.id}
+              className="rounded-xl border bg-muted/20 p-3 text-xs"
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-semibold">{en.wing} Wing</span>
+                <span className="rounded border px-1.5 py-0.5">{en.status}</span>
+              </div>
+              <p className="mt-1 text-muted-foreground">
+                Para {en.currentPara ?? "—"}
+                {en.currentSurah ? ` • ${en.currentSurah}` : ""}
+              </p>
+              {en.ustad && (
+                <p className="mt-0.5 text-muted-foreground">
+                  Ustad: {en.ustad.firstName} {en.ustad.lastName ?? ""}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {report.recentLogs.length > 0 ? (
+        <>
+          <div className="space-y-2 md:hidden">
+            {report.recentLogs.slice(0, 10).map((log) => (
+              <div
+                key={log.id}
+                className="rounded-[11px] border bg-muted/20 p-3 text-xs"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-semibold">
+                    {new Date(log.logDate).toLocaleDateString()}
+                  </span>
+                  <div className="flex gap-1.5">
+                    <span className="rounded-full border bg-background px-2 py-0.5 text-[10px] font-semibold">
+                      {log.sobokQuality}
+                    </span>
+                    <span className="rounded-full border bg-background px-2 py-0.5 text-[10px]">
+                      {log.attendanceStatus}
+                    </span>
+                  </div>
+                </div>
+                <p className="mt-1.5 font-medium">Sobok: {log.sobok}</p>
+                {log.manzil && (
+                  <p className="mt-0.5 text-muted-foreground">
+                    Manzil: {log.manzil}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="hidden overflow-x-auto rounded-[11px] border md:block">
+            <table className="w-full text-left text-xs">
+              <thead className="border-b bg-muted/40 uppercase text-muted-foreground">
+                <tr>
+                  <th className="px-3 py-2">Date</th>
+                  <th className="px-3 py-2">Sobok</th>
+                  <th className="px-3 py-2">Quality</th>
+                  <th className="px-3 py-2">Manzil</th>
+                  <th className="px-3 py-2">Attendance</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {report.recentLogs.slice(0, 10).map((log) => (
+                  <tr key={log.id}>
+                    <td className="px-3 py-2">
+                      {new Date(log.logDate).toLocaleDateString()}
+                    </td>
+                    <td className="px-3 py-2 font-medium">{log.sobok}</td>
+                    <td className="px-3 py-2">{log.sobokQuality}</td>
+                    <td className="px-3 py-2 text-muted-foreground">
+                      {log.manzil ?? "—"}
+                    </td>
+                    <td className="px-3 py-2">{log.attendanceStatus}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          No daily Sobok logs recorded yet.
+        </p>
+      )}
+    </div>
+  );
+}
+
 function GuardianHefzView({ schoolId }: { schoolId: number }) {
-  const { data, isLoading, isError, error, refetch } = useGuardianHefzProgress(schoolId);
-  if (isLoading) return <LoadingState message="Loading children's Hefz progress..." />;
+  const { data, isLoading, isError, error, refetch } =
+    useGuardianHefzProgress(schoolId);
+  if (isLoading)
+    return <LoadingState message="Loading children's Hefz progress..." />;
   if (isError) {
     return (
       <ErrorState
@@ -53,24 +205,31 @@ function GuardianHefzView({ schoolId }: { schoolId: number }) {
       />
     );
   }
+  const reports = (Array.isArray(data) ? data : []) as HefzProgressReport[];
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Hefz &amp; Najera Progress</h1>
+        <h1 className="text-2xl font-bold tracking-tight">
+          Hefz &amp; Najera Progress
+        </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Daily Sobok, Sobok-e-Am, and Manzil memorization updates for your linked children.
+          Daily Sobok, Sobok-e-Am, and Manzil memorization updates for your
+          linked children.
         </p>
       </div>
-      {!data || (Array.isArray(data) && data.length === 0) ? (
+      {reports.length === 0 ? (
         <EmptyState
           icon={BookOpenCheck}
           title="No Hefz progress records yet"
-          description="Once your child is enrolled in the Hefz or Najera wing, daily logs will appear here."
+          description="Once your child is enrolled in the Noorani, Najera, or Hefz wing, daily logs will appear here."
         />
       ) : (
-        <pre className="overflow-x-auto rounded-xl border bg-card p-5 text-xs">
-          {JSON.stringify(data, null, 2)}
-        </pre>
+        <div className="space-y-4">
+          {reports.map((report) => (
+            <HefzProgressCard key={report.student.id} report={report} />
+          ))}
+        </div>
       )}
     </div>
   );
@@ -87,29 +246,34 @@ function StudentHefzView({ schoolId }: { schoolId: number }) {
   if (progressQuery.isError) {
     return (
       <ErrorState
-        message={getApiErrorMessage(progressQuery.error, "Failed to load Hefz progress")}
+        message={getApiErrorMessage(
+          progressQuery.error,
+          "Failed to load Hefz progress",
+        )}
         onRetry={() => progressQuery.refetch()}
       />
     );
   }
+  const report = progressQuery.data as HefzProgressReport | undefined;
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">My Hefz &amp; Najera Progress</h1>
+        <h1 className="text-2xl font-bold tracking-tight">
+          My Hefz &amp; Najera Progress
+        </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Track your daily Sobok, Sobok-e-Am, Manzil, and Ustad notes.
         </p>
       </div>
-      {!progressQuery.data ? (
+      {!report ? (
         <EmptyState
           icon={BookOpenCheck}
           title="Not enrolled in Hefz/Najera"
           description="You do not have an active Hefz or Najera enrollment yet."
         />
       ) : (
-        <pre className="overflow-x-auto rounded-xl border bg-card p-5 text-xs">
-          {JSON.stringify(progressQuery.data, null, 2)}
-        </pre>
+        <HefzProgressCard report={report} />
       )}
     </div>
   );
@@ -246,44 +410,74 @@ function StaffHefzView({ schoolId, canEnroll }: { schoolId: number; canEnroll: b
             description="Enroll students under an Ustad to begin daily Sobok tracking."
           />
         ) : (
-          <div className="overflow-x-auto rounded-xl border bg-card">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b bg-muted/40 text-xs uppercase text-muted-foreground">
-                <tr>
-                  <th className="px-4 py-3">Student</th>
-                  <th className="px-4 py-3">Ustad</th>
-                  <th className="px-4 py-3">Wing</th>
-                  <th className="px-4 py-3">Current Para / Surah</th>
-                  <th className="px-4 py-3">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {enrollments.map((en) => (
-                  <tr key={en.id}>
-                    <td className="px-4 py-3 font-medium">
+          <>
+            <div className="space-y-2.5 md:hidden">
+              {enrollments.map((en) => (
+                <div key={en.id} className="mobile-card space-y-1.5 text-xs">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-sm font-semibold">
                       {en.student
                         ? `${en.student.firstName} ${en.student.lastName ?? ""}`
                         : `Student #${en.studentId}`}
-                    </td>
-                    <td className="px-4 py-3">
-                      {en.ustad
-                        ? `${en.ustad.firstName} ${en.ustad.lastName ?? ""}`
-                        : `Ustad #${en.ustadId}`}
-                    </td>
-                    <td className="px-4 py-3 font-medium">{en.wing}</td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      Para {en.currentPara ?? "—"} {en.currentSurah ? `• ${en.currentSurah}` : ""}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="rounded-full border px-2.5 py-0.5 text-xs font-medium">
-                        {en.status}
-                      </span>
-                    </td>
+                    </p>
+                    <span className="rounded-full border px-2 py-0.5 text-[10px] font-semibold">
+                      {en.wing} • {en.status}
+                    </span>
+                  </div>
+                  <p className="text-muted-foreground">
+                    Ustad:{" "}
+                    {en.ustad
+                      ? `${en.ustad.firstName} ${en.ustad.lastName ?? ""}`
+                      : `#${en.ustadId}`}
+                  </p>
+                  <p className="text-muted-foreground">
+                    Para {en.currentPara ?? "—"}{" "}
+                    {en.currentSurah ? `• ${en.currentSurah}` : ""}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <div className="surface-panel hidden overflow-x-auto md:block">
+              <table className="w-full text-left text-sm">
+                <thead className="border-b bg-muted/40 text-xs uppercase text-muted-foreground">
+                  <tr>
+                    <th className="px-4 py-3">Student</th>
+                    <th className="px-4 py-3">Ustad</th>
+                    <th className="px-4 py-3">Wing</th>
+                    <th className="px-4 py-3">Current Para / Surah</th>
+                    <th className="px-4 py-3">Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y">
+                  {enrollments.map((en) => (
+                    <tr key={en.id}>
+                      <td className="px-4 py-3 font-medium">
+                        {en.student
+                          ? `${en.student.firstName} ${en.student.lastName ?? ""}`
+                          : `Student #${en.studentId}`}
+                      </td>
+                      <td className="px-4 py-3">
+                        {en.ustad
+                          ? `${en.ustad.firstName} ${en.ustad.lastName ?? ""}`
+                          : `Ustad #${en.ustadId}`}
+                      </td>
+                      <td className="px-4 py-3 font-medium">{en.wing}</td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        Para {en.currentPara ?? "—"}{" "}
+                        {en.currentSurah ? `• ${en.currentSurah}` : ""}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="rounded-full border px-2.5 py-0.5 text-xs font-medium">
+                          {en.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )
       ) : logs.length === 0 ? (
         <EmptyState
@@ -292,42 +486,73 @@ function StaffHefzView({ schoolId, canEnroll }: { schoolId: number; canEnroll: b
           description="Record daily Sobok, Sobok-e-Am, and Manzil evaluations."
         />
       ) : (
-        <div className="overflow-x-auto rounded-xl border bg-card">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b bg-muted/40 text-xs uppercase text-muted-foreground">
-              <tr>
-                <th className="px-4 py-3">Date</th>
-                <th className="px-4 py-3">Student</th>
-                <th className="px-4 py-3">Sobok</th>
-                <th className="px-4 py-3">Quality</th>
-                <th className="px-4 py-3">Manzil</th>
-                <th className="px-4 py-3">Attendance</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {logs.map((l) => (
-                <tr key={l.id}>
-                  <td className="px-4 py-3 text-xs">
-                    {new Date(l.logDate).toLocaleDateString()}
-                  </td>
-                  <td className="px-4 py-3 font-medium">
-                    {l.hefzEnrollment?.student
-                      ? `${l.hefzEnrollment.student.firstName} ${l.hefzEnrollment.student.lastName ?? ""}`
-                      : `Enrollment #${l.hefzEnrollmentId}`}
-                  </td>
-                  <td className="px-4 py-3">{l.sobok}</td>
-                  <td className="px-4 py-3">
-                    <span className="rounded-full border px-2.5 py-0.5 text-xs font-medium">
-                      {l.sobokQuality}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">{l.manzil ?? "—"}</td>
-                  <td className="px-4 py-3 text-xs">{l.attendanceStatus}</td>
+        <>
+          <div className="space-y-2.5 md:hidden">
+            {logs.map((l) => (
+              <div key={l.id} className="mobile-card space-y-1.5 text-xs">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-semibold">
+                      {l.hefzEnrollment?.student
+                        ? `${l.hefzEnrollment.student.firstName} ${l.hefzEnrollment.student.lastName ?? ""}`
+                        : `Enrollment #${l.hefzEnrollmentId}`}
+                    </p>
+                    <p className="text-muted-foreground">
+                      {new Date(l.logDate).toLocaleDateString()} •{" "}
+                      {l.attendanceStatus}
+                    </p>
+                  </div>
+                  <span className="rounded-full border px-2 py-0.5 text-[10px] font-semibold">
+                    {l.sobokQuality}
+                  </span>
+                </div>
+                <p className="font-medium">Sobok: {l.sobok}</p>
+                {l.manzil && (
+                  <p className="text-muted-foreground">Manzil: {l.manzil}</p>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="surface-panel hidden overflow-x-auto md:block">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b bg-muted/40 text-xs uppercase text-muted-foreground">
+                <tr>
+                  <th className="px-4 py-3">Date</th>
+                  <th className="px-4 py-3">Student</th>
+                  <th className="px-4 py-3">Sobok</th>
+                  <th className="px-4 py-3">Quality</th>
+                  <th className="px-4 py-3">Manzil</th>
+                  <th className="px-4 py-3">Attendance</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y">
+                {logs.map((l) => (
+                  <tr key={l.id}>
+                    <td className="px-4 py-3 text-xs">
+                      {new Date(l.logDate).toLocaleDateString()}
+                    </td>
+                    <td className="px-4 py-3 font-medium">
+                      {l.hefzEnrollment?.student
+                        ? `${l.hefzEnrollment.student.firstName} ${l.hefzEnrollment.student.lastName ?? ""}`
+                        : `Enrollment #${l.hefzEnrollmentId}`}
+                    </td>
+                    <td className="px-4 py-3">{l.sobok}</td>
+                    <td className="px-4 py-3">
+                      <span className="rounded-full border px-2.5 py-0.5 text-xs font-medium">
+                        {l.sobokQuality}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {l.manzil ?? "—"}
+                    </td>
+                    <td className="px-4 py-3 text-xs">{l.attendanceStatus}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       <Modal open={enrollOpen} onClose={() => setEnrollOpen(false)} title="Enroll in Hefz / Najera">
@@ -372,8 +597,11 @@ function StaffHefzView({ schoolId, canEnroll }: { schoolId: number; canEnroll: b
                 onChange={(e) => setEnrollForm({ ...enrollForm, wing: e.target.value as HefzWing })}
                 className="h-9 w-full rounded-md border bg-background px-3 text-sm"
               >
-                <option value="HEFZ">HEFZ</option>
+                <option value="NOORANI">NOORANI</option>
+                <option value="QAIDA">QAIDA</option>
+                <option value="AMPARA">AMPARA</option>
                 <option value="NAJERA">NAJERA</option>
+                <option value="HEFZ">HEFZ</option>
               </select>
             </div>
             <div className="space-y-1">

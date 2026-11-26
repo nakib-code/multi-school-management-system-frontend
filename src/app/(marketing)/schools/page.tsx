@@ -161,10 +161,68 @@ export default function SchoolsPage() {
             </div>
           )}
 
-          {/* Table */}
+          {/* Schools Directory (Mobile Cards + Desktop Table) */}
           {!isLoading && !isError && schools.length > 0 && (
             <>
-              <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="space-y-3 md:hidden">
+                {schools.map((school) => (
+                  <div
+                    key={school.id}
+                    className="rounded-[11px] border border-slate-200 bg-white p-4 shadow-sm"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        {school.logo ? (
+                          <img
+                            src={school.logo}
+                            alt={`${school.name} logo`}
+                            className="h-11 w-11 shrink-0 rounded-[11px] border border-slate-200 object-contain"
+                          />
+                        ) : (
+                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[11px] bg-[#061842] text-base font-bold text-[#00d2c4]">
+                            {school.name.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold text-[#061842]">
+                            {school.name}
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            Code: {school.code}
+                          </p>
+                        </div>
+                      </div>
+                      <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-600">
+                        Open
+                      </span>
+                    </div>
+
+                    {school.address && (
+                      <p className="mt-2.5 flex items-start gap-1.5 text-xs text-slate-500">
+                        <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#00a99d]" />
+                        <span>{school.address}</span>
+                      </p>
+                    )}
+
+                    <div className="mt-3 flex gap-2 border-t border-slate-100 pt-3">
+                      <Link
+                        href={`/schools/${school.id}`}
+                        className="flex min-h-[40px] flex-1 items-center justify-center rounded-[11px] border border-slate-200 text-xs font-semibold text-[#061842]"
+                      >
+                        Details
+                      </Link>
+                      <Link
+                        href={`/admissions?schoolId=${school.id}`}
+                        className="flex min-h-[40px] flex-1 items-center justify-center rounded-[11px] bg-[#00a99d] text-xs font-semibold text-white"
+                      >
+                        Apply Now
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:block">
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[800px] text-sm">
                     <thead className="border-b border-slate-200 bg-slate-50">

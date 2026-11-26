@@ -93,8 +93,45 @@ export function EnrollmentsWorkspace() {
           description="Enroll students into classes and sections for the current academic year."
         />
       ) : (
-        <div className="overflow-x-auto rounded-xl border bg-card">
-          <table className="w-full text-left text-sm">
+        <>
+          <div className="space-y-2.5 md:hidden">
+            {enrollments.map((en) => (
+              <div key={en.id} className="mobile-card space-y-1.5 text-xs">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-sm font-semibold">
+                    {en.student
+                      ? `${en.student.firstName} ${en.student.lastName ?? ""}`
+                      : `Student #${en.studentId}`}
+                  </p>
+                  <span className="rounded-full border px-2 py-0.5 text-[10px] font-semibold">
+                    {en.status}
+                  </span>
+                </div>
+                <p className="text-muted-foreground">
+                  {en.class?.name ?? `Class #${en.classId}`}
+                  {en.section ? ` — ${en.section.name}` : ""} •{" "}
+                  {en.academicYear} • Roll: {en.rollNumber ?? "—"}
+                </p>
+                {canManage && (
+                  <div className="flex justify-end border-t pt-2">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => deleteMutation.mutate(en.id)}
+                      disabled={deleteMutation.isPending}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="mr-1 h-3.5 w-3.5" />
+                      Remove
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="surface-panel hidden overflow-x-auto md:block">
+            <table className="w-full text-left text-sm">
             <thead className="border-b bg-muted/40 text-xs uppercase text-muted-foreground">
               <tr>
                 <th className="px-4 py-3">Student</th>
@@ -140,8 +177,9 @@ export function EnrollmentsWorkspace() {
                 </tr>
               ))}
             </tbody>
-          </table>
-        </div>
+            </table>
+          </div>
+        </>
       )}
 
       <Modal open={open} onClose={() => setOpen(false)} title="Enroll Student">

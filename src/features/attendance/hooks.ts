@@ -14,7 +14,15 @@ export const attendanceKeys = {
 
 export const useAttendances = (
   schoolId: number,
-  params?: { studentId?: number; enrollmentId?: number; status?: string; fromDate?: string; toDate?: string },
+  params?: {
+    studentId?: number;
+    enrollmentId?: number;
+    classId?: number;
+    sectionId?: number;
+    status?: string;
+    fromDate?: string;
+    toDate?: string;
+  },
 ) =>
   useQuery({
     queryKey: attendanceKeys.list(schoolId, params),
@@ -26,8 +34,10 @@ export const useBulkMarkAttendance = (schoolId: number) => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (payload: BulkAttendanceInput) => bulkMarkAttendance(schoolId, payload),
-    onSuccess: () => {
-      toast.success("Attendance saved successfully");
+    onSuccess: (saved) => {
+      toast.success(
+        `Attendance saved for ${saved.length} student(s) & instant guardian alerts dispatched`,
+      );
       qc.invalidateQueries({ queryKey: attendanceKeys.all });
     },
     onError: (err) => toast.error(getApiErrorMessage(err, "Failed to save attendance")),

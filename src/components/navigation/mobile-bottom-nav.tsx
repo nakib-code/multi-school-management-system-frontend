@@ -3,7 +3,6 @@
 import {
   Bell,
   BookOpen,
-  BookOpenCheck,
   CalendarCheck,
   CreditCard,
   LayoutDashboard,
@@ -24,17 +23,20 @@ export function MobileBottomNav() {
   const pathname = usePathname();
   const { user } = useAuth();
 
-  if (!user || (user.role !== "TEACHER" && user.role !== "GUARDIAN")) {
+  if (
+    !user ||
+    (user.role !== "TEACHER" &&
+      user.role !== "GUARDIAN" &&
+      user.role !== "STUDENT")
+  ) {
     return null;
   }
-
-  const hasHefz = user.schoolSetting?.hasHefzSection !== false;
 
   const items: BottomNavItem[] =
     user.role === "TEACHER"
       ? [
           {
-            label: "Dashboard",
+            label: "Home",
             href: "/dashboard/teacher",
             icon: LayoutDashboard,
             exact: true,
@@ -44,59 +46,71 @@ export function MobileBottomNav() {
             href: "/dashboard/teacher/attendance",
             icon: CalendarCheck,
           },
-          hasHefz
-            ? {
-                label: "Hefz/Diary",
-                href: "/dashboard/teacher/hefz",
-                icon: BookOpenCheck,
-              }
-            : {
-                label: "Classes",
-                href: "/dashboard/teacher/classes",
-                icon: BookOpen,
-              },
           {
-            label: "Notices",
+            label: "Diary",
+            href: "/dashboard/teacher/diary",
+            icon: BookOpen,
+          },
+          {
+            label: "Alerts",
             href: "/dashboard/notifications",
             icon: Bell,
           },
         ]
-      : [
-          {
-            label: "My Children",
-            href: "/dashboard/guardian",
-            icon: Users,
-            exact: true,
-          },
-          hasHefz
-            ? {
-                label: "Sabak/Diary",
-                href: "/dashboard/guardian/hefz",
-                icon: BookOpenCheck,
-              }
-            : {
-                label: "Attendance",
-                href: "/dashboard/guardian/attendance",
-                icon: CalendarCheck,
-              },
-          {
-            label: "Fees",
-            href: "/dashboard/guardian/fees",
-            icon: CreditCard,
-          },
-          {
-            label: "Notices",
-            href: "/dashboard/notifications",
-            icon: Bell,
-          },
-        ];
+      : user.role === "GUARDIAN"
+        ? [
+            {
+              label: "Home",
+              href: "/dashboard/guardian",
+              icon: Users,
+              exact: true,
+            },
+            {
+              label: "Attendance",
+              href: "/dashboard/guardian/attendance",
+              icon: CalendarCheck,
+            },
+            {
+              label: "Diary",
+              href: "/dashboard/guardian/diary",
+              icon: BookOpen,
+            },
+            {
+              label: "Alerts",
+              href: "/dashboard/notifications",
+              icon: Bell,
+            },
+          ]
+        : [
+            {
+              label: "Home",
+              href: "/dashboard/student",
+              icon: LayoutDashboard,
+              exact: true,
+            },
+            {
+              label: "Attendance",
+              href: "/dashboard/student/attendance",
+              icon: CalendarCheck,
+            },
+            {
+              label: "Diary",
+              href: "/dashboard/student/diary",
+              icon: BookOpen,
+            },
+            {
+              label: "Fees",
+              href: "/dashboard/student/fees",
+              icon: CreditCard,
+            },
+          ];
 
   return (
     <nav
       aria-label="Mobile Bottom Navigation"
-      className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:hidden"
+      className="safe-bottom fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:hidden"
     >
-      <div className="grid h-16 grid-cols-4 items-center px-1 pb-[env(safe-area-inset-bottom)]">
+      <div className="grid h-16 grid-cols-4 items-center px-1.5">
         {items.map((item) => {
           const Icon = item.icon;
           const isActive = item.exact
@@ -107,9 +121,9 @@ export function MobileBottomNav() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center justify-center gap-1 rounded-lg py-1.5 text-[11px] font-medium transition-colors ${
+              className={`flex min-h-[44px] flex-col items-center justify-center gap-0.5 rounded-[11px] py-1 text-[11px] font-medium transition-colors ${
                 isActive
-                  ? "text-primary"
+                  ? "bg-primary/8 text-primary"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >

@@ -2,6 +2,7 @@
 
 import {
   Award,
+  BookOpen,
   BookOpenCheck,
   CalendarCheck,
   CreditCard,
@@ -33,7 +34,7 @@ export default function GuardianDashboardPage() {
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4">
         <DashboardCard
           title="Attendance Records"
           value={attendanceQuery.data?.length ?? 0}
@@ -44,16 +45,19 @@ export default function GuardianDashboardPage() {
           value={resultsQuery.data?.length ?? 0}
           icon={Award}
         />
-        <DashboardCard
-          title="Fee Invoices"
-          value={feesQuery.data?.length ?? 0}
-          icon={CreditCard}
-        />
+        <div className="col-span-2 sm:col-span-1">
+          <DashboardCard
+            title="Fee Invoices"
+            value={feesQuery.data?.length ?? 0}
+            icon={CreditCard}
+          />
+        </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
         {[
-          { label: "Attendance", href: "/dashboard/guardian/attendance", icon: CalendarCheck },
+          { label: "Daily Class Diary", href: "/dashboard/guardian/diary", icon: BookOpen },
+          { label: "Attendance Sheet", href: "/dashboard/guardian/attendance", icon: CalendarCheck },
           { label: "Examinations", href: "/dashboard/guardian/exams", icon: FileText },
           { label: "Results & GPA", href: "/dashboard/guardian/results", icon: Award },
           { label: "Fees & Payments", href: "/dashboard/guardian/fees", icon: CreditCard },
@@ -64,9 +68,9 @@ export default function GuardianDashboardPage() {
             <Link
               key={item.href}
               href={item.href}
-              className="flex items-center gap-3 rounded-xl border bg-card p-4 text-sm font-medium transition hover:border-primary/40 hover:bg-muted/30"
+              className="flex min-h-[52px] items-center gap-3 rounded-[11px] border bg-card px-3.5 py-3 text-sm font-medium transition hover:border-primary/40 hover:bg-muted/30"
             >
-              <Icon className="h-5 w-5 text-primary" />
+              <Icon className="h-5 w-5 shrink-0 text-primary" />
               <span>{item.label}</span>
             </Link>
           );

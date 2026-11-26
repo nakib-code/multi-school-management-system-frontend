@@ -92,6 +92,37 @@ export const useMarkAllNotificationsRead = () => {
   });
 };
 
+export interface BroadcastNotificationInput {
+  schoolId?: number;
+  title: string;
+  message: string;
+  type: "ANNOUNCEMENT" | "EMERGENCY";
+  audience: "ALL" | "TEACHERS" | "GUARDIANS" | "STUDENTS" | "CLASS";
+  classId?: number;
+  sectionId?: number;
+}
+
+export const useBroadcastNotification = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: BroadcastNotificationInput) => {
+      const res = await api.post<{
+        success: boolean;
+        data: { sentCount: number };
+      }>("/notifications/broadcast", payload);
+      return res.data.data;
+    },
+    onSuccess: (data) => {
+      toast.success(
+        `Notice delivered to ${data.sentCount} recipient(s)`,
+      );
+      qc.invalidateQueries({ queryKey: notificationKeys.all });
+    },
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to send notice")),
+  });
+};
+
 export const useDeleteNotification = () => {
   const qc = useQueryClient();
   return useMutation({

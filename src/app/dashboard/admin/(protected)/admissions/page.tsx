@@ -4,54 +4,57 @@ import {
   AlertCircle,
   ChevronLeft,
   ChevronRight,
+  ExternalLink,
+  Eye,
   Loader2,
   RefreshCw,
   Search,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-
+import { Modal } from "@/components/modals/modal";
 import {
+  useAdmissionDetails,
   useAdmissions,
   useApproveAdmission,
   useConfirmCashPayment,
   useRejectAdmission,
 } from "@/features/admissions/hooks";
-import { useAuth } from "@/providers/auth-provider";
 import type {
-  AdmissionStatus,
   AdmissionPaymentStatus,
+  AdmissionStatus,
 } from "@/features/admissions/types";
+import { useAuth } from "@/providers/auth-provider";
 
 const PAGE_SIZE = 10;
 
 export default function AdminAdmissionsPage() {
   const { user } = useAuth();
-
   const schoolId = user?.schoolId ?? 0;
 
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<AdmissionStatus | "">("");
-  const [paymentStatus, setPaymentStatus] =
-    useState<AdmissionPaymentStatus | "">("");
+  const [paymentStatus, setPaymentStatus] = useState<
+    AdmissionPaymentStatus | ""
+  >("");
   const [page, setPage] = useState(1);
   const [rejectId, setRejectId] = useState<number | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
+  const [detailId, setDetailId] = useState<number | null>(null);
 
-  const {
-    data,
-    isLoading,
-    isError,
-    isFetching,
-    refetch,
-  } = useAdmissions(schoolId, {
-    page,
-    limit: PAGE_SIZE,
-    search: search || undefined,
-    status: status || undefined,
-    paymentStatus: paymentStatus || undefined,
-  });
+  const { data, isLoading, isError, isFetching, refetch } = useAdmissions(
+    schoolId,
+    {
+      page,
+      limit: PAGE_SIZE,
+      search: search || undefined,
+      status: status || undefined,
+      paymentStatus: paymentStatus || undefined,
+    },
+  );
+
+  const detailQuery = useAdmissionDetails(schoolId, detailId ?? 0);
 
   const approveMutation = useApproveAdmission(schoolId);
   const rejectMutation = useRejectAdmission(schoolId);
@@ -66,11 +69,18 @@ export default function AdminAdmissionsPage() {
   }
 
   async function handleApprove(admissionId: number) {
-    if (!window.confirm("Approve this admission application?")) return;
+    if (
+      !window.confirm(
+        "Approve this admission? This will create the Student, Class Enrollment, and link/create the Guardian.",
+      )
+    ) {
+      return;
+    }
 
     try {
       await approveMutation.mutateAsync(admissionId);
-      toast.success("Admission approved successfully");
+      toast.success("Admission approved — Student, Enrollment & Guardian created");
+      setDetailId(null);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Failed to approve admission",
@@ -79,14 +89,16 @@ export default function AdminAdmissionsPage() {
   }
 
   async function handleCashPayment(admissionId: number) {
-    if (!window.confirm("Confirm that the admission fee was received in cash?")) {
+    if (
+      !window.confirm("Confirm that the admission fee was received in cash?")
+    ) {
       return;
     }
 
     try {
       await cashPaymentMutation.mutateAsync({
         admissionId,
-        input: { remarks: "Cash payment confirmed by admin" },
+        input: { remarks: "Cash payment confirmed by staff" },
       });
       toast.success("Cash payment confirmed");
     } catch (error) {
@@ -100,7 +112,6 @@ export default function AdminAdmissionsPage() {
     if (!rejectId) return;
 
     const reason = rejectionReason.trim();
-
     if (!reason) {
       toast.error("Please enter a rejection reason");
       return;
@@ -115,6 +126,7 @@ export default function AdminAdmissionsPage() {
       toast.success("Admission rejected successfully");
       setRejectId(null);
       setRejectionReason("");
+      setDetailId(null);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Failed to reject admission",
@@ -130,12 +142,15 @@ export default function AdminAdmissionsPage() {
     );
   }
 
+  const detail = detailQuery.data;
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Admissions</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Review applications, verify payments, and manage admission decisions.
+          Inspect applications, verify payments, and approve into Student +
+          Enrollment + Guardian records.
         </p>
       </div>
 
@@ -152,7 +167,7 @@ export default function AdminAdmissionsPage() {
           <input
             value={searchInput}
             onChange={(event) => setSearchInput(event.target.value)}
-            placeholder="Search application, name, email..."
+            placeholder="Search application, student, phone..."
             className="h-10 w-full rounded-lg border bg-background pl-9 pr-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
           />
         </form>
@@ -266,14 +281,108 @@ export default function AdminAdmissionsPage() {
             No admission applications found.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[1050px] text-left text-sm">
+          <>
+            {/* Mobile Admission Cards */}
+            <div className="space-y-2.5 p-3 md:hidden">
+              {admissions.map((admission) => {
+                const isPending = admission.status === "PENDING";
+                const hasPaidOrNoFee =
+                  !admission.payment ||
+                  admission.payment.amount <= 0 ||
+                  admission.payment.status === "PAID";
+                const isCash = admission.payment?.paymentMethod === "CASH";
+
+                return (
+                  <div key={admission.id} className="mobile-card space-y-2.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold">
+                          {admission.studentName}
+                        </p>
+                        <p className="font-mono text-[11px] text-muted-foreground">
+                          {admission.applicationNo}
+                        </p>
+                      </div>
+                      <StatusBadge status={admission.status} />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                      <div>
+                        <span className="block text-[10px] uppercase">Class</span>
+                        <span className="font-medium text-foreground">
+                          {admission.class.name}
+                          {admission.section ? ` • ${admission.section.name}` : ""}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="block text-[10px] uppercase">Guardian</span>
+                        <span className="font-medium text-foreground">
+                          {admission.guardianPhone ?? admission.guardianName ?? "—"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 border-t pt-2.5">
+                      <button
+                        type="button"
+                        onClick={() => setDetailId(admission.id)}
+                        className="inline-flex min-h-[40px] flex-1 items-center justify-center gap-1 rounded-[11px] border px-3 text-xs font-medium hover:bg-muted"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                        Details
+                      </button>
+
+                      {isPending &&
+                        isCash &&
+                        admission.payment?.status !== "PAID" && (
+                          <button
+                            type="button"
+                            disabled={cashPaymentMutation.isPending}
+                            onClick={() => handleCashPayment(admission.id)}
+                            className="min-h-[40px] flex-1 rounded-[11px] border px-3 text-xs font-medium hover:bg-muted disabled:opacity-50"
+                          >
+                            Confirm Cash
+                          </button>
+                        )}
+
+                      {isPending && hasPaidOrNoFee && (
+                        <button
+                          type="button"
+                          disabled={approveMutation.isPending}
+                          onClick={() => handleApprove(admission.id)}
+                          className="min-h-[40px] flex-1 rounded-[11px] bg-primary px-3 text-xs font-medium text-primary-foreground disabled:opacity-50"
+                        >
+                          Approve
+                        </button>
+                      )}
+
+                      {isPending && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRejectId(admission.id);
+                            setRejectionReason("");
+                          }}
+                          className="min-h-[40px] rounded-[11px] border border-destructive/30 px-3 text-xs font-medium text-destructive hover:bg-destructive/5"
+                        >
+                          Reject
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop Admissions Table */}
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full min-w-[1050px] text-left text-sm">
               <thead className="border-b bg-muted/40 text-xs text-muted-foreground">
                 <tr>
                   <th className="px-4 py-3 font-medium">Application</th>
-                  <th className="px-4 py-3 font-medium">Student</th>
-                  <th className="px-4 py-3 font-medium">Class</th>
-                  <th className="px-4 py-3 font-medium">Admission</th>
+                  <th className="px-4 py-3 font-medium">Student &amp; Guardian</th>
+                  <th className="px-4 py-3 font-medium">Class &amp; Type</th>
+                  <th className="px-4 py-3 font-medium">Status</th>
                   <th className="px-4 py-3 font-medium">Payment</th>
                   <th className="px-4 py-3 font-medium">Applied on</th>
                   <th className="px-4 py-3 font-medium">Actions</th>
@@ -283,11 +392,17 @@ export default function AdminAdmissionsPage() {
               <tbody className="divide-y">
                 {admissions.map((admission) => {
                   const isPending = admission.status === "PENDING";
-                  const paymentIsPaid = admission.payment?.status === "PAID";
+                  const hasPaidOrNoFee =
+                    !admission.payment ||
+                    admission.payment.amount <= 0 ||
+                    admission.payment.status === "PAID";
                   const isCash = admission.payment?.paymentMethod === "CASH";
 
                   return (
-                    <tr key={admission.id} className="align-top hover:bg-muted/20">
+                    <tr
+                      key={admission.id}
+                      className="align-top hover:bg-muted/20"
+                    >
                       <td className="px-4 py-4">
                         <p className="font-medium">{admission.applicationNo}</p>
                         <p className="mt-1 text-xs text-muted-foreground">
@@ -297,30 +412,38 @@ export default function AdminAdmissionsPage() {
 
                       <td className="px-4 py-4">
                         <p className="font-medium">{admission.studentName}</p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {admission.studentEmail}
-                        </p>
+                        {admission.guardianName && (
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            Guardian: {admission.guardianName}
+                          </p>
+                        )}
                         {admission.guardianPhone && (
-                          <p className="mt-1 text-xs text-muted-foreground">
+                          <p className="text-xs text-muted-foreground">
                             {admission.guardianPhone}
                           </p>
                         )}
                       </td>
 
                       <td className="px-4 py-4">
-                        <p>{admission.class.name}</p>
+                        <p>
+                          {admission.class.name}
+                          {admission.section
+                            ? ` • ${admission.section.name}`
+                            : ""}
+                        </p>
                         <p className="mt-1 text-xs text-muted-foreground">
                           {admission.academicYear}
+                          {admission.residentialType
+                            ? ` • ${admission.residentialType.replace("_", " ")}`
+                            : ""}
+                          {admission.quranWing
+                            ? ` • ${admission.quranWing}`
+                            : ""}
                         </p>
                       </td>
 
                       <td className="px-4 py-4">
                         <StatusBadge status={admission.status} />
-                        {!admission.studentEmailVerified && (
-                          <p className="mt-1 text-xs text-amber-600">
-                            Email not verified
-                          </p>
-                        )}
                       </td>
 
                       <td className="px-4 py-4">
@@ -333,7 +456,9 @@ export default function AdminAdmissionsPage() {
                             </p>
                           </>
                         ) : (
-                          <span className="text-muted-foreground">No payment</span>
+                          <span className="text-xs text-muted-foreground">
+                            No upfront fee
+                          </span>
                         )}
                       </td>
 
@@ -343,18 +468,29 @@ export default function AdminAdmissionsPage() {
 
                       <td className="px-4 py-4">
                         <div className="flex min-w-36 flex-col items-start gap-2">
-                          {isPending && isCash && !paymentIsPaid && (
-                            <button
-                              type="button"
-                              disabled={cashPaymentMutation.isPending}
-                              onClick={() => handleCashPayment(admission.id)}
-                              className="rounded-md border px-3 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-50"
-                            >
-                              Confirm cash
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            onClick={() => setDetailId(admission.id)}
+                            className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-xs font-medium hover:bg-muted"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                            View Details
+                          </button>
 
-                          {isPending && paymentIsPaid && (
+                          {isPending &&
+                            isCash &&
+                            admission.payment?.status !== "PAID" && (
+                              <button
+                                type="button"
+                                disabled={cashPaymentMutation.isPending}
+                                onClick={() => handleCashPayment(admission.id)}
+                                className="rounded-md border px-3 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-50"
+                              >
+                                Confirm cash
+                              </button>
+                            )}
+
+                          {isPending && hasPaidOrNoFee && (
                             <button
                               type="button"
                               disabled={approveMutation.isPending}
@@ -377,20 +513,15 @@ export default function AdminAdmissionsPage() {
                               Reject
                             </button>
                           )}
-
-                          {!isPending && (
-                            <span className="text-xs text-muted-foreground">
-                              No actions available
-                            </span>
-                          )}
                         </div>
                       </td>
                     </tr>
                   );
                 })}
               </tbody>
-            </table>
-          </div>
+              </table>
+            </div>
+          </>
         )}
 
         {/* Pagination */}
@@ -414,11 +545,7 @@ export default function AdminAdmissionsPage() {
 
               <button
                 type="button"
-                disabled={
-                  !meta ||
-                  page >= meta.totalPages ||
-                  isFetching
-                }
+                disabled={!meta || page >= meta.totalPages || isFetching}
                 onClick={() => setPage((current) => current + 1)}
                 className="inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-sm hover:bg-muted disabled:opacity-50"
               >
@@ -429,6 +556,167 @@ export default function AdminAdmissionsPage() {
           </div>
         )}
       </div>
+
+      {/* Admission Detail Modal */}
+      <Modal
+        open={detailId !== null}
+        onClose={() => setDetailId(null)}
+        title={
+          detail
+            ? `Admission ${detail.applicationNo}`
+            : "Admission Application Details"
+        }
+        maxWidthClass="max-w-3xl"
+      >
+        {detailQuery.isLoading ? (
+          <div className="flex items-center justify-center py-10 text-sm text-muted-foreground">
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Loading full details...
+          </div>
+        ) : detail ? (
+          <div className="max-h-[75vh] space-y-6 overflow-y-auto pr-1 text-sm">
+            <div className="grid gap-4 rounded-xl border bg-muted/20 p-4 sm:grid-cols-3">
+              <DetailItem label="Student Name" value={detail.studentName} />
+              <DetailItem label="Bangla Name" value={detail.nameBangla} />
+              <DetailItem
+                label="Date of Birth"
+                value={
+                  detail.dateOfBirth
+                    ? new Date(detail.dateOfBirth).toLocaleDateString()
+                    : null
+                }
+              />
+              <DetailItem label="Gender" value={detail.gender} />
+              <DetailItem label="Blood Group" value={detail.bloodGroup} />
+              <DetailItem label="Birth Reg No." value={detail.birthRegNo} />
+              <DetailItem
+                label="Residential Type"
+                value={detail.residentialType?.replace("_", " ")}
+              />
+              <DetailItem
+                label="Class / Section"
+                value={`${detail.class.name}${detail.section ? ` (${detail.section.name})` : ""}`}
+              />
+              <DetailItem
+                label="Session / Shift"
+                value={`${detail.academicYear} · ${detail.shift ?? "MORNING"}`}
+              />
+              <DetailItem
+                label="Academic Group"
+                value={detail.academicGroup ?? detail.group}
+              />
+              <DetailItem label="Quran / Hefz Wing" value={detail.quranWing} />
+              <DetailItem
+                label="Previous School"
+                value={
+                  detail.previousSchool
+                    ? `${detail.previousSchool}${detail.previousClass ? ` (${detail.previousClass})` : ""}`
+                    : null
+                }
+              />
+            </div>
+
+            <div className="grid gap-4 rounded-xl border p-4 sm:grid-cols-3">
+              <DetailItem label="Guardian Name" value={detail.guardianName} />
+              <DetailItem label="Guardian Phone" value={detail.guardianPhone} />
+              <DetailItem
+                label="Relationship"
+                value={detail.guardianRelationship}
+              />
+              <DetailItem label="Guardian Email" value={detail.guardianEmail} />
+              <DetailItem label="Guardian NID" value={detail.guardianNid} />
+              <DetailItem
+                label="Occupation"
+                value={detail.guardianOccupation}
+              />
+              <DetailItem label="Father Name" value={detail.fatherName} />
+              <DetailItem label="Mother Name" value={detail.motherName} />
+              <DetailItem
+                label="Present Address"
+                value={detail.presentAddress ?? detail.address}
+              />
+            </div>
+
+            {/* Uploaded Documents */}
+            <div className="space-y-3 rounded-xl border p-4">
+              <h3 className="font-semibold">Uploaded Documents</h3>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {[
+                  { label: "Student Photo", url: detail.studentPhotoUrl },
+                  { label: "Birth Certificate", url: detail.birthCertificateUrl },
+                  { label: "Guardian NID", url: detail.guardianNidUrl },
+                  {
+                    label: "Previous TC / Certificate",
+                    url: detail.previousTcUrl ?? detail.previousCertificateUrl,
+                  },
+                  { label: "Marksheet", url: detail.marksheetUrl },
+                ].map((doc) => (
+                  <div
+                    key={doc.label}
+                    className="flex items-center justify-between rounded-lg border px-3 py-2 text-xs"
+                  >
+                    <span className="font-medium">{doc.label}</span>
+                    {doc.url ? (
+                      <a
+                        href={doc.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-primary hover:underline"
+                      >
+                        Preview <ExternalLink className="h-3 w-3" />
+                      </a>
+                    ) : (
+                      <span className="text-muted-foreground">Not uploaded</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {detail.status === "PENDING" && (
+              <div className="flex justify-end gap-2 border-t pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRejectId(detail.id);
+                    setRejectionReason("");
+                  }}
+                  className="rounded-lg border border-destructive/40 px-4 py-2 text-xs font-medium text-destructive hover:bg-destructive/5"
+                >
+                  Reject
+                </button>
+                {(!detail.payment ||
+                  detail.payment.amount <= 0 ||
+                  detail.payment.status === "PAID") && (
+                  <button
+                    type="button"
+                    disabled={approveMutation.isPending}
+                    onClick={() => handleApprove(detail.id)}
+                    className="rounded-lg bg-primary px-4 py-2 text-xs font-medium text-primary-foreground disabled:opacity-50"
+                  >
+                    Approve &amp; Enroll Student
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        ) : null}
+      </Modal>
+    </div>
+  );
+}
+
+function DetailItem({
+  label,
+  value,
+}: {
+  label: string;
+  value?: string | number | null;
+}) {
+  return (
+    <div>
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-0.5 font-medium">{value || "—"}</p>
     </div>
   );
 }

@@ -35,6 +35,7 @@ const segmentTitles: Record<string, string> = {
   notifications: "Notifications",
   subjects: "Subjects",
   attendance: "Attendance",
+  diary: "Daily Class Diary",
   exams: "Examinations",
   results: "Results & Grades",
   fees: "Fees & Payments",
@@ -60,7 +61,7 @@ export function Header({ onMenuClick }: HeaderProps) {
       <button
         type="button"
         onClick={onMenuClick}
-        className="mr-3 inline-flex h-9 w-9 items-center justify-center rounded-lg border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground lg:hidden"
+        className="mr-2.5 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[11px] border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground lg:hidden"
         aria-label="Open navigation"
       >
         <Menu className="h-5 w-5" />

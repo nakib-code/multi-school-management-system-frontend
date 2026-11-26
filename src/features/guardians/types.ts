@@ -5,21 +5,34 @@ export interface GuardianRecord {
   relation: string | null;
   occupation: string | null;
   address: string | null;
-  user?: { id: number; name: string; email: string; phone?: string | null; status: string };
+  nid?: string | null;
+  user?: {
+    id: number;
+    name: string;
+    email: string;
+    phone?: string | null;
+    status: string;
+  };
   students?: Array<{
     studentId: number;
     isPrimary: boolean;
-    student?: { id: number; firstName: string; lastName: string | null; studentId: string };
+    student?: {
+      id: number;
+      firstName: string;
+      lastName: string | null;
+      studentId: string;
+    };
   }>;
 }
 
 export interface CreateGuardianInput {
   name: string;
-  email: string;
-  password: string;
-  phone?: string;
+  phone: string;
+  email?: string;
+  password?: string;
   relation?: string;
   occupation?: string;
   address?: string;
+  nid?: string;
   studentIds?: number[];
 }

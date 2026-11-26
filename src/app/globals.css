@@ -279,10 +279,12 @@
   html {
     @apply font-sans;
     scroll-behavior: smooth;
+    overflow-x: clip;
   }
 
   body {
     @apply bg-background text-foreground;
+    overflow-x: clip;
   }
 
   button:not(:disabled),
@@ -731,4 +733,59 @@
   background: rgba(250, 204, 21, 0.08);
 
   filter: blur(64px);
+}
+
+/* =========================================================
+   Shared Mobile-First & Non-AI Rhythm Utilities
+========================================================= */
+
+.surface-panel {
+  border-radius: 11px;
+  border: 1px solid var(--border);
+  background: var(--card);
+}
+
+.mobile-card {
+  border-radius: 11px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  padding: 0.875rem;
+}
+
+.mobile-filter-bar {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.625rem;
+  border-radius: 11px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  padding: 0.875rem;
+}
+
+@media (min-width: 640px) {
+  .mobile-filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.75rem;
+    padding: 1rem;
+  }
+}
+
+.tap-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }

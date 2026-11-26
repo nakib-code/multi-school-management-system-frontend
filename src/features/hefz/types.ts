@@ -1,4 +1,4 @@
-export type HefzWing = "NAJERA" | "HEFZ";
+export type HefzWing = "NOORANI" | "QAIDA" | "AMPARA" | "NAJERA" | "HEFZ";
 export type SobokQuality = "GOOD" | "AVERAGE" | "WEAK" | "REVISE";
 export type HefzAttendanceStatus = "PRESENT" | "ABSENT" | "LATE";
 

@@ -1,10 +1,23 @@
 import { api } from "@/lib/api";
 import type { ApiResponse } from "@/types/api";
 import type {
+  CreateStudentInput,
+  CreateStudentResponse,
   StudentListResponse,
   StudentRecord,
   UpdateStudentInput,
 } from "./types";
+
+export const createStudent = async (
+  schoolId: number,
+  payload: CreateStudentInput,
+): Promise<CreateStudentResponse> => {
+  const res = await api.post<ApiResponse<CreateStudentResponse>>(
+    `/schools/${schoolId}/students`,
+    payload,
+  );
+  return res.data.data;
+};
 
 export const getStudents = async (
   schoolId: number,
@@ -13,6 +26,16 @@ export const getStudents = async (
   const res = await api.get<ApiResponse<StudentListResponse>>(
     `/schools/${schoolId}/students`,
     { params },
+  );
+  return res.data.data;
+};
+
+export const getStudentById = async (
+  schoolId: number,
+  id: number,
+): Promise<StudentRecord> => {
+  const res = await api.get<ApiResponse<StudentRecord>>(
+    `/schools/${schoolId}/students/${id}`,
   );
   return res.data.data;
 };

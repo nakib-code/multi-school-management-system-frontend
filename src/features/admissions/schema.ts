@@ -1,87 +1,108 @@
 import { z } from "zod";
 
+const emptyToUndefined = (val: unknown) =>
+  typeof val === "string" && val.trim() === "" ? undefined : val;
+
 export const admissionSchema = z.object({
+  // Stage 1 — Required Student Info
   studentName: z
     .string()
     .trim()
     .min(2, "Student name must be at least 2 characters")
     .max(150),
 
-  studentEmail: z
-    .string()
-    .trim()
-    .email("Please enter a valid student email"),
+  dateOfBirth: z.string().trim().min(4, "Date of birth is required"),
 
-  password: z
-    .string()
-    .min(8, "Password must be at least 8 characters")
-    .max(100),
+  gender: z.enum(["MALE", "FEMALE", "OTHER"], {
+    message: "Please select gender",
+  }),
 
-  dateOfBirth: z.string().optional(),
+  residentialType: z
+    .enum(["NON_RESIDENTIAL", "RESIDENTIAL", "DAY_CARE"])
+    .default("NON_RESIDENTIAL"),
 
-  gender: z.string().optional(),
-
-  bloodGroup: z.string().optional(),
-
-  previousSchool: z.string().optional(),
-
-  previousClass: z.string().optional(),
-
-  guardianName: z.string().optional(),
-
-  guardianEmail: z
-    .string()
-    .email("Please enter a valid guardian email")
-    .optional()
-    .or(z.literal("")),
-
-  guardianPhone: z.string().optional(),
-
-  guardianRelationship: z.string().optional(),
-
-  guardianNid: z.string().optional(),
-
-  guardianOccupation: z.string().optional(),
-
-  address: z.string().max(500).optional(),
-
-  // Academic
-  classId: z.coerce
-    .number()
-    .int()
-    .positive("Please select a class"),
-
+  // Stage 1 — Required Academic Info
   academicYear: z
     .string()
     .trim()
     .min(4, "Academic year is required")
     .max(20),
 
-  shift: z.string().optional(),
+  classId: z.coerce.number().int().positive("Please select a class"),
 
-  group: z.string().optional(),
+  sectionId: z.preprocess(
+    emptyToUndefined,
+    z.coerce.number().int().positive().optional(),
+  ),
 
-  // Documents
-  studentPhotoUrl: z
+  shift: z.enum(["MORNING", "DAY", "EVENING"]).default("MORNING"),
+
+  academicGroup: z.preprocess(
+    emptyToUndefined,
+    z.enum(["SCIENCE", "ARTS", "COMMERCE"]).optional(),
+  ),
+
+  quranWing: z.preprocess(
+    emptyToUndefined,
+    z.enum(["NOORANI", "QAIDA", "AMPARA", "NAJERA", "HEFZ"]).optional(),
+  ),
+
+  // Stage 1 — Required Guardian Info
+  guardianName: z
     .string()
-    .url("Please enter a valid photo URL")
-    .optional()
-    .or(z.literal("")),
+    .trim()
+    .min(2, "Guardian name is required")
+    .max(150),
 
-  birthCertificateUrl: z
+  guardianPhone: z
     .string()
-    .url("Please enter a valid document URL")
-    .optional()
-    .or(z.literal("")),
+    .trim()
+    .min(6, "Guardian phone number is required")
+    .max(30),
 
-  previousCertificateUrl: z
-    .string()
-    .url("Please enter a valid document URL")
-    .optional()
-    .or(z.literal("")),
+  guardianRelationship: z.string().trim().max(50).optional().default("FATHER"),
 
-  // Payment
-  paymentMethod: z.enum(["CASH", "ONLINE"]),
+  guardianEmail: z.preprocess(
+    emptyToUndefined,
+    z.string().trim().email("Please enter a valid guardian email").optional(),
+  ),
+
+  guardianNid: z.string().trim().max(50).optional(),
+  guardianOccupation: z.string().trim().max(100).optional(),
+
+  // Stage 2 — Optional Details
+  nameBangla: z.string().trim().max(150).optional(),
+  birthRegNo: z.string().trim().max(30).optional(),
+  bloodGroup: z.string().trim().max(10).optional(),
+  previousSchool: z.string().trim().max(200).optional(),
+  previousClass: z.string().trim().max(100).optional(),
+  fatherName: z.string().trim().max(150).optional(),
+  motherName: z.string().trim().max(150).optional(),
+  presentAddress: z.string().trim().max(500).optional(),
+  permanentAddress: z.string().trim().max(500).optional(),
+
+  // Optional Documents
+  studentPhotoUrl: z.preprocess(
+    emptyToUndefined,
+    z.string().url("Please enter a valid photo URL").optional(),
+  ),
+  birthCertificateUrl: z.preprocess(
+    emptyToUndefined,
+    z.string().url("Please enter a valid document URL").optional(),
+  ),
+  guardianNidUrl: z.preprocess(
+    emptyToUndefined,
+    z.string().url("Please enter a valid document URL").optional(),
+  ),
+  previousTcUrl: z.preprocess(
+    emptyToUndefined,
+    z.string().url("Please enter a valid document URL").optional(),
+  ),
+
+  // Optional Payment
+  paymentMethod: z
+    .enum(["CASH", "ONLINE", "BKASH", "NAGAD", "ROCKET"])
+    .optional(),
 });
 
 export type AdmissionFormValues = z.infer<typeof admissionSchema>;

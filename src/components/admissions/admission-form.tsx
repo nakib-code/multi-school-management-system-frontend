@@ -12,124 +12,99 @@ import {
   Users,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { type FormEvent, useState } from "react";
+import { useState } from "react";
 import { Controller, type FieldPath, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import type { z } from "zod";
 
-import { createAdmission, verifyStudentEmail } from "@/features/admissions/api";
+import { FileUpload } from "@/components/shared/file-upload";
+import { createAdmission } from "@/features/admissions/api";
 import type { AdmissionFormValues } from "@/features/admissions/schema";
 import { admissionSchema } from "@/features/admissions/schema";
-import type { CreateAdmissionInput } from "@/features/admissions/types";
-import { usePublicActiveClasses } from "@/features/public/classes/hook";
+import type {
+  AdmissionPaymentMethod,
+  CreateAdmissionInput,
+} from "@/features/admissions/types";
+import {
+  usePublicActiveClasses,
+  usePublicActiveSections,
+} from "@/features/public/classes/hook";
+import { useAuth } from "@/providers/auth-provider";
 
 interface AdmissionFormProps {
   schoolId: number;
 }
 
-type PaymentMethod = "CASH" | "ONLINE";
-
 interface SubmittedApplication {
-  applicationNo: string;
-  studentEmail: string;
-  paymentMethod: PaymentMethod;
-  paymentStatus: "PENDING";
-  emailVerificationRequired: boolean;
-}
-
-interface PendingAdmission {
   id: number;
   applicationNo: string;
-  studentEmail: string;
-  paymentMethod: PaymentMethod;
-  emailVerified: boolean;
+  studentName: string;
+  guardianPhone: string | null;
+  paymentMethod: AdmissionPaymentMethod | null;
+  paymentStatus: string | null;
 }
 
+const isSeniorClass = (name?: string, code?: string) => {
+  const text = `${name ?? ""} ${code ?? ""}`.toLowerCase();
+  return /\b(9|10|nine|ten|ssc|dakhil)\b/.test(text);
+};
+
 const steps = [
-  {
-    id: 1,
-    title: "Student",
-    description: "Student information",
-    icon: User,
-  },
-  {
-    id: 2,
-    title: "Academic",
-    description: "Academic information",
-    icon: FileText,
-  },
-  {
-    id: 3,
-    title: "Guardian",
-    description: "Guardian information",
-    icon: Users,
-  },
-  {
-    id: 4,
-    title: "Review",
-    description: "Review & payment",
-    icon: CreditCard,
-  },
+  { id: 1, title: "Student", description: "Basic details", icon: User },
+  { id: 2, title: "Academic", description: "Class & wing", icon: FileText },
+  { id: 3, title: "Guardian", description: "Parent & docs", icon: Users },
+  { id: 4, title: "Review", description: "Confirm & submit", icon: CreditCard },
 ];
 
 export default function AdmissionForm({ schoolId }: AdmissionFormProps) {
   const router = useRouter();
+  const { user } = useAuth();
 
   const [step, setStep] = useState(1);
   const [submittedApplication, setSubmittedApplication] =
     useState<SubmittedApplication | null>(null);
-  const [pendingAdmission, setPendingAdmission] =
-    useState<PendingAdmission | null>(null);
-  const [verificationCode, setVerificationCode] = useState("");
-  const [isVerifying, setIsVerifying] = useState(false);
 
   const {
     register,
     control,
     trigger,
     watch,
+    setValue,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<z.input<typeof admissionSchema>, unknown, AdmissionFormValues>({
     resolver: zodResolver(admissionSchema),
     defaultValues: {
-      academicYear: "2026-2027",
-      paymentMethod: "ONLINE",
+      academicYear: String(new Date().getFullYear()),
+      residentialType: "NON_RESIDENTIAL",
+      shift: "MORNING",
+      guardianRelationship: "FATHER",
+      paymentMethod: "CASH",
     },
     mode: "onTouched",
   });
 
   const values = watch();
+  const selectedClassId = watch("classId") as number | undefined;
 
-  // PUBLIC CLASSES
   const {
     data: classes = [],
     isLoading: isClassesLoading,
     isError: isClassesError,
   } = usePublicActiveClasses(schoolId);
 
-  const selectedClassId = watch("classId") as number | undefined;
+  const { data: sections = [], isLoading: isSectionsLoading } =
+    usePublicActiveSections(schoolId, selectedClassId);
 
   const selectedClass = classes.find((item) => item.id === selectedClassId);
+  const selectedSection = sections.find(
+    (sec) => sec.id === Number(values.sectionId),
+  );
+  const showAcademicGroup = isSeniorClass(
+    selectedClass?.name,
+    selectedClass?.code,
+  );
 
-  // NAVIGATE TO THE SEPARATE PAYMENT PAGE
-  const startOnlinePayment = (admissionId: number) => {
-    if (
-      !Number.isInteger(schoolId) ||
-      schoolId <= 0 ||
-      !Number.isInteger(admissionId) ||
-      admissionId <= 0
-    ) {
-      toast.error("Invalid school or admission information.");
-      return;
-    }
-
-    router.push(
-      `/admissions/payment?schoolId=${schoolId}&admissionId=${admissionId}`,
-    );
-  };
-
-  // SUBMIT ADMISSION
   const onSubmit = async (data: AdmissionFormValues) => {
     try {
       if (!Number.isInteger(schoolId) || schoolId <= 0) {
@@ -139,45 +114,67 @@ export default function AdmissionForm({ schoolId }: AdmissionFormProps) {
 
       const input: CreateAdmissionInput = {
         schoolId,
-        ...data,
+        studentName: data.studentName,
+        dateOfBirth: data.dateOfBirth,
+        gender: data.gender,
+        residentialType: data.residentialType,
+        academicYear: data.academicYear,
+        classId: data.classId,
+        ...(data.sectionId ? { sectionId: data.sectionId } : {}),
+        shift: data.shift,
+        ...(showAcademicGroup && data.academicGroup
+          ? { academicGroup: data.academicGroup }
+          : {}),
+        ...(data.quranWing ? { quranWing: data.quranWing } : {}),
+        guardianName: data.guardianName,
+        guardianPhone: data.guardianPhone,
+        guardianRelationship: data.guardianRelationship,
+        ...(data.guardianEmail ? { guardianEmail: data.guardianEmail } : {}),
+        ...(data.guardianNid ? { guardianNid: data.guardianNid } : {}),
+        ...(data.guardianOccupation
+          ? { guardianOccupation: data.guardianOccupation }
+          : {}),
+        ...(data.nameBangla ? { nameBangla: data.nameBangla } : {}),
+        ...(data.birthRegNo ? { birthRegNo: data.birthRegNo } : {}),
+        ...(data.bloodGroup ? { bloodGroup: data.bloodGroup } : {}),
+        ...(data.previousSchool ? { previousSchool: data.previousSchool } : {}),
+        ...(data.previousClass ? { previousClass: data.previousClass } : {}),
+        ...(data.presentAddress ? { presentAddress: data.presentAddress } : {}),
+        ...(data.studentPhotoUrl
+          ? { studentPhotoUrl: data.studentPhotoUrl }
+          : {}),
+        ...(data.birthCertificateUrl
+          ? { birthCertificateUrl: data.birthCertificateUrl }
+          : {}),
+        ...(data.guardianNidUrl ? { guardianNidUrl: data.guardianNidUrl } : {}),
+        ...(data.previousTcUrl ? { previousTcUrl: data.previousTcUrl } : {}),
+        ...(data.paymentMethod ? { paymentMethod: data.paymentMethod } : {}),
       };
 
       const result = await createAdmission(input);
 
-      // Show OTP verification before continuing when required.
-      if (result.emailVerificationRequired) {
-        setPendingAdmission({
-          id: result.id,
-          applicationNo: result.applicationNo,
-          studentEmail: result.studentEmail,
-          paymentMethod: result.paymentMethod,
-          emailVerified: false,
-        });
-
-        setVerificationCode("");
-
-        toast.success("Application created. Check your email for the OTP.");
-
+      if (
+        result.payment &&
+        result.payment.paymentMethod !== "CASH" &&
+        result.payment.amount > 0
+      ) {
+        toast.success("Application submitted! Proceed to mobile banking payment.");
+        router.push(
+          `/admissions/payment?schoolId=${schoolId}&admissionId=${result.id}`,
+        );
         return;
       }
 
-      // If verification is not required by the API, continue
-      // to the separate payment page for online applications.
-      if (result.paymentMethod === "ONLINE") {
-        startOnlinePayment(result.id);
-        return;
-      }
-
-      // Preserve the existing cash-payment flow.
       setSubmittedApplication({
+        id: result.id,
         applicationNo: result.applicationNo,
-        studentEmail: result.studentEmail,
+        studentName: result.studentName,
+        guardianPhone: result.guardianPhone,
         paymentMethod: result.paymentMethod,
         paymentStatus: result.paymentStatus,
-        emailVerificationRequired: false,
       });
 
-      toast.success("Admission application submitted!");
+      toast.success("Admission application submitted successfully!");
     } catch (error) {
       toast.error(
         error instanceof Error
@@ -187,226 +184,29 @@ export default function AdmissionForm({ schoolId }: AdmissionFormProps) {
     }
   };
 
-  // VERIFY EMAIL OTP
-  const handleVerifyEmail = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (!pendingAdmission || pendingAdmission.emailVerified) {
-      return;
-    }
-
-    if (!/^\d{6}$/.test(verificationCode)) {
-      toast.error("Enter the 6-digit verification code.");
-      return;
-    }
-
-    setIsVerifying(true);
-
-    try {
-      const result = await verifyStudentEmail(
-        pendingAdmission.studentEmail,
-        verificationCode,
-      );
-
-      if (!result.emailVerified || result.admissionId !== pendingAdmission.id) {
-        throw new Error("Email verification failed.");
-      }
-
-      const verifiedAdmission: PendingAdmission = {
-        ...pendingAdmission,
-        emailVerified: true,
-      };
-
-      setPendingAdmission(verifiedAdmission);
-      setVerificationCode("");
-
-      toast.success("Email verified successfully!");
-
-      // Mobile banking payment: navigate to payment instructions page.
-      if (verifiedAdmission.paymentMethod === "ONLINE") {
-        startOnlinePayment(verifiedAdmission.id);
-        return;
-      }
-
-      // Cash payment: show confirmation after OTP verification.
-      setSubmittedApplication({
-        applicationNo: verifiedAdmission.applicationNo,
-        studentEmail: verifiedAdmission.studentEmail,
-        paymentMethod: "CASH",
-        paymentStatus: "PENDING",
-        emailVerificationRequired: false,
-      });
-
-      setPendingAdmission(null);
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to verify email.",
-      );
-    } finally {
-      setIsVerifying(false);
-    }
-  };
-
-  // NEXT STEP
   const nextStep = async () => {
     let fields: FieldPath<z.input<typeof admissionSchema>>[] = [];
 
     if (step === 1) {
-      fields = ["studentName", "studentEmail", "password"];
+      fields = ["studentName", "dateOfBirth", "gender", "residentialType"];
     }
-
     if (step === 2) {
       fields = ["academicYear", "classId"];
     }
-
     if (step === 3) {
-      fields = [
-        "guardianName",
-        "guardianEmail",
-        "guardianPhone",
-        "guardianRelationship",
-        "guardianNid",
-        "guardianOccupation",
-        "address",
-      ];
+      fields = ["guardianName", "guardianPhone", "guardianEmail"];
     }
 
     const valid = await trigger(fields);
-
     if (!valid) return;
 
     setStep((current) => Math.min(current + 1, 4));
   };
 
-  // PREVIOUS STEP
   const previousStep = () => {
     setStep((current) => Math.max(current - 1, 1));
   };
 
-  // EMAIL VERIFICATION SCREEN
-  if (pendingAdmission) {
-    return (
-      <div className="mx-auto max-w-lg rounded-2xl border bg-background p-6 shadow-sm sm:p-8">
-        <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-          <Check className="h-7 w-7 text-primary" />
-        </div>
-
-        <h2 className="text-2xl font-semibold tracking-tight">
-          {pendingAdmission.emailVerified
-            ? "Continue Your Application"
-            : "Verify Your Email"}
-        </h2>
-
-        <p className="mt-2 text-sm text-muted-foreground">
-          {pendingAdmission.emailVerified
-            ? "Your application is ready. Continue to the next step."
-            : "We sent a 6-digit verification code to "}
-
-          {!pendingAdmission.emailVerified && (
-            <span className="font-medium text-foreground">
-              {pendingAdmission.studentEmail}
-            </span>
-          )}
-
-          {!pendingAdmission.emailVerified && ". Enter the code to continue."}
-        </p>
-
-        <div className="mt-5 rounded-xl border bg-muted/30 p-4">
-          <p className="text-xs text-muted-foreground">Application Number</p>
-          <p className="mt-1 font-semibold">{pendingAdmission.applicationNo}</p>
-        </div>
-
-        {pendingAdmission.emailVerified ? (
-          <div className="mt-6 space-y-4">
-            <p className="text-sm text-green-600">
-              {pendingAdmission.paymentMethod === "ONLINE"
-                ? "Your email is verified. Continue to online payment."
-                : "Your email has been verified."}
-            </p>
-
-            {pendingAdmission.paymentMethod === "ONLINE" ? (
-              <button
-                type="button"
-                onClick={() => startOnlinePayment(pendingAdmission.id)}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-medium text-primary-foreground"
-              >
-                <CreditCard className="h-4 w-4" />
-                Continue to Payment
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  setSubmittedApplication({
-                    applicationNo: pendingAdmission.applicationNo,
-                    studentEmail: pendingAdmission.studentEmail,
-                    paymentMethod: "CASH",
-                    paymentStatus: "PENDING",
-                    emailVerificationRequired: false,
-                  });
-
-                  setPendingAdmission(null);
-                }}
-                className="w-full rounded-lg bg-primary px-5 py-3 text-sm font-medium text-primary-foreground"
-              >
-                Continue
-              </button>
-            )}
-          </div>
-        ) : (
-          <form onSubmit={handleVerifyEmail} className="mt-6 space-y-4">
-            <div>
-              <label
-                htmlFor="verificationCode"
-                className="mb-2 block text-sm font-medium"
-              >
-                Verification Code
-              </label>
-
-              <input
-                id="verificationCode"
-                type="text"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                maxLength={6}
-                pattern="[0-9]{6}"
-                required
-                value={verificationCode}
-                onChange={(event) =>
-                  setVerificationCode(
-                    event.target.value.replace(/\D/g, "").slice(0, 6),
-                  )
-                }
-                placeholder="Enter 6-digit OTP"
-                className="h-12 w-full rounded-lg border bg-background px-3 text-center text-lg tracking-[0.4em] outline-none focus:border-primary"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={isVerifying || verificationCode.length !== 6}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isVerifying ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Verifying...
-                </>
-              ) : (
-                "Verify Email"
-              )}
-            </button>
-
-            <p className="text-center text-xs text-muted-foreground">
-              Check your inbox and spam folder for the code.
-            </p>
-          </form>
-        )}
-      </div>
-    );
-  }
-
-  // SUCCESS SCREEN
   if (submittedApplication) {
     return (
       <div className="rounded-2xl border bg-background p-6 shadow-sm sm:p-8">
@@ -418,68 +218,63 @@ export default function AdmissionForm({ schoolId }: AdmissionFormProps) {
           <h2 className="text-2xl font-semibold tracking-tight">
             Application Submitted
           </h2>
-
           <p className="mt-2 text-sm text-muted-foreground">
-            Your admission application has been submitted successfully.
+            Keep your Application Number and Guardian Phone to track your
+            admission status.
           </p>
 
           <div className="mt-6 w-full rounded-xl border bg-muted/30 p-5 text-left">
-            <div className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
               <ReviewItem
                 label="Application Number"
                 value={submittedApplication.applicationNo}
               />
-
               <ReviewItem
-                label="Student Email"
-                value={submittedApplication.studentEmail}
+                label="Student Name"
+                value={submittedApplication.studentName}
               />
-
               <ReviewItem
-                label="Payment Method"
+                label="Guardian Phone"
+                value={submittedApplication.guardianPhone}
+              />
+              <ReviewItem
+                label="Payment"
                 value={
-                  submittedApplication.paymentMethod === "ONLINE"
-                    ? "Online Payment"
-                    : "Cash Payment"
+                  submittedApplication.paymentMethod
+                    ? `${submittedApplication.paymentMethod} (${submittedApplication.paymentStatus ?? "PENDING"})`
+                    : "No upfront fee"
                 }
-              />
-
-              <ReviewItem
-                label="Payment Status"
-                value={submittedApplication.paymentStatus}
               />
             </div>
           </div>
-
-          {submittedApplication.emailVerificationRequired && (
-            <div className="mt-5 w-full rounded-xl border border-blue-200 bg-blue-50 p-4 text-left dark:border-blue-900 dark:bg-blue-950/30">
-              <p className="text-sm font-medium">Email verification required</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Please check your email and verify your address.
-              </p>
-            </div>
-          )}
-
-          {submittedApplication.paymentMethod === "CASH" && (
-            <div className="mt-5 w-full rounded-xl border border-yellow-200 bg-yellow-50 p-4 text-left dark:border-yellow-900 dark:bg-yellow-950/30">
-              <p className="text-sm font-medium">Cash payment</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Please contact the school and complete your admission payment in
-                cash.
-              </p>
-            </div>
-          )}
         </div>
       </div>
     );
   }
 
-  // ADMISSION FORM
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-      {/* STEPS */}
-      <div className="overflow-x-auto pb-2">
-        <div className="mx-auto flex min-w-[650px] max-w-4xl items-start justify-between">
+      {/* MOBILE STEP INDICATOR */}
+      <div className="space-y-2 rounded-[11px] border bg-background p-3.5 sm:hidden">
+        <div className="flex items-center justify-between text-xs">
+          <span className="font-semibold text-primary">
+            Step {step} of {steps.length}
+          </span>
+          <span className="font-medium text-foreground">
+            {steps[step - 1]?.title} — {steps[step - 1]?.description}
+          </span>
+        </div>
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+          <div
+            className="h-full rounded-full bg-primary transition-all duration-300"
+            style={{ width: `${(step / steps.length) * 100}%` }}
+          />
+        </div>
+      </div>
+
+      {/* DESKTOP STEPS */}
+      <div className="hidden overflow-x-auto pb-2 sm:block">
+        <div className="mx-auto flex max-w-4xl items-start justify-between">
           {steps.map((item, index) => {
             const Icon = item.icon;
             const isActive = step === item.id;
@@ -504,31 +299,26 @@ export default function AdmissionForm({ schoolId }: AdmissionFormProps) {
                       <Icon className="h-4 w-4" />
                     )}
                   </div>
-
                   <div className="mt-2 text-center">
                     <p
-                      className={[
-                        "text-sm font-medium",
+                      className={`text-sm font-medium ${
                         isActive || isCompleted
                           ? "text-foreground"
-                          : "text-muted-foreground",
-                      ].join(" ")}
+                          : "text-muted-foreground"
+                      }`}
                     >
                       {item.title}
                     </p>
-
                     <p className="mt-0.5 text-xs text-muted-foreground">
                       {item.description}
                     </p>
                   </div>
                 </div>
-
                 {index < steps.length - 1 && (
                   <div
-                    className={[
-                      "mt-5 h-px flex-1",
-                      step > item.id ? "bg-primary" : "bg-border",
-                    ].join(" ")}
+                    className={`mt-5 h-px flex-1 ${
+                      step > item.id ? "bg-primary" : "bg-border"
+                    }`}
                   />
                 )}
               </div>
@@ -543,23 +333,24 @@ export default function AdmissionForm({ schoolId }: AdmissionFormProps) {
           <div className="mb-6">
             <h2 className="text-xl font-semibold">Student Information</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Enter the student's basic information.
+              No student email or password required. Only essential details to
+              get started fast.
             </p>
           </div>
 
           <div className="grid gap-5 md:grid-cols-2">
-            <div className="md:col-span-2">
+            <div>
               <label
                 htmlFor="studentName"
                 className="mb-2 block text-sm font-medium"
               >
-                Student Name *
+                Student Full Name *
               </label>
               <input
                 id="studentName"
                 {...register("studentName")}
-                placeholder="Enter student name"
-                className="h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+                placeholder="Enter student full name"
+                className="h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:border-primary"
               />
               {errors.studentName && (
                 <p className="mt-1.5 text-xs text-destructive">
@@ -570,44 +361,17 @@ export default function AdmissionForm({ schoolId }: AdmissionFormProps) {
 
             <div>
               <label
-                htmlFor="studentEmail"
+                htmlFor="nameBangla"
                 className="mb-2 block text-sm font-medium"
               >
-                Student Email *
+                Name in Bangla (Optional)
               </label>
               <input
-                id="studentEmail"
-                type="email"
-                {...register("studentEmail")}
-                placeholder="student@example.com"
+                id="nameBangla"
+                {...register("nameBangla")}
+                placeholder="শিক্ষার্থীর বাংলা নাম"
                 className="h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:border-primary"
               />
-              {errors.studentEmail && (
-                <p className="mt-1.5 text-xs text-destructive">
-                  {errors.studentEmail.message}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label
-                htmlFor="password"
-                className="mb-2 block text-sm font-medium"
-              >
-                Password *
-              </label>
-              <input
-                id="password"
-                type="password"
-                {...register("password")}
-                placeholder="Minimum 8 characters"
-                className="h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:border-primary"
-              />
-              {errors.password && (
-                <p className="mt-1.5 text-xs text-destructive">
-                  {errors.password.message}
-                </p>
-              )}
             </div>
 
             <div>
@@ -615,7 +379,7 @@ export default function AdmissionForm({ schoolId }: AdmissionFormProps) {
                 htmlFor="dateOfBirth"
                 className="mb-2 block text-sm font-medium"
               >
-                Date of Birth
+                Date of Birth *
               </label>
               <input
                 id="dateOfBirth"
@@ -623,6 +387,11 @@ export default function AdmissionForm({ schoolId }: AdmissionFormProps) {
                 {...register("dateOfBirth")}
                 className="h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:border-primary"
               />
+              {errors.dateOfBirth && (
+                <p className="mt-1.5 text-xs text-destructive">
+                  {errors.dateOfBirth.message}
+                </p>
+              )}
             </div>
 
             <div>
@@ -630,7 +399,7 @@ export default function AdmissionForm({ schoolId }: AdmissionFormProps) {
                 htmlFor="gender"
                 className="mb-2 block text-sm font-medium"
               >
-                Gender
+                Gender *
               </label>
               <select
                 id="gender"
@@ -642,6 +411,29 @@ export default function AdmissionForm({ schoolId }: AdmissionFormProps) {
                 <option value="FEMALE">Female</option>
                 <option value="OTHER">Other</option>
               </select>
+              {errors.gender && (
+                <p className="mt-1.5 text-xs text-destructive">
+                  {errors.gender.message}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label
+                htmlFor="residentialType"
+                className="mb-2 block text-sm font-medium"
+              >
+                Residential / Care Type *
+              </label>
+              <select
+                id="residentialType"
+                {...register("residentialType")}
+                className="h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:border-primary"
+              >
+                <option value="NON_RESIDENTIAL">Non-Residential (Day)</option>
+                <option value="RESIDENTIAL">Residential (Hostel)</option>
+                <option value="DAY_CARE">Day-Care</option>
+              </select>
             </div>
 
             <div>
@@ -649,23 +441,37 @@ export default function AdmissionForm({ schoolId }: AdmissionFormProps) {
                 htmlFor="bloodGroup"
                 className="mb-2 block text-sm font-medium"
               >
-                Blood Group
+                Blood Group (Optional)
               </label>
               <select
                 id="bloodGroup"
                 {...register("bloodGroup")}
-                className="h-10 w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+                className="h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:border-primary"
               >
                 <option value="">Select blood group</option>
-                <option value="A+">A+</option>
-                <option value="A-">A-</option>
-                <option value="B+">B+</option>
-                <option value="B-">B-</option>
-                <option value="AB+">AB+</option>
-                <option value="AB-">AB-</option>
-                <option value="O+">O+</option>
-                <option value="O-">O-</option>
+                {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map(
+                  (bg) => (
+                    <option key={bg} value={bg}>
+                      {bg}
+                    </option>
+                  ),
+                )}
               </select>
+            </div>
+
+            <div>
+              <label
+                htmlFor="birthRegNo"
+                className="mb-2 block text-sm font-medium"
+              >
+                Birth Registration No. (Optional)
+              </label>
+              <input
+                id="birthRegNo"
+                {...register("birthRegNo")}
+                placeholder="17-digit Birth Reg. No."
+                className="h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:border-primary"
+              />
             </div>
 
             <div>
@@ -673,27 +479,12 @@ export default function AdmissionForm({ schoolId }: AdmissionFormProps) {
                 htmlFor="previousSchool"
                 className="mb-2 block text-sm font-medium"
               >
-                Previous School
+                Previous School (Optional)
               </label>
               <input
                 id="previousSchool"
                 {...register("previousSchool")}
-                placeholder="Previous school name"
-                className="h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:border-primary"
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="previousClass"
-                className="mb-2 block text-sm font-medium"
-              >
-                Previous Class
-              </label>
-              <input
-                id="previousClass"
-                {...register("previousClass")}
-                placeholder="Previous class"
+                placeholder="Previous school / madrasa"
                 className="h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:border-primary"
               />
             </div>
@@ -707,7 +498,8 @@ export default function AdmissionForm({ schoolId }: AdmissionFormProps) {
           <div className="mb-6">
             <h2 className="text-xl font-semibold">Academic Information</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Select the academic year and class.
+              Choose session, class, optional section, and Hefz/Group if
+              applicable.
             </p>
           </div>
 
@@ -717,7 +509,7 @@ export default function AdmissionForm({ schoolId }: AdmissionFormProps) {
                 htmlFor="academicYear"
                 className="mb-2 block text-sm font-medium"
               >
-                Academic Year *
+                Academic Year / Session *
               </label>
               <input
                 id="academicYear"
@@ -738,7 +530,6 @@ export default function AdmissionForm({ schoolId }: AdmissionFormProps) {
               >
                 Class *
               </label>
-
               <Controller
                 name="classId"
                 control={control}
@@ -748,38 +539,60 @@ export default function AdmissionForm({ schoolId }: AdmissionFormProps) {
                     value={field.value ? String(field.value) : ""}
                     disabled={isClassesLoading}
                     onChange={(event) => {
-                      const classId = event.target.value
+                      const nextId = event.target.value
                         ? Number(event.target.value)
                         : undefined;
-
-                      field.onChange(classId);
+                      field.onChange(nextId);
+                      setValue("sectionId", undefined);
                     }}
-                    className="h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:border-primary disabled:cursor-not-allowed disabled:opacity-60"
+                    className="h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:border-primary disabled:opacity-60"
                   >
                     <option value="">
                       {isClassesLoading
                         ? "Loading classes..."
                         : isClassesError
                           ? "Failed to load classes"
-                          : classes.length === 0
-                            ? "No classes available"
-                            : "Select class"}
+                          : "Select class"}
                     </option>
-
-                    {classes.map((schoolClass) => (
-                      <option key={schoolClass.id} value={schoolClass.id}>
-                        {schoolClass.name} ({schoolClass.code})
+                    {classes.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} ({c.code})
                       </option>
                     ))}
                   </select>
                 )}
               />
-
               {errors.classId && (
                 <p className="mt-1.5 text-xs text-destructive">
                   {errors.classId.message}
                 </p>
               )}
+            </div>
+
+            <div>
+              <label
+                htmlFor="sectionId"
+                className="mb-2 block text-sm font-medium"
+              >
+                Section (Optional)
+              </label>
+              <select
+                id="sectionId"
+                disabled={!selectedClassId || isSectionsLoading}
+                {...register("sectionId")}
+                className="h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:border-primary disabled:opacity-60"
+              >
+                <option value="">
+                  {isSectionsLoading
+                    ? "Loading sections..."
+                    : "Any / School will assign"}
+                </option>
+                {sections.map((sec) => (
+                  <option key={sec.id} value={sec.id}>
+                    {sec.name} ({sec.code})
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
@@ -791,38 +604,67 @@ export default function AdmissionForm({ schoolId }: AdmissionFormProps) {
                 {...register("shift")}
                 className="h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:border-primary"
               >
-                <option value="">Select shift</option>
                 <option value="MORNING">Morning</option>
                 <option value="DAY">Day</option>
+                <option value="EVENING">Evening</option>
               </select>
             </div>
 
+            {showAcademicGroup && (
+              <div>
+                <label
+                  htmlFor="academicGroup"
+                  className="mb-2 block text-sm font-medium"
+                >
+                  Group (Class 9–10)
+                </label>
+                <select
+                  id="academicGroup"
+                  {...register("academicGroup")}
+                  className="h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:border-primary"
+                >
+                  <option value="">Select group</option>
+                  <option value="SCIENCE">Science</option>
+                  <option value="ARTS">Arts</option>
+                  <option value="COMMERCE">Commerce</option>
+                </select>
+              </div>
+            )}
+
             <div>
-              <label htmlFor="group" className="mb-2 block text-sm font-medium">
-                Group
+              <label
+                htmlFor="quranWing"
+                className="mb-2 block text-sm font-medium"
+              >
+                Quran / Hefz Wing (Optional)
               </label>
               <select
-                id="group"
-                {...register("group")}
+                id="quranWing"
+                {...register("quranWing")}
                 className="h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:border-primary"
               >
-                <option value="">Select group</option>
-                <option value="SCIENCE">Science</option>
-                <option value="COMMERCE">Commerce</option>
-                <option value="ARTS">Arts</option>
+                <option value="">General / Not applicable</option>
+                <option value="NOORANI">Noorani</option>
+                <option value="QAIDA">Qaida</option>
+                <option value="AMPARA">Ampara</option>
+                <option value="NAJERA">Najera</option>
+                <option value="HEFZ">Hefz</option>
               </select>
             </div>
           </div>
         </section>
       )}
 
-      {/* STEP 3 — GUARDIAN */}
+      {/* STEP 3 — GUARDIAN & OPTIONAL DOCUMENTS */}
       {step === 3 && (
         <section className="rounded-2xl border bg-background p-6 shadow-sm sm:p-8">
           <div className="mb-6">
-            <h2 className="text-xl font-semibold">Guardian Information</h2>
+            <h2 className="text-xl font-semibold">
+              Guardian &amp; Optional Documents
+            </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Enter the student's guardian information.
+              Guardian phone is used for parent portal login and admission
+              tracking.
             </p>
           </div>
 
@@ -832,14 +674,58 @@ export default function AdmissionForm({ schoolId }: AdmissionFormProps) {
                 htmlFor="guardianName"
                 className="mb-2 block text-sm font-medium"
               >
-                Guardian Name
+                Guardian Name *
               </label>
               <input
                 id="guardianName"
                 {...register("guardianName")}
-                placeholder="Guardian name"
+                placeholder="Father / Mother / Guardian name"
                 className="h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:border-primary"
               />
+              {errors.guardianName && (
+                <p className="mt-1.5 text-xs text-destructive">
+                  {errors.guardianName.message}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label
+                htmlFor="guardianPhone"
+                className="mb-2 block text-sm font-medium"
+              >
+                Guardian Phone *
+              </label>
+              <input
+                id="guardianPhone"
+                {...register("guardianPhone")}
+                placeholder="01XXXXXXXXX"
+                className="h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:border-primary"
+              />
+              {errors.guardianPhone && (
+                <p className="mt-1.5 text-xs text-destructive">
+                  {errors.guardianPhone.message}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label
+                htmlFor="guardianRelationship"
+                className="mb-2 block text-sm font-medium"
+              >
+                Relationship
+              </label>
+              <select
+                id="guardianRelationship"
+                {...register("guardianRelationship")}
+                className="h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:border-primary"
+              >
+                <option value="FATHER">Father</option>
+                <option value="MOTHER">Mother</option>
+                <option value="LOCAL_GUARDIAN">Local Guardian</option>
+                <option value="OTHER">Other</option>
+              </select>
             </div>
 
             <div>
@@ -847,7 +733,7 @@ export default function AdmissionForm({ schoolId }: AdmissionFormProps) {
                 htmlFor="guardianEmail"
                 className="mb-2 block text-sm font-medium"
               >
-                Guardian Email
+                Guardian Email (Optional)
               </label>
               <input
                 id="guardianEmail"
@@ -865,47 +751,10 @@ export default function AdmissionForm({ schoolId }: AdmissionFormProps) {
 
             <div>
               <label
-                htmlFor="guardianPhone"
-                className="mb-2 block text-sm font-medium"
-              >
-                Guardian Phone
-              </label>
-              <input
-                id="guardianPhone"
-                {...register("guardianPhone")}
-                placeholder="01XXXXXXXXX"
-                className="h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:border-primary"
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="guardianRelationship"
-                className="mb-2 block text-sm font-medium"
-              >
-                Relationship
-              </label>
-              <select
-                id="guardianRelationship"
-                {...register("guardianRelationship")}
-                className="h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:border-primary"
-              >
-                <option value="">Select relationship</option>
-                <option value="FATHER">Father</option>
-                <option value="MOTHER">Mother</option>
-                <option value="BROTHER">Brother</option>
-                <option value="SISTER">Sister</option>
-                <option value="GUARDIAN">Guardian</option>
-                <option value="OTHER">Other</option>
-              </select>
-            </div>
-
-            <div>
-              <label
                 htmlFor="guardianNid"
                 className="mb-2 block text-sm font-medium"
               >
-                Guardian NID
+                Guardian NID (Optional)
               </label>
               <input
                 id="guardianNid"
@@ -920,7 +769,7 @@ export default function AdmissionForm({ schoolId }: AdmissionFormProps) {
                 htmlFor="guardianOccupation"
                 className="mb-2 block text-sm font-medium"
               >
-                Occupation
+                Occupation (Optional)
               </label>
               <input
                 id="guardianOccupation"
@@ -932,24 +781,54 @@ export default function AdmissionForm({ schoolId }: AdmissionFormProps) {
 
             <div className="md:col-span-2">
               <label
-                htmlFor="address"
+                htmlFor="presentAddress"
                 className="mb-2 block text-sm font-medium"
               >
-                Address
+                Present Address (Optional)
               </label>
               <textarea
-                id="address"
-                {...register("address")}
-                placeholder="Enter full address"
-                rows={4}
+                id="presentAddress"
+                {...register("presentAddress")}
+                rows={3}
+                placeholder="House, Road, Area, District"
                 className="w-full resize-none rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
               />
-              {errors.address && (
-                <p className="mt-1.5 text-xs text-destructive">
-                  {errors.address.message}
-                </p>
-              )}
             </div>
+
+            {/* Optional Documents */}
+            {user ? (
+              <div className="grid gap-4 border-t pt-4 md:col-span-2 md:grid-cols-2">
+                <FileUpload
+                  category="STUDENT_PHOTO"
+                  label="Student Photo (Optional)"
+                  currentUrl={
+                    typeof values.studentPhotoUrl === "string"
+                      ? values.studentPhotoUrl
+                      : undefined
+                  }
+                  onUploaded={(file) => setValue("studentPhotoUrl", file.url)}
+                />
+                <FileUpload
+                  category="DOCUMENT"
+                  label="Birth Certificate (Optional)"
+                  accept="image/jpeg,image/png,image/webp,application/pdf"
+                  currentUrl={
+                    typeof values.birthCertificateUrl === "string"
+                      ? values.birthCertificateUrl
+                      : undefined
+                  }
+                  onUploaded={(file) =>
+                    setValue("birthCertificateUrl", file.url)
+                  }
+                />
+              </div>
+            ) : (
+              <div className="rounded-xl border border-dashed bg-muted/20 p-4 text-xs text-muted-foreground md:col-span-2">
+                Documents (photo, birth certificate, guardian NID, TC) are
+                optional at admission and can be uploaded by the office or
+                guardian after admission is approved.
+              </div>
+            )}
           </div>
         </section>
       )}
@@ -958,47 +837,17 @@ export default function AdmissionForm({ schoolId }: AdmissionFormProps) {
       {step === 4 && (
         <section className="space-y-6">
           <div className="rounded-2xl border bg-background p-6 shadow-sm sm:p-8">
-            <div className="mb-5 flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <User className="h-4 w-4" />
-              </div>
-              <div>
-                <h2 className="font-semibold">Student Information</h2>
-                <p className="text-xs text-muted-foreground">
-                  Review student details
-                </p>
-              </div>
-            </div>
-
+            <h2 className="mb-4 font-semibold">Summary</h2>
             <div className="grid gap-4 sm:grid-cols-2">
               <ReviewItem label="Student Name" value={values.studentName} />
-              <ReviewItem label="Student Email" value={values.studentEmail} />
+              <ReviewItem label="Bangla Name" value={values.nameBangla} />
               <ReviewItem label="Date of Birth" value={values.dateOfBirth} />
               <ReviewItem label="Gender" value={values.gender} />
-              <ReviewItem label="Blood Group" value={values.bloodGroup} />
               <ReviewItem
-                label="Previous School"
-                value={values.previousSchool}
+                label="Residential Type"
+                value={values.residentialType}
               />
-              <ReviewItem label="Previous Class" value={values.previousClass} />
-            </div>
-          </div>
-
-          <div className="rounded-2xl border bg-background p-6 shadow-sm sm:p-8">
-            <div className="mb-5 flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <FileText className="h-4 w-4" />
-              </div>
-              <div>
-                <h2 className="font-semibold">Academic Information</h2>
-                <p className="text-xs text-muted-foreground">
-                  Review academic details
-                </p>
-              </div>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <ReviewItem label="Academic Year" value={values.academicYear} />
+              <ReviewItem label="Session" value={values.academicYear} />
               <ReviewItem
                 label="Class"
                 value={
@@ -1007,122 +856,72 @@ export default function AdmissionForm({ schoolId }: AdmissionFormProps) {
                     : undefined
                 }
               />
+              <ReviewItem label="Section" value={selectedSection?.name} />
               <ReviewItem label="Shift" value={values.shift} />
-              <ReviewItem label="Group" value={values.group} />
-            </div>
-          </div>
-
-          <div className="rounded-2xl border bg-background p-6 shadow-sm sm:p-8">
-            <div className="mb-5 flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <Users className="h-4 w-4" />
-              </div>
-              <div>
-                <h2 className="font-semibold">Guardian Information</h2>
-                <p className="text-xs text-muted-foreground">
-                  Review guardian details
-                </p>
-              </div>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
+              {showAcademicGroup && (
+                <ReviewItem
+                  label="Group"
+                  value={
+                    typeof values.academicGroup === "string"
+                      ? values.academicGroup
+                      : undefined
+                  }
+                />
+              )}
+              <ReviewItem
+                label="Quran / Hefz Wing"
+                value={
+                  typeof values.quranWing === "string"
+                    ? values.quranWing
+                    : undefined
+                }
+              />
               <ReviewItem label="Guardian Name" value={values.guardianName} />
-              <ReviewItem label="Guardian Email" value={values.guardianEmail} />
               <ReviewItem label="Guardian Phone" value={values.guardianPhone} />
               <ReviewItem
                 label="Relationship"
                 value={values.guardianRelationship}
               />
-              <ReviewItem label="Guardian NID" value={values.guardianNid} />
-              <ReviewItem
-                label="Occupation"
-                value={values.guardianOccupation}
-              />
-              <ReviewItem label="Address" value={values.address} />
             </div>
           </div>
 
           <div className="rounded-2xl border bg-background p-6 shadow-sm sm:p-8">
-            <div className="mb-5 flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <CreditCard className="h-4 w-4" />
-              </div>
-              <div>
-                <h2 className="font-semibold">Payment Method</h2>
-                <p className="text-xs text-muted-foreground">
-                  Choose how you want to pay.
-                </p>
-              </div>
-            </div>
-
+            <h2 className="mb-1 font-semibold">
+              Admission Fee Payment Method (If Applicable)
+            </h2>
+            <p className="mb-4 text-xs text-muted-foreground">
+              Only charged if the institution has enabled an upfront admission
+              fee.
+            </p>
             <Controller
               name="paymentMethod"
               control={control}
               render={({ field }) => (
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <label
-                    className={[
-                      "cursor-pointer rounded-xl border p-4 transition",
-                      field.value === "ONLINE"
-                        ? "border-primary bg-primary/5"
-                        : "hover:bg-muted/40",
-                    ].join(" ")}
-                  >
-                    <input
-                      type="radio"
-                      value="ONLINE"
-                      checked={field.value === "ONLINE"}
-                      onChange={() => field.onChange("ONLINE")}
-                      className="sr-only"
-                    />
-                    <div className="flex items-start gap-3">
-                      <CreditCard className="mt-0.5 h-5 w-5 text-primary" />
-                      <div>
-                        <p className="text-sm font-medium">
-                          Mobile Banking (bKash / Nagad / Rocket)
-                        </p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          Verify your email first, then send the fee via bKash,
-                          Nagad, or Rocket for manual verification.
-                        </p>
-                      </div>
-                    </div>
-                  </label>
-
-                  <label
-                    className={[
-                      "cursor-pointer rounded-xl border p-4 transition",
-                      field.value === "CASH"
-                        ? "border-primary bg-primary/5"
-                        : "hover:bg-muted/40",
-                    ].join(" ")}
-                  >
-                    <input
-                      type="radio"
-                      value="CASH"
-                      checked={field.value === "CASH"}
-                      onChange={() => field.onChange("CASH")}
-                      className="sr-only"
-                    />
-                    <div className="flex items-start gap-3">
-                      <FileText className="mt-0.5 h-5 w-5 text-primary" />
-                      <div>
-                        <p className="text-sm font-medium">Cash Payment</p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          Pay the admission fee directly at the school.
-                        </p>
-                      </div>
-                    </div>
-                  </label>
+                <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+                  {(["CASH", "BKASH", "NAGAD", "ROCKET"] as const).map(
+                    (method) => (
+                      <label
+                        key={method}
+                        className={`cursor-pointer rounded-xl border p-3 text-center text-sm font-medium transition ${
+                          field.value === method
+                            ? "border-primary bg-primary/5 text-primary"
+                            : "hover:bg-muted/40"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          value={method}
+                          checked={field.value === method}
+                          onChange={() => field.onChange(method)}
+                          className="sr-only"
+                        />
+                        {method === "CASH" ? "Cash at Office" : method}
+                      </label>
+                    ),
+                  )}
                 </div>
               )}
             />
-
-            {errors.paymentMethod && (
-              <p className="mt-2 text-xs text-destructive">
-                {errors.paymentMethod.message}
-              </p>
-            )}
           </div>
         </section>
       )}
@@ -1162,11 +961,7 @@ export default function AdmissionForm({ schoolId }: AdmissionFormProps) {
               </>
             ) : (
               <>
-                {values.paymentMethod === "ONLINE" ? (
-                  <CreditCard className="h-4 w-4" />
-                ) : (
-                  <Check className="h-4 w-4" />
-                )}
+                <Check className="h-4 w-4" />
                 Submit Application
               </>
             )}
@@ -1177,13 +972,13 @@ export default function AdmissionForm({ schoolId }: AdmissionFormProps) {
   );
 }
 
-// REVIEW ITEM
-interface ReviewItemProps {
+function ReviewItem({
+  label,
+  value,
+}: {
   label: string;
   value?: string | number | null;
-}
-
-function ReviewItem({ label, value }: ReviewItemProps) {
+}) {
   return (
     <div>
       <p className="text-xs text-muted-foreground">{label}</p>

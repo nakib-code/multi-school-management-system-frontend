@@ -24,7 +24,7 @@ export function NotificationMenu() {
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="relative inline-flex h-9 w-9 items-center justify-center rounded-lg border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        className="relative inline-flex h-10 w-10 items-center justify-center rounded-[11px] border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         aria-label="Notifications"
       >
         <Bell className="h-4 w-4" />
@@ -43,7 +43,7 @@ export function NotificationMenu() {
             onClick={() => setOpen(false)}
             aria-label="Close notifications"
           />
-          <div className="absolute right-0 z-50 mt-2 w-80 rounded-xl border bg-background p-4 shadow-lg sm:w-96">
+          <div className="fixed inset-x-3 top-16 z-50 rounded-[14px] border bg-background p-3.5 shadow-lg sm:absolute sm:inset-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-96 sm:p-4">
             <div className="mb-3 flex items-center justify-between border-b pb-2.5">
               <div>
                 <p className="text-sm font-semibold">Notifications</p>
@@ -86,15 +86,32 @@ export function NotificationMenu() {
                       if (!n.isRead) markReadMut.mutate(n.id);
                     }}
                     className={`w-full rounded-lg border p-2.5 text-left transition ${
-                      n.isRead
-                        ? "bg-background hover:bg-muted/30"
-                        : "border-primary/30 bg-primary/5 hover:bg-primary/10"
+                      n.type === "EMERGENCY"
+                        ? "border-red-300 bg-red-50/70 hover:bg-red-50 dark:border-red-900 dark:bg-red-950/30"
+                        : n.isRead
+                          ? "bg-background hover:bg-muted/30"
+                          : "border-primary/30 bg-primary/5 hover:bg-primary/10"
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <p className="text-xs font-semibold text-foreground">
-                        {n.title}
-                      </p>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span
+                          className={`rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase ${
+                            n.type === "EMERGENCY"
+                              ? "bg-red-600 text-white"
+                              : n.type === "ATTENDANCE"
+                                ? "bg-amber-500/15 text-amber-700"
+                                : n.type === "DIARY"
+                                  ? "bg-emerald-500/15 text-emerald-700"
+                                  : "bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          {n.type}
+                        </span>
+                        <p className="text-xs font-semibold text-foreground">
+                          {n.title}
+                        </p>
+                      </div>
                       <span className="shrink-0 text-[10px] text-muted-foreground">
                         {new Date(n.createdAt).toLocaleDateString()}
                       </span>

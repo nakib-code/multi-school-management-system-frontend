@@ -21,26 +21,26 @@ export function SchoolHeader({ school }: { school: SchoolPublic }) {
   return (
     <header className="sticky top-0 z-40 bg-white border-b shadow-sm">
       <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-16">
-        <Link href="/" className="flex items-center gap-3">
+        <Link href="/" className="flex min-w-0 items-center gap-3">
           {school.logo ? (
             <Image
               src={school.logo}
               alt={school.name}
               width={40}
               height={40}
-              className="rounded-full object-cover"
+              className="shrink-0 rounded-full object-cover"
             />
           ) : (
             <div
-              className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-bold text-white"
               style={{ backgroundColor: 'var(--primary)' }}
             >
               {school.name.charAt(0)}
             </div>
           )}
-          <div>
+          <div className="min-w-0">
             <p
-              className="font-bold text-lg leading-tight"
+              className="truncate text-base font-bold leading-tight sm:text-lg"
               style={{ color: 'var(--primary)' }}
             >
               {school.name}
@@ -74,11 +74,12 @@ export function SchoolHeader({ school }: { school: SchoolPublic }) {
         </nav>
 
         <button
-          className="md:hidden"
+          type="button"
+          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[11px] border md:hidden"
           onClick={() => setOpen(!open)}
           aria-label="Menu"
         >
-          {open ? <X /> : <Menu />}
+          {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
       </div>
 

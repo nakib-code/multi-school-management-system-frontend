@@ -19,36 +19,26 @@ import type {
 } from "@/features/admissions/types";
 
 export default function TrackAdmissionPage() {
-  const [applicationNo, setApplicationNo] =
-    useState("");
+  const [applicationNo, setApplicationNo] = useState("");
+  const [guardianPhone, setGuardianPhone] = useState("");
+  const [result, setResult] = useState<TrackAdmissionResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const [studentEmail, setStudentEmail] =
-    useState("");
-
-  const [result, setResult] =
-    useState<TrackAdmissionResponse | null>(null);
-
-  const [isLoading, setIsLoading] =
-    useState(false);
-
-  const handleSubmit = async (
-    event: FormEvent<HTMLFormElement>,
-  ) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!applicationNo.trim()) {
-      toast.error(
-        "Please enter your application number",
-      );
+      toast.error("Please enter your application number");
       return;
     }
 
-    if (!studentEmail.trim()) {
-      toast.error(
-        "Please enter your student email",
-      );
+    if (!guardianPhone.trim()) {
+      toast.error("Please enter guardian phone or email");
       return;
     }
+
+    const contact = guardianPhone.trim();
+    const isEmail = contact.includes("@");
 
     try {
       setIsLoading(true);
@@ -56,19 +46,14 @@ export default function TrackAdmissionPage() {
 
       const data = await trackAdmission({
         applicationNo: applicationNo.trim(),
-        studentEmail: studentEmail.trim(),
+        ...(isEmail ? { studentEmail: contact } : { guardianPhone: contact }),
       });
 
       setResult(data);
-
-      toast.success(
-        "Application found successfully",
-      );
+      toast.success("Application found successfully");
     } catch (error) {
       toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to track application",
+        error instanceof Error ? error.message : "Failed to track application",
       );
     } finally {
       setIsLoading(false);
@@ -128,20 +113,18 @@ export default function TrackAdmissionPage() {
 
             <div>
               <label
-                htmlFor="studentEmail"
+                htmlFor="guardianPhone"
                 className="mb-2 block text-sm font-medium text-slate-700"
               >
-                Student Email
+                Guardian Phone (or Student Email)
               </label>
 
               <input
-                id="studentEmail"
-                type="email"
-                value={studentEmail}
-                onChange={(event) =>
-                  setStudentEmail(event.target.value)
-                }
-                placeholder="student@example.com"
+                id="guardianPhone"
+                type="text"
+                value={guardianPhone}
+                onChange={(event) => setGuardianPhone(event.target.value)}
+                placeholder="01XXXXXXXXX"
                 className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm outline-none transition focus:border-[#00a99d] focus:ring-2 focus:ring-[#00a99d]/10"
               />
             </div>
@@ -199,8 +182,12 @@ export default function TrackAdmissionPage() {
                 />
 
                 <InfoItem
-                  label="Student Email"
-                  value={result.student.email}
+                  label="Guardian Phone"
+                  value={
+                    result.student.guardianPhone ??
+                    result.student.email ??
+                    "—"
+                  }
                 />
 
                 <InfoItem
