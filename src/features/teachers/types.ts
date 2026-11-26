@@ -13,6 +13,8 @@ export interface TeacherRecord {
   isActive: boolean;
   email?: string;
   status?: string;
+  temporaryPassword?: string;
+  mustChangePassword?: boolean;
   user?: {
     id: number;
     name: string;
@@ -26,7 +28,7 @@ export interface TeacherRecord {
 export interface CreateTeacherInput {
   name: string;
   email: string;
-  password: string;
+  password?: string;
   employeeId: string;
   firstName: string;
   lastName?: string;
@@ -34,6 +36,18 @@ export interface CreateTeacherInput {
   address?: string;
   designation?: string;
   qualification?: string;
+}
+
+export interface ResendTeacherOtpResponse {
+  teacherId: number;
+  email: string;
+  expiresInSeconds: number;
+  cooldownSeconds: number;
+}
+
+export interface ResetTeacherPasswordInput {
+  password: string;
+  mustChangePassword?: boolean;
 }
 
 export interface TeacherAssignmentRecord {
@@ -45,9 +59,14 @@ export interface TeacherAssignmentRecord {
   subjectId: number;
   academicYear: string;
   isActive: boolean;
-  teacher?: { id: number; firstName: string; lastName: string | null; employeeId: string };
+  teacher?: {
+    id: number;
+    firstName: string;
+    lastName: string | null;
+    employeeId: string;
+  };
   class?: { id: number; name: string; code: string };
-  section?: { id: number; name: string; code: string };
+  section?: { id: number; name: string };
   subject?: { id: number; name: string; code: string };
 }
 

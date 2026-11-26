@@ -10,13 +10,20 @@ import {
   deleteTeacherAssignment,
   getTeacherAssignments,
   getTeachers,
+  resendTeacherOtp,
+  resetTeacherPassword,
   verifyTeacherEmail,
 } from "./api";
-import type { CreateTeacherAssignmentInput, CreateTeacherInput } from "./types";
+import type {
+  CreateTeacherAssignmentInput,
+  CreateTeacherInput,
+  ResetTeacherPasswordInput,
+} from "./types";
 
 export const teacherKeys = {
   all: ["teachers"] as const,
-  list: (schoolId: number, search?: string) => [...teacherKeys.all, schoolId, search] as const,
+  list: (schoolId: number, search?: string) =>
+    [...teacherKeys.all, schoolId, search] as const,
   assignments: (schoolId: number) => ["teacher-assignments", schoolId] as const,
 };
 
@@ -35,7 +42,8 @@ export const useCreateTeacher = (schoolId: number) => {
       toast.success("Teacher created! Verification code emailed to teacher.");
       qc.invalidateQueries({ queryKey: teacherKeys.all });
     },
-    onError: (err) => toast.error(getApiErrorMessage(err, "Failed to create teacher")),
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to create teacher")),
   });
 };
 
@@ -48,7 +56,36 @@ export const useVerifyTeacherEmail = (schoolId: number) => {
       toast.success("Teacher email verified & activated");
       qc.invalidateQueries({ queryKey: teacherKeys.all });
     },
-    onError: (err) => toast.error(getApiErrorMessage(err, "Verification failed")),
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Verification failed")),
+  });
+};
+
+export const useResendTeacherOtp = (schoolId: number) => {
+  return useMutation({
+    mutationFn: (teacherId: number) => resendTeacherOtp(schoolId, teacherId),
+    onSuccess: (data) => {
+      toast.success(`New verification OTP emailed to ${data.email}`);
+    },
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to resend OTP")),
+  });
+};
+
+export const useResetTeacherPassword = (schoolId: number) => {
+  return useMutation({
+    mutationFn: ({
+      teacherId,
+      payload,
+    }: {
+      teacherId: number;
+      payload: ResetTeacherPasswordInput;
+    }) => resetTeacherPassword(schoolId, teacherId, payload),
+    onSuccess: () => {
+      toast.success("Teacher password updated successfully");
+    },
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to reset password")),
   });
 };
 
@@ -60,7 +97,8 @@ export const useDeactivateTeacher = (schoolId: number) => {
       toast.success("Teacher deactivated");
       qc.invalidateQueries({ queryKey: teacherKeys.all });
     },
-    onError: (err) => toast.error(getApiErrorMessage(err, "Failed to deactivate teacher")),
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to deactivate teacher")),
   });
 };
 
@@ -80,7 +118,8 @@ export const useCreateTeacherAssignment = (schoolId: number) => {
       toast.success("Teacher assigned to class/subject");
       qc.invalidateQueries({ queryKey: teacherKeys.assignments(schoolId) });
     },
-    onError: (err) => toast.error(getApiErrorMessage(err, "Failed to assign teacher")),
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to assign teacher")),
   });
 };
 
@@ -92,6 +131,7 @@ export const useDeleteTeacherAssignment = (schoolId: number) => {
       toast.success("Assignment removed");
       qc.invalidateQueries({ queryKey: teacherKeys.assignments(schoolId) });
     },
-    onError: (err) => toast.error(getApiErrorMessage(err, "Failed to remove assignment")),
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to remove assignment")),
   });
 };

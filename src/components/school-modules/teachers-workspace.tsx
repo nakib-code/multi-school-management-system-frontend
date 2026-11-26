@@ -1,7 +1,16 @@
 "use client";
 
-import { KeyRound, Plus, Trash2, Users } from "lucide-react";
-import { useState } from "react";
+import {
+  Copy,
+  KeyRound,
+  LockKeyhole,
+  Plus,
+  RefreshCw,
+  Trash2,
+  Users,
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { Modal } from "@/components/modals/modal";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ErrorState } from "@/components/shared/error-state";
@@ -16,6 +25,8 @@ import {
   useCreateTeacherAssignment,
   useDeactivateTeacher,
   useDeleteTeacherAssignment,
+  useResendTeacherOtp,
+  useResetTeacherPassword,
   useTeacherAssignments,
   useTeachers,
   useVerifyTeacherEmail,
@@ -34,6 +45,38 @@ export function TeachersWorkspace() {
   const [assignOpen, setAssignOpen] = useState(false);
   const [verifyTeacherId, setVerifyTeacherId] = useState<number | null>(null);
   const [verifyCode, setVerifyCode] = useState("");
+  const [resetTarget, setResetTarget] = useState<{
+    id: number;
+    name: string;
+  } | null>(null);
+  const [resetPasswordVal, setResetPasswordVal] = useState("");
+  const [resetMustChange, setResetMustChange] = useState(true);
+
+  const [createdCredentials, setCreatedCredentials] = useState<{
+    teacherId: number;
+    name: string;
+    email: string;
+    employeeId: string;
+    temporaryPassword: string;
+  } | null>(null);
+
+  // Per-teacher 60s resend cooldown tracker (teacherId -> seconds remaining)
+  const [cooldowns, setCooldowns] = useState<Record<number, number>>({});
+
+  useEffect(() => {
+    const hasActive = Object.values(cooldowns).some((sec) => sec > 0);
+    if (!hasActive) return;
+    const timer = setInterval(() => {
+      setCooldowns((prev) => {
+        const next: Record<number, number> = {};
+        for (const [key, sec] of Object.entries(prev)) {
+          if (sec > 1) next[Number(key)] = sec - 1;
+        }
+        return next;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [cooldowns]);
 
   const [form, setForm] = useState({
     name: "",
@@ -63,15 +106,21 @@ export function TeachersWorkspace() {
 
   const createTeacherMut = useCreateTeacher(schoolId);
   const verifyEmailMut = useVerifyTeacherEmail(schoolId);
+  const resendOtpMut = useResendTeacherOtp(schoolId);
+  const resetPasswordMut = useResetTeacherPassword(schoolId);
   const deactivateMut = useDeactivateTeacher(schoolId);
   const createAssignMut = useCreateTeacherAssignment(schoolId);
   const deleteAssignMut = useDeleteTeacherAssignment(schoolId);
 
-  if (teachersQuery.isLoading) return <LoadingState message="Loading teachers..." />;
+  if (teachersQuery.isLoading)
+    return <LoadingState message="Loading teachers..." />;
   if (teachersQuery.isError) {
     return (
       <ErrorState
-        message={getApiErrorMessage(teachersQuery.error, "Failed to load teachers")}
+        message={getApiErrorMessage(
+          teachersQuery.error,
+          "Failed to load teachers",
+        )}
         onRetry={() => teachersQuery.refetch()}
       />
     );
@@ -82,18 +131,33 @@ export function TeachersWorkspace() {
 
   const handleCreateTeacher = async (e: React.FormEvent) => {
     e.preventDefault();
-    await createTeacherMut.mutateAsync({
+    const created = await createTeacherMut.mutateAsync({
       name: form.name.trim(),
       email: form.email.trim(),
-      password: form.password,
+      ...(form.password.trim() ? { password: form.password.trim() } : {}),
       employeeId: form.employeeId.trim(),
       firstName: form.firstName.trim(),
       ...(form.lastName ? { lastName: form.lastName.trim() } : {}),
       ...(form.phone ? { phone: form.phone.trim() } : {}),
       ...(form.designation ? { designation: form.designation.trim() } : {}),
-      ...(form.qualification ? { qualification: form.qualification.trim() } : {}),
+      ...(form.qualification
+        ? { qualification: form.qualification.trim() }
+        : {}),
     });
+
     setCreateOpen(false);
+    setCooldowns((prev) => ({ ...prev, [created.id]: 60 }));
+
+    if (created.temporaryPassword) {
+      setCreatedCredentials({
+        teacherId: created.id,
+        name: `${created.firstName} ${created.lastName ?? ""}`.trim(),
+        email: created.email ?? form.email.trim(),
+        employeeId: created.employeeId,
+        temporaryPassword: created.temporaryPassword,
+      });
+    }
+
     setForm({
       name: "",
       email: "",
@@ -105,6 +169,41 @@ export function TeachersWorkspace() {
       designation: "",
       qualification: "",
     });
+  };
+
+  const handleResendOtp = async (teacherId: number) => {
+    if ((cooldowns[teacherId] ?? 0) > 0) return;
+    const res = await resendOtpMut.mutateAsync(teacherId);
+    setCooldowns((prev) => ({
+      ...prev,
+      [teacherId]: res.cooldownSeconds ?? 60,
+    }));
+  };
+
+  const handleVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!verifyTeacherId) return;
+    await verifyEmailMut.mutateAsync({
+      teacherId: verifyTeacherId,
+      code: verifyCode.trim(),
+    });
+    setVerifyTeacherId(null);
+    setVerifyCode("");
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetTarget) return;
+    await resetPasswordMut.mutateAsync({
+      teacherId: resetTarget.id,
+      payload: {
+        password: resetPasswordVal,
+        mustChangePassword: resetMustChange,
+      },
+    });
+    setResetTarget(null);
+    setResetPasswordVal("");
+    setResetMustChange(true);
   };
 
   const handleCreateAssignment = async (e: React.FormEvent) => {
@@ -119,15 +218,13 @@ export function TeachersWorkspace() {
     setAssignOpen(false);
   };
 
-  const handleVerify = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!verifyTeacherId) return;
-    await verifyEmailMut.mutateAsync({
-      teacherId: verifyTeacherId,
-      code: verifyCode.trim(),
-    });
-    setVerifyTeacherId(null);
-    setVerifyCode("");
+  const copyText = async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success(`${label} copied`);
+    } catch {
+      toast.error("Could not copy to clipboard");
+    }
   };
 
   return (
@@ -138,17 +235,25 @@ export function TeachersWorkspace() {
             Teachers &amp; Assignments
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Manage faculty accounts, email verification, and class/subject teaching assignments.
+            Manage faculty accounts, email OTP verification, password resets,
+            and class/subject assignments.
           </p>
         </div>
 
         {canManage && (
-          <div className="flex gap-2">
-            <Button onClick={() => setCreateOpen(true)} className="gap-1.5">
+          <div className="grid grid-cols-2 gap-2 sm:flex">
+            <Button
+              onClick={() => setCreateOpen(true)}
+              className="min-h-[44px] gap-1.5 rounded-[11px] sm:min-h-0"
+            >
               <Plus className="h-4 w-4" />
               Add Teacher
             </Button>
-            <Button variant="outline" onClick={() => setAssignOpen(true)} className="gap-1.5">
+            <Button
+              variant="outline"
+              onClick={() => setAssignOpen(true)}
+              className="min-h-[44px] gap-1.5 rounded-[11px] sm:min-h-0"
+            >
               <Plus className="h-4 w-4" />
               Assign Subject
             </Button>
@@ -156,11 +261,11 @@ export function TeachersWorkspace() {
         )}
       </div>
 
-      <div className="flex gap-2 border-b">
+      <div className="no-scrollbar flex gap-2 overflow-x-auto border-b">
         <button
           type="button"
           onClick={() => setTab("teachers")}
-          className={`border-b-2 px-4 py-2 text-sm font-medium transition ${
+          className={`min-h-[44px] shrink-0 border-b-2 px-4 py-2 text-sm font-medium transition ${
             tab === "teachers"
               ? "border-primary text-primary"
               : "border-transparent text-muted-foreground hover:text-foreground"
@@ -171,7 +276,7 @@ export function TeachersWorkspace() {
         <button
           type="button"
           onClick={() => setTab("assignments")}
-          className={`border-b-2 px-4 py-2 text-sm font-medium transition ${
+          className={`min-h-[44px] shrink-0 border-b-2 px-4 py-2 text-sm font-medium transition ${
             tab === "assignments"
               ? "border-primary text-primary"
               : "border-transparent text-muted-foreground hover:text-foreground"
@@ -189,69 +294,188 @@ export function TeachersWorkspace() {
             description="Create a teacher account and verify their email OTP to activate login."
           />
         ) : (
-          <div className="overflow-x-auto rounded-xl border bg-card">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b bg-muted/40 text-xs uppercase text-muted-foreground">
-                <tr>
-                  <th className="px-4 py-3">Employee ID</th>
-                  <th className="px-4 py-3">Name</th>
-                  <th className="px-4 py-3">Email</th>
-                  <th className="px-4 py-3">Designation</th>
-                  <th className="px-4 py-3">Account Status</th>
-                  {canManage && <th className="px-4 py-3 text-right">Actions</th>}
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {teachers.map((t) => {
-                  const status = t.user?.status ?? t.status ?? (t.isActive ? "ACTIVE" : "INACTIVE");
-                  return (
-                    <tr key={t.id}>
-                      <td className="px-4 py-3 font-mono text-xs">{t.employeeId}</td>
-                      <td className="px-4 py-3 font-medium">
-                        {t.firstName} {t.lastName ?? ""}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {t.user?.email ?? t.email ?? "—"}
-                      </td>
-                      <td className="px-4 py-3">{t.designation ?? "—"}</td>
-                      <td className="px-4 py-3">
-                        <span className="rounded-full border px-2.5 py-0.5 text-xs font-medium">
-                          {status}
-                        </span>
-                      </td>
-                      {canManage && (
-                        <td className="px-4 py-3 text-right">
-                          <div className="inline-flex items-center gap-2">
-                            {status === "PENDING" && (
+          <>
+            {/* Mobile Teacher Cards */}
+            <div className="space-y-2.5 md:hidden">
+              {teachers.map((t) => {
+                const status =
+                  t.user?.status ??
+                  t.status ??
+                  (t.isActive ? "ACTIVE" : "INACTIVE");
+                const cd = cooldowns[t.id] ?? 0;
+                const fullName = `${t.firstName} ${t.lastName ?? ""}`.trim();
+
+                return (
+                  <div key={t.id} className="mobile-card space-y-2.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold">
+                          {fullName}
+                        </p>
+                        <p className="font-mono text-[11px] text-muted-foreground">
+                          {t.employeeId} • {t.designation ?? "Teacher"}
+                        </p>
+                      </div>
+                      <span className="shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold">
+                        {status}
+                      </span>
+                    </div>
+
+                    <p className="truncate text-xs text-muted-foreground">
+                      {t.user?.email ?? t.email ?? "—"}
+                      {t.phone ? ` • ${t.phone}` : ""}
+                    </p>
+
+                    {canManage && (
+                      <div className="flex flex-wrap gap-2 border-t pt-2.5">
+                        {status === "PENDING" && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setVerifyTeacherId(t.id)}
+                              className="min-h-[40px] flex-1 gap-1 rounded-[11px] text-xs"
+                            >
+                              <KeyRound className="h-3.5 w-3.5" />
+                              Verify OTP
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={cd > 0 || resendOtpMut.isPending}
+                              onClick={() => handleResendOtp(t.id)}
+                              className="min-h-[40px] flex-1 gap-1 rounded-[11px] text-xs"
+                            >
+                              <RefreshCw className="h-3.5 w-3.5" />
+                              {cd > 0 ? `Resend (${cd}s)` : "Resend OTP"}
+                            </Button>
+                          </>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            setResetTarget({ id: t.id, name: fullName })
+                          }
+                          className="min-h-[40px] flex-1 gap-1 rounded-[11px] text-xs"
+                        >
+                          <LockKeyhole className="h-3.5 w-3.5" />
+                          Reset Password
+                        </Button>
+                        {isAdmin && t.isActive && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => deactivateMut.mutate(t.id)}
+                            className="min-h-[40px] rounded-[11px] text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop Teacher Table */}
+            <div className="surface-panel hidden overflow-x-auto md:block">
+              <table className="w-full text-left text-sm">
+                <thead className="border-b bg-muted/40 text-xs uppercase text-muted-foreground">
+                  <tr>
+                    <th className="px-4 py-3">Employee ID</th>
+                    <th className="px-4 py-3">Name</th>
+                    <th className="px-4 py-3">Email &amp; Phone</th>
+                    <th className="px-4 py-3">Designation</th>
+                    <th className="px-4 py-3">Account Status</th>
+                    {canManage && (
+                      <th className="px-4 py-3 text-right">Actions</th>
+                    )}
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {teachers.map((t) => {
+                    const status =
+                      t.user?.status ??
+                      t.status ??
+                      (t.isActive ? "ACTIVE" : "INACTIVE");
+                    const cd = cooldowns[t.id] ?? 0;
+                    const fullName = `${t.firstName} ${t.lastName ?? ""}`.trim();
+
+                    return (
+                      <tr key={t.id}>
+                        <td className="px-4 py-3 font-mono text-xs">
+                          {t.employeeId}
+                        </td>
+                        <td className="px-4 py-3 font-medium">{fullName}</td>
+                        <td className="px-4 py-3 text-xs text-muted-foreground">
+                          <p>{t.user?.email ?? t.email ?? "—"}</p>
+                          {t.phone && <p>{t.phone}</p>}
+                        </td>
+                        <td className="px-4 py-3">{t.designation ?? "—"}</td>
+                        <td className="px-4 py-3">
+                          <span className="rounded-full border px-2.5 py-0.5 text-xs font-medium">
+                            {status}
+                          </span>
+                        </td>
+                        {canManage && (
+                          <td className="px-4 py-3 text-right">
+                            <div className="inline-flex flex-wrap items-center justify-end gap-1.5">
+                              {status === "PENDING" && (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => setVerifyTeacherId(t.id)}
+                                    className="gap-1"
+                                  >
+                                    <KeyRound className="h-3.5 w-3.5" />
+                                    Verify OTP
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={cd > 0 || resendOtpMut.isPending}
+                                    onClick={() => handleResendOtp(t.id)}
+                                    className="gap-1"
+                                  >
+                                    <RefreshCw className="h-3.5 w-3.5" />
+                                    {cd > 0 ? `${cd}s` : "Resend OTP"}
+                                  </Button>
+                                </>
+                              )}
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => setVerifyTeacherId(t.id)}
+                                onClick={() =>
+                                  setResetTarget({ id: t.id, name: fullName })
+                                }
                                 className="gap-1"
                               >
-                                <KeyRound className="h-3.5 w-3.5" />
-                                Verify OTP
+                                <LockKeyhole className="h-3.5 w-3.5" />
+                                Reset Password
                               </Button>
-                            )}
-                            {isAdmin && t.isActive && (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => deactivateMut.mutate(t.id)}
-                                className="text-destructive"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </td>
-                      )}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                              {isAdmin && t.isActive && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => deactivateMut.mutate(t.id)}
+                                  className="text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
         )
       ) : assignments.length === 0 ? (
         <EmptyState
@@ -260,7 +484,7 @@ export function TeachersWorkspace() {
           description="Assign teachers to classes, sections, and subjects."
         />
       ) : (
-        <div className="overflow-x-auto rounded-xl border bg-card">
+        <div className="surface-panel overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="border-b bg-muted/40 text-xs uppercase text-muted-foreground">
               <tr>
@@ -280,9 +504,12 @@ export function TeachersWorkspace() {
                       : `Teacher #${a.teacherId}`}
                   </td>
                   <td className="px-4 py-3">
-                    {a.class?.name ?? a.classId} — {a.section?.name ?? a.sectionId}
+                    {a.class?.name ?? a.classId} —{" "}
+                    {a.section?.name ?? a.sectionId}
                   </td>
-                  <td className="px-4 py-3">{a.subject?.name ?? a.subjectId}</td>
+                  <td className="px-4 py-3">
+                    {a.subject?.name ?? a.subjectId}
+                  </td>
                   <td className="px-4 py-3">{a.academicYear}</td>
                   {canManage && (
                     <td className="px-4 py-3 text-right">
@@ -303,11 +530,16 @@ export function TeachersWorkspace() {
         </div>
       )}
 
-      <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Add New Teacher">
+      {/* Add New Teacher Modal */}
+      <Modal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        title="Add New Teacher"
+      >
         <form onSubmit={handleCreateTeacher} className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1">
-              <Label>Full Account Name</Label>
+              <Label>Full Account Name *</Label>
               <Input
                 required
                 value={form.name}
@@ -315,23 +547,27 @@ export function TeachersWorkspace() {
               />
             </div>
             <div className="space-y-1">
-              <Label>Employee ID</Label>
+              <Label>Employee ID *</Label>
               <Input
                 required
                 placeholder="TCH-001"
                 value={form.employeeId}
-                onChange={(e) => setForm({ ...form, employeeId: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, employeeId: e.target.value })
+                }
               />
             </div>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1">
-              <Label>First Name</Label>
+              <Label>First Name *</Label>
               <Input
                 required
                 value={form.firstName}
-                onChange={(e) => setForm({ ...form, firstName: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, firstName: e.target.value })
+                }
               />
             </div>
             <div className="space-y-1">
@@ -345,7 +581,7 @@ export function TeachersWorkspace() {
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1">
-              <Label>Email</Label>
+              <Label>Email *</Label>
               <Input
                 type="email"
                 required
@@ -354,11 +590,11 @@ export function TeachersWorkspace() {
               />
             </div>
             <div className="space-y-1">
-              <Label>Password (min 8 chars)</Label>
+              <Label>Password (Optional — min 8 chars)</Label>
               <Input
                 type="password"
                 minLength={8}
-                required
+                placeholder="Leave blank to auto-generate"
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
               />
@@ -371,12 +607,15 @@ export function TeachersWorkspace() {
               <Input
                 placeholder="Senior Ustad"
                 value={form.designation}
-                onChange={(e) => setForm({ ...form, designation: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, designation: e.target.value })
+                }
               />
             </div>
             <div className="space-y-1">
               <Label>Phone</Label>
               <Input
+                placeholder="01XXXXXXXXX"
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
               />
@@ -384,7 +623,11 @@ export function TeachersWorkspace() {
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setCreateOpen(false)}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={createTeacherMut.isPending}>
@@ -394,14 +637,97 @@ export function TeachersWorkspace() {
         </form>
       </Modal>
 
-      <Modal open={assignOpen} onClose={() => setAssignOpen(false)} title="Assign Teacher to Class & Subject">
+      {/* One-Time Temporary Credentials Confirmation Modal */}
+      <Modal
+        open={!!createdCredentials}
+        onClose={() => setCreatedCredentials(null)}
+        title="Teacher Created — Save Temporary Password"
+        maxWidthClass="max-w-md"
+      >
+        {createdCredentials && (
+          <div className="space-y-4 text-sm">
+            <p className="text-xs text-muted-foreground">
+              Share these credentials securely with{" "}
+              <strong className="text-foreground">
+                {createdCredentials.name}
+              </strong>
+              . This temporary password is shown only once. A 6-digit email
+              verification OTP has also been sent.
+            </p>
+
+            <div className="space-y-2.5 rounded-[11px] border bg-muted/30 p-3.5 text-xs">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-muted-foreground">Email</span>
+                <span className="font-medium">{createdCredentials.email}</span>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-muted-foreground">Employee ID</span>
+                <span className="font-mono font-semibold">
+                  {createdCredentials.employeeId}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-2 border-t pt-2">
+                <span className="text-muted-foreground">Temp Password</span>
+                <div className="flex items-center gap-1.5">
+                  <code className="rounded bg-background px-2 py-0.5 font-mono text-sm font-bold text-primary">
+                    {createdCredentials.temporaryPassword}
+                  </code>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      copyText(
+                        createdCredentials.temporaryPassword,
+                        "Temporary password",
+                      )
+                    }
+                    className="h-7 px-2"
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCreatedCredentials(null)}
+              >
+                Done
+              </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  const id = createdCredentials.teacherId;
+                  setCreatedCredentials(null);
+                  setVerifyTeacherId(id);
+                }}
+              >
+                Enter Email OTP Now
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Assign Subject Modal */}
+      <Modal
+        open={assignOpen}
+        onClose={() => setAssignOpen(false)}
+        title="Assign Teacher to Class & Subject"
+      >
         <form onSubmit={handleCreateAssignment} className="space-y-4">
           <div className="space-y-1">
             <Label>Teacher</Label>
             <select
               required
               value={assignForm.teacherId}
-              onChange={(e) => setAssignForm({ ...assignForm, teacherId: e.target.value })}
+              onChange={(e) =>
+                setAssignForm({ ...assignForm, teacherId: e.target.value })
+              }
               className="h-9 w-full rounded-md border bg-background px-3 text-sm"
             >
               <option value="">Select teacher...</option>
@@ -419,7 +745,9 @@ export function TeachersWorkspace() {
               <select
                 required
                 value={assignForm.classId}
-                onChange={(e) => setAssignForm({ ...assignForm, classId: e.target.value })}
+                onChange={(e) =>
+                  setAssignForm({ ...assignForm, classId: e.target.value })
+                }
                 className="h-9 w-full rounded-md border bg-background px-3 text-sm"
               >
                 <option value="">Select class...</option>
@@ -435,12 +763,18 @@ export function TeachersWorkspace() {
               <select
                 required
                 value={assignForm.sectionId}
-                onChange={(e) => setAssignForm({ ...assignForm, sectionId: e.target.value })}
+                onChange={(e) =>
+                  setAssignForm({ ...assignForm, sectionId: e.target.value })
+                }
                 className="h-9 w-full rounded-md border bg-background px-3 text-sm"
               >
                 <option value="">Select section...</option>
                 {sections
-                  .filter((s) => !assignForm.classId || s.classId === Number(assignForm.classId))
+                  .filter(
+                    (s) =>
+                      !assignForm.classId ||
+                      s.classId === Number(assignForm.classId),
+                  )
                   .map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.name}
@@ -456,7 +790,9 @@ export function TeachersWorkspace() {
               <select
                 required
                 value={assignForm.subjectId}
-                onChange={(e) => setAssignForm({ ...assignForm, subjectId: e.target.value })}
+                onChange={(e) =>
+                  setAssignForm({ ...assignForm, subjectId: e.target.value })
+                }
                 className="h-9 w-full rounded-md border bg-background px-3 text-sm"
               >
                 <option value="">Select subject...</option>
@@ -472,13 +808,19 @@ export function TeachersWorkspace() {
               <Input
                 required
                 value={assignForm.academicYear}
-                onChange={(e) => setAssignForm({ ...assignForm, academicYear: e.target.value })}
+                onChange={(e) =>
+                  setAssignForm({ ...assignForm, academicYear: e.target.value })
+                }
               />
             </div>
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={() => setAssignOpen(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setAssignOpen(false)}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={createAssignMut.isPending}>
@@ -488,6 +830,7 @@ export function TeachersWorkspace() {
         </form>
       </Modal>
 
+      {/* Verify Teacher Email OTP Modal (with Resend OTP + 60s Cooldown) */}
       <Modal
         open={!!verifyTeacherId}
         onClose={() => setVerifyTeacherId(null)}
@@ -500,17 +843,105 @@ export function TeachersWorkspace() {
             <Input
               required
               maxLength={6}
+              inputMode="numeric"
               placeholder="123456"
               value={verifyCode}
-              onChange={(e) => setVerifyCode(e.target.value)}
+              onChange={(e) =>
+                setVerifyCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+              }
+              className="text-center font-mono text-lg tracking-[0.35em]"
             />
           </div>
+
+          {verifyTeacherId && (
+            <div className="flex items-center justify-between rounded-[11px] bg-muted/40 px-3 py-2 text-xs">
+              <span className="text-muted-foreground">
+                Code expired or missing?
+              </span>
+              <button
+                type="button"
+                disabled={
+                  (cooldowns[verifyTeacherId] ?? 0) > 0 ||
+                  resendOtpMut.isPending
+                }
+                onClick={() => handleResendOtp(verifyTeacherId)}
+                className="font-semibold text-primary hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {(cooldowns[verifyTeacherId] ?? 0) > 0
+                  ? `Resend in ${cooldowns[verifyTeacherId]}s`
+                  : "Resend OTP"}
+              </button>
+            </div>
+          )}
+
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setVerifyTeacherId(null)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setVerifyTeacherId(null)}
+            >
               Cancel
             </Button>
-            <Button type="submit" disabled={verifyEmailMut.isPending}>
-              Verify
+            <Button
+              type="submit"
+              disabled={verifyEmailMut.isPending || verifyCode.length !== 6}
+            >
+              {verifyEmailMut.isPending ? "Verifying..." : "Verify & Activate"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Reset Teacher Password Modal */}
+      <Modal
+        open={!!resetTarget}
+        onClose={() => {
+          setResetTarget(null);
+          setResetPasswordVal("");
+        }}
+        title={
+          resetTarget
+            ? `Reset Password — ${resetTarget.name}`
+            : "Reset Teacher Password"
+        }
+        maxWidthClass="max-w-sm"
+      >
+        <form onSubmit={handleResetPassword} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label>New Password (min 8 chars) *</Label>
+            <Input
+              type="password"
+              required
+              minLength={8}
+              value={resetPasswordVal}
+              onChange={(e) => setResetPasswordVal(e.target.value)}
+              placeholder="Enter new password"
+            />
+          </div>
+
+          <label className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={resetMustChange}
+              onChange={(e) => setResetMustChange(e.target.checked)}
+              className="h-4 w-4 rounded border"
+            />
+            Require teacher to change password on next login
+          </label>
+
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setResetTarget(null);
+                setResetPasswordVal("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={resetPasswordMut.isPending}>
+              {resetPasswordMut.isPending ? "Updating..." : "Update Password"}
             </Button>
           </div>
         </form>

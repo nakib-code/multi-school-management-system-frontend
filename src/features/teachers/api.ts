@@ -3,6 +3,8 @@ import type { ApiResponse } from "@/types/api";
 import type {
   CreateTeacherAssignmentInput,
   CreateTeacherInput,
+  ResendTeacherOtpResponse,
+  ResetTeacherPasswordInput,
   TeacherAssignmentRecord,
   TeacherRecord,
 } from "./types";
@@ -37,6 +39,28 @@ export const verifyTeacherEmail = async (
   const res = await api.patch<ApiResponse<unknown>>(
     `/schools/${schoolId}/teachers/${teacherId}/verify-email`,
     { code },
+  );
+  return res.data.data;
+};
+
+export const resendTeacherOtp = async (
+  schoolId: number,
+  teacherId: number,
+): Promise<ResendTeacherOtpResponse> => {
+  const res = await api.post<ApiResponse<ResendTeacherOtpResponse>>(
+    `/schools/${schoolId}/teachers/${teacherId}/resend-otp`,
+  );
+  return res.data.data;
+};
+
+export const resetTeacherPassword = async (
+  schoolId: number,
+  teacherId: number,
+  payload: ResetTeacherPasswordInput,
+) => {
+  const res = await api.post<ApiResponse<unknown>>(
+    `/schools/${schoolId}/teachers/${teacherId}/reset-password`,
+    payload,
   );
   return res.data.data;
 };
