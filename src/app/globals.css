@@ -789,3 +789,33 @@
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* =========================================================
+   Print Stylesheet (Monthly Attendance Reports -> PDF)
+========================================================= */
+
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  aside,
+  header,
+  nav,
+  .no-print {
+    display: none !important;
+  }
+
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .print-report-sheet {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+}

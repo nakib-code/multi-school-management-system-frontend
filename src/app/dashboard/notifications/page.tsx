@@ -198,60 +198,86 @@ export default function NotificationsHistoryPage() {
           />
         ) : (
           <div className="space-y-3">
-            {notifications.map((n) => (
-              <div
-                key={n.id}
-                className={`flex flex-col justify-between gap-3 rounded-xl border p-4 sm:flex-row sm:items-center ${
-                  n.type === "EMERGENCY"
-                    ? "border-red-300 bg-red-50/70 dark:border-red-900 dark:bg-red-950/30"
-                    : n.isRead
-                      ? "bg-card"
-                      : "border-primary/30 bg-primary/5"
-                }`}
-              >
-                <div className="space-y-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span
-                      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase ${
-                        TYPE_BADGE_STYLES[n.type] ?? ""
-                      }`}
-                    >
-                      {n.type === "EMERGENCY" && (
-                        <AlertTriangle className="h-3 w-3" />
-                      )}
-                      {n.type}
-                    </span>
-                    <p className="text-sm font-semibold">{n.title}</p>
-                    <span className="text-xs text-muted-foreground">
-                      {new Date(n.createdAt).toLocaleString()}
-                    </span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{n.message}</p>
-                </div>
+            {notifications.map((n) => {
+              const attStatus =
+                n.type === "ATTENDANCE" &&
+                n.metadata &&
+                typeof n.metadata.status === "string"
+                  ? n.metadata.status
+                  : null;
+              const isAbsentAlert = attStatus === "ABSENT";
+              const isLateAlert = attStatus === "LATE";
+              const isExcusedAlert = attStatus === "EXCUSED";
 
-                <div className="flex shrink-0 items-center gap-1">
-                  {!n.isRead && (
+              const badgeStyle =
+                n.type === "ATTENDANCE"
+                  ? isAbsentAlert
+                    ? "border-red-300 bg-red-500/15 text-red-700 dark:border-red-800 dark:text-red-300"
+                    : isLateAlert
+                      ? "border-amber-300 bg-amber-500/15 text-amber-800 dark:border-amber-800 dark:text-amber-300"
+                      : isExcusedAlert
+                        ? "border-blue-300 bg-blue-500/15 text-blue-700 dark:border-blue-800 dark:text-blue-300"
+                        : TYPE_BADGE_STYLES.ATTENDANCE
+                  : (TYPE_BADGE_STYLES[n.type] ?? "");
+
+              const cardStyle =
+                n.type === "EMERGENCY"
+                  ? "border-red-300 bg-red-50/70 dark:border-red-900 dark:bg-red-950/30"
+                  : isAbsentAlert && !n.isRead
+                    ? "border-red-300 bg-red-50/60 dark:border-red-900/70 dark:bg-red-950/20"
+                    : isLateAlert && !n.isRead
+                      ? "border-amber-300 bg-amber-50/60 dark:border-amber-900/70 dark:bg-amber-950/20"
+                      : n.isRead
+                        ? "bg-card"
+                        : "border-primary/30 bg-primary/5";
+
+              return (
+                <div
+                  key={n.id}
+                  className={`flex flex-col justify-between gap-3 rounded-xl border p-4 sm:flex-row sm:items-center ${cardStyle}`}
+                >
+                  <div className="space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase ${badgeStyle}`}
+                      >
+                        {(n.type === "EMERGENCY" || isAbsentAlert) && (
+                          <AlertTriangle className="h-3 w-3" />
+                        )}
+                        {attStatus ? `${n.type} • ${attStatus}` : n.type}
+                      </span>
+                      <p className="text-sm font-semibold">{n.title}</p>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(n.createdAt).toLocaleString()}
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">{n.message}</p>
+                  </div>
+
+                  <div className="flex shrink-0 items-center gap-1">
+                    {!n.isRead && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => markReadMut.mutate(n.id)}
+                        className="gap-1"
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                        Read
+                      </Button>
+                    )}
                     <Button
                       size="sm"
-                      variant="outline"
-                      onClick={() => markReadMut.mutate(n.id)}
-                      className="gap-1"
+                      variant="ghost"
+                      onClick={() => deleteMut.mutate(n.id)}
+                      className="text-destructive"
                     >
-                      <Check className="h-3.5 w-3.5" />
-                      Read
+                      <Trash2 className="h-4 w-4" />
                     </Button>
-                  )}
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => deleteMut.mutate(n.id)}
-                    className="text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
