@@ -8,9 +8,13 @@ import {
   deleteGuardian,
   getGuardians,
   linkStudentToGuardian,
+  resetGuardianPassword,
   unlinkStudentFromGuardian,
 } from "./api";
-import type { CreateGuardianInput } from "./types";
+import type {
+  CreateGuardianInput,
+  ResetGuardianPasswordInput,
+} from "./types";
 
 export const guardianKeys = {
   all: ["guardians"] as const,
@@ -59,6 +63,23 @@ export const useUnlinkStudentFromGuardian = (schoolId: number) => {
       qc.invalidateQueries({ queryKey: guardianKeys.list(schoolId) });
     },
     onError: (err) => toast.error(getApiErrorMessage(err, "Failed to unlink student")),
+  });
+};
+
+export const useResetGuardianPassword = (schoolId: number) => {
+  return useMutation({
+    mutationFn: ({
+      guardianId,
+      payload,
+    }: {
+      guardianId: number;
+      payload: ResetGuardianPasswordInput;
+    }) => resetGuardianPassword(schoolId, guardianId, payload),
+    onSuccess: () => {
+      toast.success("Guardian password updated");
+    },
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to reset guardian password")),
   });
 };
 

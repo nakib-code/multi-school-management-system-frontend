@@ -14,6 +14,10 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Modal } from "@/components/modals/modal";
 import {
+  type GuardianCredentialsData,
+  GuardianCredentialsModal,
+} from "@/components/school-modules/guardian-credentials-modal";
+import {
   useAdmissionDetails,
   useAdmissions,
   useApproveAdmission,
@@ -42,6 +46,8 @@ export default function AdminAdmissionsPage() {
   const [rejectId, setRejectId] = useState<number | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [detailId, setDetailId] = useState<number | null>(null);
+  const [guardianCredentials, setGuardianCredentials] =
+    useState<GuardianCredentialsData | null>(null);
 
   const { data, isLoading, isError, isFetching, refetch } = useAdmissions(
     schoolId,
@@ -78,9 +84,17 @@ export default function AdminAdmissionsPage() {
     }
 
     try {
-      await approveMutation.mutateAsync(admissionId);
+      const approved = await approveMutation.mutateAsync(admissionId);
       toast.success("Admission approved — Student, Enrollment & Guardian created");
       setDetailId(null);
+      if (approved.guardian?.temporaryPassword) {
+        setGuardianCredentials({
+          name: approved.guardian.name,
+          phone: approved.guardian.phone,
+          temporaryPassword: approved.guardian.temporaryPassword,
+          studentName: approved.studentName,
+        });
+      }
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Failed to approve admission",
@@ -702,6 +716,11 @@ export default function AdminAdmissionsPage() {
           </div>
         ) : null}
       </Modal>
+
+      <GuardianCredentialsModal
+        credentials={guardianCredentials}
+        onClose={() => setGuardianCredentials(null)}
+      />
     </div>
   );
 }

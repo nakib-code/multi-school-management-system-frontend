@@ -6,6 +6,7 @@ export interface GuardianRecord {
   occupation: string | null;
   address: string | null;
   nid?: string | null;
+  temporaryPassword?: string;
   user?: {
     id: number;
     name: string;
@@ -35,4 +36,17 @@ export interface CreateGuardianInput {
   address?: string;
   nid?: string;
   studentIds?: number[];
+}
+
+export interface ResetGuardianPasswordInput {
+  password?: string;
+  mustChangePassword?: boolean;
+}
+
+export interface ResetGuardianPasswordResponse {
+  guardianId: number;
+  name: string;
+  phone: string | null;
+  temporaryPassword: string;
+  mustChangePassword: boolean;
 }

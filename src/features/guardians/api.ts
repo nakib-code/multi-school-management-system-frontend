@@ -1,6 +1,11 @@
 import { api } from "@/lib/api";
 import type { ApiResponse } from "@/types/api";
-import type { CreateGuardianInput, GuardianRecord } from "./types";
+import type {
+  CreateGuardianInput,
+  GuardianRecord,
+  ResetGuardianPasswordInput,
+  ResetGuardianPasswordResponse,
+} from "./types";
 
 export const getGuardians = async (schoolId: number): Promise<GuardianRecord[]> => {
   const res = await api.get<ApiResponse<GuardianRecord[]>>(`/schools/${schoolId}/guardians`);
@@ -37,6 +42,18 @@ export const unlinkStudentFromGuardian = async (
 ) => {
   const res = await api.delete<ApiResponse<unknown>>(
     `/schools/${schoolId}/guardians/${guardianId}/students/${studentId}`,
+  );
+  return res.data.data;
+};
+
+export const resetGuardianPassword = async (
+  schoolId: number,
+  guardianId: number,
+  payload: ResetGuardianPasswordInput,
+): Promise<ResetGuardianPasswordResponse> => {
+  const res = await api.post<ApiResponse<ResetGuardianPasswordResponse>>(
+    `/schools/${schoolId}/guardians/${guardianId}/reset-password`,
+    payload,
   );
   return res.data.data;
 };

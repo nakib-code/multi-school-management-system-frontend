@@ -245,22 +245,23 @@ function LoginPageContent() {
                 onSubmit={handleSubmit(onSubmit)}
                 className="space-y-5 p-6 sm:p-8"
               >
-                {/* Email */}
+                {/* Phone Number or Email */}
                 <div className="space-y-2">
                   <label
                     htmlFor="email"
                     className="flex items-center gap-1.5 text-sm font-semibold text-[#061842]"
                   >
                     <Mail className="h-4 w-4 text-[#008f87]" />
-                    Email
+                    Phone Number or Email
                   </label>
 
                   <div className="relative">
                     <input
                       id="email"
-                      type="email"
-                      autoComplete="email"
-                      placeholder="admin@example.com"
+                      type="text"
+                      inputMode="email"
+                      autoComplete="username"
+                      placeholder="Phone (01XXXXXXXXX) or Email"
                       {...register("email")}
                       className={`${inputClass(
                         !!errors.email,
@@ -269,6 +270,11 @@ function LoginPageContent() {
 
                     <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   </div>
+
+                  <p className="text-[11px] text-slate-500">
+                    Guardians can sign in directly using their registered mobile
+                    number (e.g. 017XXXXXXXX).
+                  </p>
 
                   {errors.email && (
                     <p

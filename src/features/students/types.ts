@@ -186,6 +186,7 @@ export interface CreateStudentResponse {
     email: string;
     isExistingGuardian: boolean;
     defaultPassword?: string;
+    temporaryPassword?: string;
   } | null;
 }
 

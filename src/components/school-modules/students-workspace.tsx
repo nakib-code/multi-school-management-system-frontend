@@ -12,6 +12,10 @@ import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Modal } from "@/components/modals/modal";
+import {
+  type GuardianCredentialsData,
+  GuardianCredentialsModal,
+} from "@/components/school-modules/guardian-credentials-modal";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ErrorState } from "@/components/shared/error-state";
 import { LoadingState } from "@/components/shared/loading";
@@ -55,6 +59,8 @@ export function StudentsWorkspace() {
   const debouncedSearch = useDebounce(search, 300);
 
   const [quickAdmitOpen, setQuickAdmitOpen] = useState(false);
+  const [guardianCredentials, setGuardianCredentials] =
+    useState<GuardianCredentialsData | null>(null);
   const [admitForm, setAdmitForm] = useState({
     academicYear: String(new Date().getFullYear()),
     classId: "",
@@ -130,11 +136,17 @@ export function StudentsWorkspace() {
       toast.info(
         `Linked to existing guardian ${res.guardian.name} (${res.guardian.phone})`,
       );
-    } else if (res.guardian?.defaultPassword) {
-      toast.info(
-        `Guardian login created — Phone: ${res.guardian.phone}, Temp Password: ${res.guardian.defaultPassword}`,
-        { duration: 8000 },
-      );
+    } else if (
+      res.guardian &&
+      (res.guardian.temporaryPassword || res.guardian.defaultPassword)
+    ) {
+      setGuardianCredentials({
+        name: res.guardian.name,
+        phone: res.guardian.phone,
+        temporaryPassword:
+          res.guardian.temporaryPassword ?? res.guardian.defaultPassword!,
+        studentName: admitForm.studentName.trim(),
+      });
     }
 
     setQuickAdmitOpen(false);
@@ -733,6 +745,11 @@ export function StudentsWorkspace() {
           </div>
         </form>
       </Modal>
+
+      <GuardianCredentialsModal
+        credentials={guardianCredentials}
+        onClose={() => setGuardianCredentials(null)}
+      />
     </div>
   );
 }

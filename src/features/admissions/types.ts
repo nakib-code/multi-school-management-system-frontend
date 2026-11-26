@@ -282,6 +282,14 @@ export interface ApproveAdmissionResponse {
   classId: number;
   sectionId: number | null;
   academicYear: string;
+  guardian?: {
+    guardianId: number;
+    name: string;
+    phone: string;
+    email: string;
+    isExistingGuardian: boolean;
+    temporaryPassword?: string;
+  } | null;
   status: AdmissionStatus;
   reviewedAt: string;
 }

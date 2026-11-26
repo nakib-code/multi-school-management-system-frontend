@@ -1,8 +1,12 @@
 "use client";
 
-import { HeartHandshake, Link2, Plus, Trash2 } from "lucide-react";
+import { HeartHandshake, Link2, LockKeyhole, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Modal } from "@/components/modals/modal";
+import {
+  type GuardianCredentialsData,
+  GuardianCredentialsModal,
+} from "@/components/school-modules/guardian-credentials-modal";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ErrorState } from "@/components/shared/error-state";
 import { LoadingState } from "@/components/shared/loading";
@@ -14,10 +18,16 @@ import {
   useDeleteGuardian,
   useGuardians,
   useLinkStudentToGuardian,
+  useResetGuardianPassword,
 } from "@/features/guardians/hooks";
 import { useStudents } from "@/features/students/hooks";
 import { getApiErrorMessage } from "@/lib/api";
 import { useAuth } from "@/providers/auth-provider";
+
+const formatGuardianEmail = (email?: string | null) => {
+  if (!email || email.endsWith("@madrasaos.local")) return "No email";
+  return email;
+};
 
 export function GuardiansWorkspace() {
   const { user } = useAuth();
@@ -35,11 +45,20 @@ export function GuardiansWorkspace() {
   const { data: studentsData } = useStudents(schoolId, { page: 1, limit: 100 });
   const createMut = useCreateGuardian(schoolId);
   const linkMut = useLinkStudentToGuardian(schoolId);
+  const resetPasswordMut = useResetGuardianPassword(schoolId);
   const deleteMut = useDeleteGuardian(schoolId);
 
   const [open, setOpen] = useState(false);
   const [linkGuardianId, setLinkGuardianId] = useState<number | null>(null);
   const [linkStudentId, setLinkStudentId] = useState("");
+  const [resetTarget, setResetTarget] = useState<{
+    id: number;
+    name: string;
+    phone: string;
+  } | null>(null);
+  const [resetPasswordVal, setResetPasswordVal] = useState("");
+  const [credentials, setCredentials] =
+    useState<GuardianCredentialsData | null>(null);
   const [form, setForm] = useState({
     name: "",
     phone: "",
@@ -53,7 +72,7 @@ export function GuardiansWorkspace() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    await createMut.mutateAsync({
+    const created = await createMut.mutateAsync({
       name: form.name.trim(),
       phone: form.phone.trim(),
       ...(form.email.trim() ? { email: form.email.trim() } : {}),
@@ -64,6 +83,15 @@ export function GuardiansWorkspace() {
       ...(form.address.trim() ? { address: form.address.trim() } : {}),
     });
     setOpen(false);
+    const createdPhone = created.user?.phone ?? form.phone.trim();
+    const createdPassword = created.temporaryPassword || form.password;
+    if (createdPassword) {
+      setCredentials({
+        name: created.user?.name ?? form.name.trim(),
+        phone: createdPhone,
+        temporaryPassword: createdPassword,
+      });
+    }
     setForm({
       name: "",
       phone: "",
@@ -73,6 +101,27 @@ export function GuardiansWorkspace() {
       occupation: "",
       nid: "",
       address: "",
+    });
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetTarget) return;
+    const res = await resetPasswordMut.mutateAsync({
+      guardianId: resetTarget.id,
+      payload: {
+        ...(resetPasswordVal.trim()
+          ? { password: resetPasswordVal.trim() }
+          : {}),
+        mustChangePassword: true,
+      },
+    });
+    setResetTarget(null);
+    setResetPasswordVal("");
+    setCredentials({
+      name: res.name,
+      phone: res.phone ?? resetTarget.phone,
+      temporaryPassword: res.temporaryPassword,
     });
   };
 
@@ -156,7 +205,7 @@ export function GuardiansWorkspace() {
                   </span>
                 </p>
                 {canManage && (
-                  <div className="flex gap-2 border-t pt-2">
+                  <div className="flex flex-wrap gap-2 border-t pt-2">
                     <Button
                       size="sm"
                       variant="outline"
@@ -165,6 +214,21 @@ export function GuardiansWorkspace() {
                     >
                       <Link2 className="h-3.5 w-3.5" />
                       Link Student
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        setResetTarget({
+                          id: g.id,
+                          name: g.user?.name ?? `Guardian #${g.id}`,
+                          phone: g.user?.phone ?? "",
+                        })
+                      }
+                      className="min-h-[40px] flex-1 gap-1 rounded-[11px]"
+                    >
+                      <LockKeyhole className="h-3.5 w-3.5" />
+                      Reset Password
                     </Button>
                     {isAdmin && (
                       <Button
@@ -203,7 +267,7 @@ export function GuardiansWorkspace() {
                     <p className="font-medium text-foreground">
                       {g.user?.phone ?? "—"}
                     </p>
-                    <p>{g.user?.email ?? "—"}</p>
+                    <p>{formatGuardianEmail(g.user?.email)}</p>
                   </td>
                   <td className="px-4 py-3 text-xs">
                     <p>{g.relation ?? "—"}</p>
@@ -233,6 +297,21 @@ export function GuardiansWorkspace() {
                         >
                           <Link2 className="h-3.5 w-3.5" />
                           Link Student
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            setResetTarget({
+                              id: g.id,
+                              name: g.user?.name ?? `Guardian #${g.id}`,
+                              phone: g.user?.phone ?? "",
+                            })
+                          }
+                          className="gap-1"
+                        >
+                          <LockKeyhole className="h-3.5 w-3.5" />
+                          Reset Password
                         </Button>
                         {isAdmin && (
                           <Button
@@ -390,6 +469,56 @@ export function GuardiansWorkspace() {
           </div>
         </form>
       </Modal>
+
+      {/* Reset Guardian Password Modal */}
+      <Modal
+        open={!!resetTarget}
+        onClose={() => {
+          setResetTarget(null);
+          setResetPasswordVal("");
+        }}
+        title={
+          resetTarget
+            ? `Reset Password — ${resetTarget.name}`
+            : "Reset Guardian Password"
+        }
+        maxWidthClass="max-w-sm"
+      >
+        <form onSubmit={handleResetPassword} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label>New Password (Optional — leave blank to auto-generate)</Label>
+            <Input
+              type="password"
+              minLength={6}
+              value={resetPasswordVal}
+              onChange={(e) => setResetPasswordVal(e.target.value)}
+              placeholder="Leave blank for strong temp password"
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setResetTarget(null);
+                setResetPasswordVal("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={resetPasswordMut.isPending}>
+              {resetPasswordMut.isPending
+                ? "Resetting..."
+                : "Generate / Set Password"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      <GuardianCredentialsModal
+        credentials={credentials}
+        onClose={() => setCredentials(null)}
+      />
     </div>
   );
 }
