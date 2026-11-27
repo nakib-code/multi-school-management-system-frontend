@@ -16,11 +16,7 @@ interface DashboardShellProps {
 
 const ROUTE_FEATURE_MAP: {
   segment: string;
-  key:
-    | "hasHefzSection"
-    | "hasOnlineAdmission"
-    | "hasTeacherPayroll"
-    | "hasPublicWebsite";
+  key: "hasHefzSection" | "hasOnlineAdmission" | "hasTeacherPayroll";
   label: string;
 }[] = [
   { segment: "/hefz", key: "hasHefzSection", label: "Hefz & Najera Tracking" },
@@ -33,11 +29,6 @@ const ROUTE_FEATURE_MAP: {
     segment: "/salaries",
     key: "hasTeacherPayroll",
     label: "Teacher Payroll & Salaries",
-  },
-  {
-    segment: "/website",
-    key: "hasPublicWebsite",
-    label: "Public Website Builder",
   },
 ];
 

@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Loader2, X } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import type { School } from "@/types/school";
 
@@ -26,7 +26,7 @@ export function RejectSchoolDialog({
     if (open) {
       setReason("");
     }
-  }, [open, school]);
+  }, [open]);
 
   if (!open || !school) {
     return null;
@@ -54,18 +54,13 @@ export function RejectSchoolDialog({
       >
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2
-              id="reject-school-title"
-              className="text-lg font-semibold"
-            >
+            <h2 id="reject-school-title" className="text-lg font-semibold">
               Reject School
             </h2>
 
             <p className="mt-1 text-sm text-muted-foreground">
               Rejecting{" "}
-              <span className="font-medium text-foreground">
-                {school.name}
-              </span>
+              <span className="font-medium text-foreground">{school.name}</span>
               .
             </p>
           </div>
@@ -83,10 +78,7 @@ export function RejectSchoolDialog({
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <div className="space-y-2">
-            <label
-              htmlFor="rejectionReason"
-              className="text-sm font-medium"
-            >
+            <label htmlFor="rejectionReason" className="text-sm font-medium">
               Rejection Reason
             </label>
 
@@ -117,9 +109,7 @@ export function RejectSchoolDialog({
               disabled={loading || !reason.trim()}
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground transition hover:bg-destructive/90 disabled:pointer-events-none disabled:opacity-50"
             >
-              {loading && (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              )}
+              {loading && <Loader2 className="h-4 w-4 animate-spin" />}
 
               {loading ? "Rejecting..." : "Reject School"}
             </button>

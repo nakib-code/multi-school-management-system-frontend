@@ -5,9 +5,7 @@ export type SchoolUserRole =
   | "STUDENT"
   | "GUARDIAN";
 
-export type SchoolUserStatus =
-  | "ACTIVE"
-  | "INACTIVE";
+export type SchoolUserStatus = "ACTIVE" | "INACTIVE";
 
 export interface SchoolUser {
   id: number;

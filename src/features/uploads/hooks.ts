@@ -31,7 +31,10 @@ export const useUploadFile = () =>
       category: UploadCategory;
       fileName?: string;
     }) => {
-      const res = await api.post<ApiResponse<UploadedFileRecord>>("/uploads", payload);
+      const res = await api.post<ApiResponse<UploadedFileRecord>>(
+        "/uploads",
+        payload,
+      );
       return res.data.data;
     },
     onSuccess: () => {

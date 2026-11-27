@@ -52,5 +52,4 @@ export const USER_CATEGORIES = [
   description: string;
 }[];
 
-export type UserCategoryKey =
-  (typeof USER_CATEGORIES)[number]["key"];
+export type UserCategoryKey = (typeof USER_CATEGORIES)[number]["key"];

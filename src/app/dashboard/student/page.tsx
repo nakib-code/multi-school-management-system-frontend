@@ -36,10 +36,15 @@ export default function StudentDashboardPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">
-          Welcome, {profile ? `${profile.firstName} ${profile.lastName ?? ""}` : user?.name}
+          Welcome,{" "}
+          {profile
+            ? `${profile.firstName} ${profile.lastName ?? ""}`
+            : user?.name}
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {profile ? `Student ID: ${profile.studentId}` : "View your attendance, exams, results, fees, and Hefz progress."}
+          {profile
+            ? `Student ID: ${profile.studentId}`
+            : "View your attendance, exams, results, fees, and Hefz progress."}
         </p>
       </div>
 
@@ -63,12 +68,36 @@ export default function StudentDashboardPage() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {[
-          { label: "My Profile", href: "/dashboard/student/profile", icon: UserCheck },
-          { label: "Attendance History", href: "/dashboard/student/attendance", icon: CalendarCheck },
-          { label: "Exam Schedules", href: "/dashboard/student/exams", icon: FileText },
-          { label: "Results & GPA", href: "/dashboard/student/results", icon: Award },
-          { label: "Fees & Payments", href: "/dashboard/student/fees", icon: CreditCard },
-          { label: "Hefz Progress", href: "/dashboard/student/hefz", icon: BookOpenCheck },
+          {
+            label: "My Profile",
+            href: "/dashboard/student/profile",
+            icon: UserCheck,
+          },
+          {
+            label: "Attendance History",
+            href: "/dashboard/student/attendance",
+            icon: CalendarCheck,
+          },
+          {
+            label: "Exam Schedules",
+            href: "/dashboard/student/exams",
+            icon: FileText,
+          },
+          {
+            label: "Results & GPA",
+            href: "/dashboard/student/results",
+            icon: Award,
+          },
+          {
+            label: "Fees & Payments",
+            href: "/dashboard/student/fees",
+            icon: CreditCard,
+          },
+          {
+            label: "Hefz Progress",
+            href: "/dashboard/student/hefz",
+            icon: BookOpenCheck,
+          },
         ].map((item) => {
           const Icon = item.icon;
           return (

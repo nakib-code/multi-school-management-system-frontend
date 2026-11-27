@@ -8,6 +8,8 @@ import {
   getMe,
   login,
   logout,
+  type UpdateMePayload,
+  updateMe,
 } from "./api";
 
 import type { LoginPayload } from "./types";
@@ -56,6 +58,17 @@ export const useChangePassword = () => {
 
   return useMutation({
     mutationFn: (payload: ChangePasswordPayload) => changePassword(payload),
+    onSuccess: (updatedUser) => {
+      queryClient.setQueryData(authKeys.me(), updatedUser);
+    },
+  });
+};
+
+export const useUpdateMe = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: UpdateMePayload) => updateMe(payload),
     onSuccess: (updatedUser) => {
       queryClient.setQueryData(authKeys.me(), updatedUser);
     },

@@ -374,9 +374,7 @@ export function SchoolTable() {
                                   title="Block"
                                 >
                                   <ShieldBan className="h-4 w-4" />
-                                  <span className="sr-only">
-                                    Block school
-                                  </span>
+                                  <span className="sr-only">Block school</span>
                                 </button>
                               )}
 
@@ -429,17 +427,14 @@ export function SchoolTable() {
                 </span>{" "}
                 to{" "}
                 <span className="font-medium text-foreground">{endIndex}</span>{" "}
-                of{" "}
-                <span className="font-medium text-foreground">{total}</span>{" "}
+                of <span className="font-medium text-foreground">{total}</span>{" "}
                 schools
               </p>
 
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() =>
-                    setPage((current) => Math.max(current - 1, 1))
-                  }
+                  onClick={() => setPage((current) => Math.max(current - 1, 1))}
                   disabled={page === 1 || isFetching}
                   className="inline-flex h-9 items-center gap-1 rounded-lg border px-3 text-sm font-medium transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-50"
                 >
@@ -449,8 +444,7 @@ export function SchoolTable() {
 
                 <span className="px-2 text-sm text-muted-foreground">
                   Page{" "}
-                  <span className="font-medium text-foreground">{page}</span>{" "}
-                  of{" "}
+                  <span className="font-medium text-foreground">{page}</span> of{" "}
                   <span className="font-medium text-foreground">
                     {totalPages}
                   </span>
@@ -538,10 +532,7 @@ function DeleteSchoolDialog({
             </div>
 
             <div className="min-w-0">
-              <h2
-                id="delete-school-title"
-                className="text-lg font-semibold"
-              >
+              <h2 id="delete-school-title" className="text-lg font-semibold">
                 Delete school permanently?
               </h2>
 

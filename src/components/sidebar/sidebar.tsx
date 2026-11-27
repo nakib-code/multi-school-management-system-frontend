@@ -44,7 +44,6 @@ interface NavItem {
   featureKey?:
     | "hasGeneralSection"
     | "hasHefzSection"
-    | "hasPublicWebsite"
     | "hasOnlineAdmission"
     | "hasTeacherPayroll"
     | "smsEnabled";
@@ -176,6 +175,11 @@ const navigationByRole: Record<string, NavItem[]> = {
       href: "/dashboard/admin/subscription/payment",
       icon: Package,
     },
+    {
+      label: "Reports",
+      href: "/dashboard/admin/reports",
+      icon: BarChart3,
+    },
     { label: "Settings", href: "/dashboard/admin/settings", icon: Settings },
   ],
   MANAGER: [
@@ -247,6 +251,11 @@ const navigationByRole: Record<string, NavItem[]> = {
       label: "Hefz & Najera",
       href: "/dashboard/manager/hefz",
       icon: BookOpenCheck,
+    },
+    {
+      label: "Reports",
+      href: "/dashboard/manager/reports",
+      icon: BarChart3,
     },
     { label: "Settings", href: "/dashboard/manager/settings", icon: Settings },
   ],
@@ -386,8 +395,6 @@ export function Sidebar({ open, onClose }: SidebarProps) {
     if (item.href.endsWith("/admissions") && !settings.hasOnlineAdmission)
       return false;
     if (item.href.endsWith("/salaries") && !settings.hasTeacherPayroll)
-      return false;
-    if (item.href.endsWith("/website") && !settings.hasPublicWebsite)
       return false;
     return true;
   });

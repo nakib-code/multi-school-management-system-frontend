@@ -1,17 +1,10 @@
 "use client";
 
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { packageApi } from "./api";
 
-import type {
-  CreatePackagePayload,
-  UpdatePackagePayload,
-} from "./type";
+import type { CreatePackagePayload, UpdatePackagePayload } from "./type";
 
 export const packageKeys = {
   all: ["super-admin", "packages"] as const,
@@ -20,8 +13,7 @@ export const packageKeys = {
 
   details: () => [...packageKeys.all, "detail"] as const,
 
-  detail: (id: number) =>
-    [...packageKeys.details(), id] as const,
+  detail: (id: number) => [...packageKeys.details(), id] as const,
 };
 
 export const usePackages = () => {
@@ -43,8 +35,7 @@ export const useCreatePackage = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (payload: CreatePackagePayload) =>
-      packageApi.create(payload),
+    mutationFn: (payload: CreatePackagePayload) => packageApi.create(payload),
 
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -82,13 +73,8 @@ export const useUpdatePackageStatus = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
-      id,
-      isActive,
-    }: {
-      id: number;
-      isActive: boolean;
-    }) => packageApi.updateStatus(id, isActive),
+    mutationFn: ({ id, isActive }: { id: number; isActive: boolean }) =>
+      packageApi.updateStatus(id, isActive),
 
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({

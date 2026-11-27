@@ -10,9 +10,8 @@ import type {
 } from "./types";
 
 export const getPaymentMethods = async (): Promise<PaymentMethodsResponse> => {
-  const res = await api.get<ApiResponse<PaymentMethodsResponse>>(
-    "/payments/methods",
-  );
+  const res =
+    await api.get<ApiResponse<PaymentMethodsResponse>>("/payments/methods");
   return res.data.data;
 };
 

@@ -26,12 +26,14 @@ export const useSubjects = (schoolId: number) =>
 export const useCreateSubject = (schoolId: number) => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (payload: CreateSubjectInput) => createSubject(schoolId, payload),
+    mutationFn: (payload: CreateSubjectInput) =>
+      createSubject(schoolId, payload),
     onSuccess: () => {
       toast.success("Subject created");
       qc.invalidateQueries({ queryKey: subjectKeys.list(schoolId) });
     },
-    onError: (err) => toast.error(getApiErrorMessage(err, "Failed to create subject")),
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to create subject")),
   });
 };
 
@@ -43,7 +45,8 @@ export const useToggleSubjectStatus = (schoolId: number) => {
       toast.success("Subject status updated");
       qc.invalidateQueries({ queryKey: subjectKeys.list(schoolId) });
     },
-    onError: (err) => toast.error(getApiErrorMessage(err, "Failed to update subject")),
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to update subject")),
   });
 };
 
@@ -55,6 +58,33 @@ export const useDeleteSubject = (schoolId: number) => {
       toast.success("Subject deleted");
       qc.invalidateQueries({ queryKey: subjectKeys.list(schoolId) });
     },
-    onError: (err) => toast.error(getApiErrorMessage(err, "Failed to delete subject")),
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to delete subject")),
+  });
+};
+
+export const useUpdateSubject = (schoolId: number) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      payload,
+    }: {
+      id: number;
+      payload: { name?: string; code?: string; description?: string };
+    }) => {
+      const { api } = await import("@/lib/api");
+      const res = await api.patch(
+        `/schools/${schoolId}/subjects/${id}`,
+        payload,
+      );
+      return res.data.data;
+    },
+    onSuccess: () => {
+      toast.success("Subject updated successfully");
+      qc.invalidateQueries({ queryKey: subjectKeys.all });
+    },
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to update subject")),
   });
 };

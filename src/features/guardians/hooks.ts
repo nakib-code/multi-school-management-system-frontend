@@ -11,10 +11,7 @@ import {
   resetGuardianPassword,
   unlinkStudentFromGuardian,
 } from "./api";
-import type {
-  CreateGuardianInput,
-  ResetGuardianPasswordInput,
-} from "./types";
+import type { CreateGuardianInput, ResetGuardianPasswordInput } from "./types";
 
 export const guardianKeys = {
   all: ["guardians"] as const,
@@ -31,38 +28,52 @@ export const useGuardians = (schoolId: number) =>
 export const useCreateGuardian = (schoolId: number) => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (payload: CreateGuardianInput) => createGuardian(schoolId, payload),
+    mutationFn: (payload: CreateGuardianInput) =>
+      createGuardian(schoolId, payload),
     onSuccess: () => {
       toast.success("Guardian created successfully");
       qc.invalidateQueries({ queryKey: guardianKeys.list(schoolId) });
     },
-    onError: (err) => toast.error(getApiErrorMessage(err, "Failed to create guardian")),
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to create guardian")),
   });
 };
 
 export const useLinkStudentToGuardian = (schoolId: number) => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ guardianId, studentId }: { guardianId: number; studentId: number }) =>
-      linkStudentToGuardian(schoolId, guardianId, studentId),
+    mutationFn: ({
+      guardianId,
+      studentId,
+    }: {
+      guardianId: number;
+      studentId: number;
+    }) => linkStudentToGuardian(schoolId, guardianId, studentId),
     onSuccess: () => {
       toast.success("Student linked to guardian");
       qc.invalidateQueries({ queryKey: guardianKeys.list(schoolId) });
     },
-    onError: (err) => toast.error(getApiErrorMessage(err, "Failed to link student")),
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to link student")),
   });
 };
 
 export const useUnlinkStudentFromGuardian = (schoolId: number) => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ guardianId, studentId }: { guardianId: number; studentId: number }) =>
-      unlinkStudentFromGuardian(schoolId, guardianId, studentId),
+    mutationFn: ({
+      guardianId,
+      studentId,
+    }: {
+      guardianId: number;
+      studentId: number;
+    }) => unlinkStudentFromGuardian(schoolId, guardianId, studentId),
     onSuccess: () => {
       toast.success("Student unlinked");
       qc.invalidateQueries({ queryKey: guardianKeys.list(schoolId) });
     },
-    onError: (err) => toast.error(getApiErrorMessage(err, "Failed to unlink student")),
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to unlink student")),
   });
 };
 
@@ -91,6 +102,40 @@ export const useDeleteGuardian = (schoolId: number) => {
       toast.success("Guardian deleted");
       qc.invalidateQueries({ queryKey: guardianKeys.list(schoolId) });
     },
-    onError: (err) => toast.error(getApiErrorMessage(err, "Failed to delete guardian")),
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to delete guardian")),
+  });
+};
+
+export const useUpdateGuardian = (schoolId: number) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      payload,
+    }: {
+      id: number;
+      payload: {
+        name?: string;
+        phone?: string;
+        relation?: string;
+        occupation?: string;
+        address?: string;
+        nid?: string;
+      };
+    }) => {
+      const { api } = await import("@/lib/api");
+      const res = await api.patch(
+        `/schools/${schoolId}/guardians/${id}`,
+        payload,
+      );
+      return res.data.data;
+    },
+    onSuccess: () => {
+      toast.success("Guardian updated successfully");
+      qc.invalidateQueries({ queryKey: guardianKeys.all });
+    },
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to update guardian")),
   });
 };

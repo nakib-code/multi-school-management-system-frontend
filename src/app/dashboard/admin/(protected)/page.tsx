@@ -15,12 +15,7 @@ import { useDashboard } from "@/features/dashboard/hooks";
 import type { SchoolDashboard } from "@/features/dashboard/types";
 
 export default function AdminDashboardPage() {
-  const {
-    data,
-    isLoading,
-    isError,
-    refetch,
-  } = useDashboard();
+  const { data, isLoading, isError, refetch } = useDashboard();
 
   /*
    * Loading
@@ -52,8 +47,7 @@ export default function AdminDashboardPage() {
           </h1>
 
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            Something went wrong while loading your
-            dashboard statistics.
+            Something went wrong while loading your dashboard statistics.
           </p>
 
           <button
@@ -76,9 +70,7 @@ export default function AdminDashboardPage() {
     return (
       <div className="flex min-h-[60vh] items-center justify-center px-4">
         <div className="text-center">
-          <h1 className="text-xl font-semibold">
-            Dashboard unavailable
-          </h1>
+          <h1 className="text-xl font-semibold">Dashboard unavailable</h1>
 
           <p className="mt-2 text-sm text-muted-foreground">
             Admin dashboard data is not available.
@@ -138,9 +130,7 @@ export default function AdminDashboardPage() {
     <div className="space-y-6">
       {/* Page Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">
-          Admin Dashboard
-        </h1>
+        <h1 className="text-2xl font-bold tracking-tight">Admin Dashboard</h1>
 
         <p className="mt-1 text-sm text-muted-foreground">
           Overview of your school management system.
@@ -168,37 +158,22 @@ export default function AdminDashboardPage() {
           </div>
 
           <div>
-            <h2 className="font-semibold">
-              School Overview
-            </h2>
+            <h2 className="font-semibold">School Overview</h2>
 
             <p className="text-sm text-muted-foreground">
-              Your school statistics are updated from the
-              system.
+              Your school statistics are updated from the system.
             </p>
           </div>
         </div>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <OverviewItem
-            label="Students"
-            value={stats.totalStudents}
-          />
+          <OverviewItem label="Students" value={stats.totalStudents} />
 
-          <OverviewItem
-            label="Teachers"
-            value={stats.totalTeachers}
-          />
+          <OverviewItem label="Teachers" value={stats.totalTeachers} />
 
-          <OverviewItem
-            label="Classes"
-            value={stats.totalClasses}
-          />
+          <OverviewItem label="Classes" value={stats.totalClasses} />
 
-          <OverviewItem
-            label="Subjects"
-            value={stats.totalSubjects}
-          />
+          <OverviewItem label="Subjects" value={stats.totalSubjects} />
         </div>
       </div>
     </div>
@@ -210,19 +185,12 @@ interface OverviewItemProps {
   value: number;
 }
 
-function OverviewItem({
-  label,
-  value,
-}: OverviewItemProps) {
+function OverviewItem({ label, value }: OverviewItemProps) {
   return (
     <div className="rounded-xl border bg-muted/30 p-4">
-      <p className="text-sm text-muted-foreground">
-        {label}
-      </p>
+      <p className="text-sm text-muted-foreground">{label}</p>
 
-      <p className="mt-1 text-2xl font-bold">
-        {value}
-      </p>
+      <p className="mt-1 text-2xl font-bold">{value}</p>
     </div>
   );
 }

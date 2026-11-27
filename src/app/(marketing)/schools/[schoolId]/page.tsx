@@ -138,18 +138,16 @@ export default function SchoolDetailsPage() {
           <div className="grid gap-6 lg:grid-cols-3">
             {/* About */}
             <div className="rounded-2xl border bg-white p-6 shadow-sm lg:col-span-2">
-              <span className="school-section-badge">
-                About School
-              </span>
+              <span className="school-section-badge">About School</span>
 
               <h2 className="mt-3 text-2xl font-bold text-[#061842]">
                 Welcome to {school.name}
               </h2>
 
               <p className="mt-4 text-sm leading-7 text-slate-600">
-                Explore admission opportunities at {school.name}. Complete
-                your application online and provide the required student and
-                guardian information.
+                Explore admission opportunities at {school.name}. Complete your
+                application online and provide the required student and guardian
+                information.
               </p>
 
               <div className="mt-8 grid gap-4 sm:grid-cols-2">
@@ -157,9 +155,7 @@ export default function SchoolDetailsPage() {
                   <p className="text-xs font-medium text-slate-400">
                     Academic Year
                   </p>
-                  <p className="mt-1 font-semibold text-[#061842]">
-                    2026–2027
-                  </p>
+                  <p className="mt-1 font-semibold text-[#061842]">2026–2027</p>
                 </div>
 
                 <div className="rounded-xl bg-slate-50 p-4">

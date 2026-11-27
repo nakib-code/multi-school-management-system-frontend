@@ -29,11 +29,15 @@ export default function SuperAdminPlatformAuditLogsPage() {
     ...(action ? { action } : {}),
   });
 
-  if (isLoading) return <LoadingState message="Loading platform audit logs..." />;
+  if (isLoading)
+    return <LoadingState message="Loading platform audit logs..." />;
   if (isError) {
     return (
       <ErrorState
-        message={getApiErrorMessage(error, "Failed to load platform audit logs")}
+        message={getApiErrorMessage(
+          error,
+          "Failed to load platform audit logs",
+        )}
         onRetry={() => refetch()}
       />
     );
@@ -49,7 +53,8 @@ export default function SuperAdminPlatformAuditLogsPage() {
           Platform Audit Logs
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Immutable platform-wide security, institution, subscription, and payment audit trail.
+          Immutable platform-wide security, institution, subscription, and
+          payment audit trail.
         </p>
       </div>
 
@@ -153,7 +158,12 @@ export default function SuperAdminPlatformAuditLogsPage() {
             Page {meta.page} of {meta.totalPages} ({meta.total} events)
           </span>
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => p - 1)}
+            >
               Previous
             </Button>
             <Button
@@ -177,8 +187,12 @@ export default function SuperAdminPlatformAuditLogsPage() {
         {selected && (
           <div className="space-y-3 text-sm">
             <div>
-              <p className="text-xs uppercase text-muted-foreground">Description</p>
-              <p className="mt-0.5 font-medium">{selected.description ?? "—"}</p>
+              <p className="text-xs uppercase text-muted-foreground">
+                Description
+              </p>
+              <p className="mt-0.5 font-medium">
+                {selected.description ?? "—"}
+              </p>
             </div>
             <div className="grid grid-cols-2 gap-3 text-xs">
               <div>
@@ -188,7 +202,8 @@ export default function SuperAdminPlatformAuditLogsPage() {
               <div>
                 <p className="uppercase text-muted-foreground">Entity</p>
                 <p className="mt-0.5 font-medium">
-                  {selected.entityType} {selected.entityId ? `#${selected.entityId}` : ""}
+                  {selected.entityType}{" "}
+                  {selected.entityId ? `#${selected.entityId}` : ""}
                 </p>
               </div>
               <div>
@@ -197,12 +212,16 @@ export default function SuperAdminPlatformAuditLogsPage() {
               </div>
               <div>
                 <p className="uppercase text-muted-foreground">Timestamp</p>
-                <p className="mt-0.5">{new Date(selected.createdAt).toLocaleString()}</p>
+                <p className="mt-0.5">
+                  {new Date(selected.createdAt).toLocaleString()}
+                </p>
               </div>
             </div>
             {selected.metadata && (
               <div>
-                <p className="text-xs uppercase text-muted-foreground">Safe Metadata</p>
+                <p className="text-xs uppercase text-muted-foreground">
+                  Safe Metadata
+                </p>
                 <pre className="mt-1 overflow-x-auto rounded-lg border bg-muted/40 p-3 text-xs">
                   {JSON.stringify(selected.metadata, null, 2)}
                 </pre>

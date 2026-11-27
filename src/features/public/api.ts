@@ -8,9 +8,8 @@ interface ApiResponse<T> {
 }
 
 export const getPublicPackages = async (): Promise<PublicPackage[]> => {
-  const response = await api.get<ApiResponse<PublicPackage[]>>(
-    "/packages/public",
-  );
+  const response =
+    await api.get<ApiResponse<PublicPackage[]>>("/packages/public");
 
   return response.data.data;
 };

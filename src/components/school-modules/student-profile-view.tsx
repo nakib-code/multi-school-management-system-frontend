@@ -186,7 +186,11 @@ export function StudentProfileView({
                 </span>
               )}
               <span>
-                • {(student.residentialType ?? "NON_RESIDENTIAL").replace("_", " ")}
+                •{" "}
+                {(student.residentialType ?? "NON_RESIDENTIAL").replace(
+                  "_",
+                  " ",
+                )}
               </span>
               {student.quranWing && <span>• {student.quranWing}</span>}
             </div>
@@ -281,11 +285,13 @@ export function StudentProfileView({
                 className="h-9 w-full rounded-md border bg-background px-3 text-sm disabled:opacity-70"
               >
                 <option value="">Select</option>
-                {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map((bg) => (
-                  <option key={bg} value={bg}>
-                    {bg}
-                  </option>
-                ))}
+                {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map(
+                  (bg) => (
+                    <option key={bg} value={bg}>
+                      {bg}
+                    </option>
+                  ),
+                )}
               </select>
             </Field>
             <Field label="17-Digit Birth Reg. No.">
@@ -676,7 +682,8 @@ export function StudentProfileView({
                       </p>
                       {(en.academicGroup || en.shift) && (
                         <p className="text-muted-foreground">
-                          {en.shift ?? ""} {en.academicGroup ? `• ${en.academicGroup}` : ""}
+                          {en.shift ?? ""}{" "}
+                          {en.academicGroup ? `• ${en.academicGroup}` : ""}
                         </p>
                       )}
                     </div>
@@ -830,7 +837,10 @@ export function StudentProfileView({
             ) : (
               [
                 { label: "Student Photo", url: student.studentPhotoUrl },
-                { label: "Birth Certificate", url: student.birthCertificateUrl },
+                {
+                  label: "Birth Certificate",
+                  url: student.birthCertificateUrl,
+                },
                 { label: "Guardian NID", url: student.guardianNidUrl },
                 { label: "Previous TC", url: student.previousTcUrl },
                 { label: "Previous Marksheet", url: student.marksheetUrl },

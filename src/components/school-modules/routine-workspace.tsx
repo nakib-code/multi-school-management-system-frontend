@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, Clock, Plus, Trash2 } from "lucide-react";
+import { CalendarDays, Clock, Pencil, Plus, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Modal } from "@/components/modals/modal";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -11,10 +11,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useClasses, useSections } from "@/features/admin/classes/hooks";
 import {
+  type ClassRoutineRecord,
   type DayOfWeek,
   useClassRoutines,
   useCreateClassRoutine,
   useDeleteClassRoutine,
+  useUpdateRoutine,
 } from "@/features/routines/hooks";
 import { useSubjects } from "@/features/subjects/hooks";
 import { useTeachers } from "@/features/teachers/hooks";
@@ -38,6 +40,7 @@ export function RoutineWorkspace() {
 
   const [classFilter, setClassFilter] = useState("");
   const [open, setOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<ClassRoutineRecord | null>(null);
   const [form, setForm] = useState({
     classId: "",
     sectionId: "",
@@ -48,6 +51,15 @@ export function RoutineWorkspace() {
     endTime: "09:45",
     roomNumber: "",
     academicYear: String(new Date().getFullYear()),
+  });
+  const [editForm, setEditForm] = useState({
+    dayOfWeek: "SUNDAY" as DayOfWeek,
+    periodNumber: "",
+    startTime: "09:00",
+    endTime: "09:45",
+    roomNumber: "",
+    subjectId: "",
+    teacherId: "",
   });
 
   const routinesQuery = useClassRoutines(
@@ -60,6 +72,7 @@ export function RoutineWorkspace() {
   const { data: teachers = [] } = useTeachers(canManage ? schoolId : 0);
 
   const createMut = useCreateClassRoutine(schoolId);
+  const updateMut = useUpdateRoutine(schoolId);
   const deleteMut = useDeleteClassRoutine(schoolId);
 
   const routines = routinesQuery.data ?? [];
@@ -84,23 +97,64 @@ export function RoutineWorkspace() {
     e.preventDefault();
     await createMut.mutateAsync({
       classId: Number(form.classId),
-      ...(form.sectionId ? { sectionId: Number(form.sectionId) } : { sectionId: null }),
+      ...(form.sectionId
+        ? { sectionId: Number(form.sectionId) }
+        : { sectionId: null }),
       subjectId: Number(form.subjectId),
       teacherId: Number(form.teacherId),
       dayOfWeek: form.dayOfWeek,
       startTime: form.startTime,
       endTime: form.endTime,
-      ...(form.roomNumber.trim() ? { roomNumber: form.roomNumber.trim() } : { roomNumber: null }),
+      ...(form.roomNumber.trim()
+        ? { roomNumber: form.roomNumber.trim() }
+        : { roomNumber: null }),
       academicYear: form.academicYear.trim(),
     });
     setOpen(false);
   };
 
-  if (routinesQuery.isLoading) return <LoadingState message="Loading class timetable..." />;
+  const openEdit = (slot: ClassRoutineRecord) => {
+    setEditTarget(slot);
+    setEditForm({
+      dayOfWeek: slot.dayOfWeek,
+      periodNumber: "",
+      startTime: slot.startTime,
+      endTime: slot.endTime,
+      roomNumber: slot.roomNumber ?? "",
+      subjectId: String(slot.subjectId),
+      teacherId: String(slot.teacherId),
+    });
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editTarget) return;
+    await updateMut.mutateAsync({
+      id: editTarget.id,
+      payload: {
+        dayOfWeek: editForm.dayOfWeek,
+        ...(editForm.periodNumber !== ""
+          ? { periodNumber: Number(editForm.periodNumber) }
+          : {}),
+        startTime: editForm.startTime,
+        endTime: editForm.endTime,
+        roomNumber: editForm.roomNumber.trim() || null,
+        subjectId: Number(editForm.subjectId),
+        teacherId: editForm.teacherId ? Number(editForm.teacherId) : null,
+      },
+    });
+    setEditTarget(null);
+  };
+
+  if (routinesQuery.isLoading)
+    return <LoadingState message="Loading class timetable..." />;
   if (routinesQuery.isError) {
     return (
       <ErrorState
-        message={getApiErrorMessage(routinesQuery.error, "Failed to load class routine")}
+        message={getApiErrorMessage(
+          routinesQuery.error,
+          "Failed to load class routine",
+        )}
         onRetry={() => routinesQuery.refetch()}
       />
     );
@@ -114,7 +168,8 @@ export function RoutineWorkspace() {
             Class Routine &amp; Timetable
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Weekly schedule with automatic teacher, class, and room conflict prevention.
+            Weekly schedule with automatic teacher, class, and room conflict
+            prevention.
           </p>
         </div>
 
@@ -182,14 +237,26 @@ export function RoutineWorkspace() {
                       </p>
                     </div>
                     {canManage && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => deleteMut.mutate(slot.id)}
-                        className="h-7 w-7 p-0 text-destructive"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => openEdit(slot)}
+                          className="h-7 w-7 p-0"
+                          title="Edit period"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => deleteMut.mutate(slot.id)}
+                          className="h-7 w-7 p-0 text-destructive"
+                          title="Delete period"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     )}
                   </div>
                 ))}
@@ -199,7 +266,11 @@ export function RoutineWorkspace() {
         </div>
       )}
 
-      <Modal open={open} onClose={() => setOpen(false)} title="Add Timetable Period">
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Add Timetable Period"
+      >
         <form onSubmit={handleCreate} className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1">
@@ -222,12 +293,16 @@ export function RoutineWorkspace() {
               <Label>Section (Optional)</Label>
               <select
                 value={form.sectionId}
-                onChange={(e) => setForm({ ...form, sectionId: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, sectionId: e.target.value })
+                }
                 className="h-9 w-full rounded-md border bg-background px-3 text-sm"
               >
                 <option value="">All / None</option>
                 {sections
-                  .filter((s) => !form.classId || s.classId === Number(form.classId))
+                  .filter(
+                    (s) => !form.classId || s.classId === Number(form.classId),
+                  )
                   .map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.name}
@@ -243,7 +318,9 @@ export function RoutineWorkspace() {
               <select
                 required
                 value={form.subjectId}
-                onChange={(e) => setForm({ ...form, subjectId: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, subjectId: e.target.value })
+                }
                 className="h-9 w-full rounded-md border bg-background px-3 text-sm"
               >
                 <option value="">Select subject...</option>
@@ -259,7 +336,9 @@ export function RoutineWorkspace() {
               <select
                 required
                 value={form.teacherId}
-                onChange={(e) => setForm({ ...form, teacherId: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, teacherId: e.target.value })
+                }
                 className="h-9 w-full rounded-md border bg-background px-3 text-sm"
               >
                 <option value="">Select teacher...</option>
@@ -277,7 +356,9 @@ export function RoutineWorkspace() {
               <Label>Day</Label>
               <select
                 value={form.dayOfWeek}
-                onChange={(e) => setForm({ ...form, dayOfWeek: e.target.value as DayOfWeek })}
+                onChange={(e) =>
+                  setForm({ ...form, dayOfWeek: e.target.value as DayOfWeek })
+                }
                 className="h-9 w-full rounded-md border bg-background px-3 text-sm"
               >
                 {DAYS.map((d) => (
@@ -293,7 +374,9 @@ export function RoutineWorkspace() {
                 type="time"
                 required
                 value={form.startTime}
-                onChange={(e) => setForm({ ...form, startTime: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, startTime: e.target.value })
+                }
               />
             </div>
             <div className="space-y-1">
@@ -313,7 +396,9 @@ export function RoutineWorkspace() {
               <Input
                 placeholder="Room 204"
                 value={form.roomNumber}
-                onChange={(e) => setForm({ ...form, roomNumber: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, roomNumber: e.target.value })
+                }
               />
             </div>
             <div className="space-y-1">
@@ -321,17 +406,151 @@ export function RoutineWorkspace() {
               <Input
                 required
                 value={form.academicYear}
-                onChange={(e) => setForm({ ...form, academicYear: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, academicYear: e.target.value })
+                }
               />
             </div>
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={createMut.isPending}>
               {createMut.isPending ? "Saving..." : "Save Period"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        open={!!editTarget}
+        onClose={() => setEditTarget(null)}
+        title="Edit Routine Period"
+      >
+        <form onSubmit={handleUpdate} className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label>Subject</Label>
+              <select
+                required
+                value={editForm.subjectId}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, subjectId: e.target.value })
+                }
+                className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+              >
+                <option value="">Select subject...</option>
+                {subjects.map((sub) => (
+                  <option key={sub.id} value={sub.id}>
+                    {sub.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <Label>Teacher</Label>
+              <select
+                value={editForm.teacherId}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, teacherId: e.target.value })
+                }
+                className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+              >
+                <option value="">Unassigned</option>
+                {teachers.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.firstName} {t.lastName ?? ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label>Day</Label>
+              <select
+                value={editForm.dayOfWeek}
+                onChange={(e) =>
+                  setEditForm({
+                    ...editForm,
+                    dayOfWeek: e.target.value as DayOfWeek,
+                  })
+                }
+                className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+              >
+                {DAYS.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <Label>Period Number (Optional)</Label>
+              <Input
+                type="number"
+                min={1}
+                placeholder="e.g. 1"
+                value={editForm.periodNumber}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, periodNumber: e.target.value })
+                }
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="space-y-1">
+              <Label>Start Time</Label>
+              <Input
+                type="time"
+                required
+                value={editForm.startTime}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, startTime: e.target.value })
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>End Time</Label>
+              <Input
+                type="time"
+                required
+                value={editForm.endTime}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, endTime: e.target.value })
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Room Number</Label>
+              <Input
+                placeholder="Room 204"
+                value={editForm.roomNumber}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, roomNumber: e.target.value })
+                }
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setEditTarget(null)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={updateMut.isPending}>
+              {updateMut.isPending ? "Saving..." : "Save Changes"}
             </Button>
           </div>
         </form>

@@ -1,6 +1,6 @@
 import { api } from "@/lib/api";
 import type { ApiResponse } from "@/types/api";
-
+import type { School } from "@/types/school";
 import type {
   CreateSchoolInput,
   CreateSchoolResponse,
@@ -9,8 +9,6 @@ import type {
   VerifyAdminEmailResponse,
 } from "./types";
 
-import type { School } from "@/types/school";
-
 // ============================================
 // Public School Registration
 // ============================================
@@ -18,9 +16,10 @@ import type { School } from "@/types/school";
 export const createSchool = async (
   payload: CreateSchoolInput,
 ): Promise<CreateSchoolResponse> => {
-  const response = await api.post<
-    ApiResponse<CreateSchoolResponse>
-  >("/schools/register", payload);
+  const response = await api.post<ApiResponse<CreateSchoolResponse>>(
+    "/schools/register",
+    payload,
+  );
 
   return response.data.data;
 };
@@ -28,9 +27,10 @@ export const createSchool = async (
 export const verifyAdminEmail = async (
   payload: VerifyAdminEmailPayload,
 ): Promise<VerifyAdminEmailResponse> => {
-  const response = await api.post<
-    ApiResponse<VerifyAdminEmailResponse>
-  >("/schools/verify-admin-email", payload);
+  const response = await api.post<ApiResponse<VerifyAdminEmailResponse>>(
+    "/schools/verify-admin-email",
+    payload,
+  );
 
   return response.data.data;
 };
@@ -59,18 +59,14 @@ export interface SchoolListResponse {
 export const getSchools = async (
   params: GetSchoolsParams = {},
 ): Promise<SchoolListResponse> => {
-  const response = await api.get<
-    ApiResponse<SchoolListResponse>
-  >("/schools", {
+  const response = await api.get<ApiResponse<SchoolListResponse>>("/schools", {
     params,
   });
 
   return response.data.data;
 };
 
-export const approveSchool = async (
-  id: number,
-): Promise<School> => {
+export const approveSchool = async (id: number): Promise<School> => {
   const response = await api.patch<ApiResponse<School>>(
     `/schools/${id}/approve`,
   );
@@ -78,19 +74,13 @@ export const approveSchool = async (
   return response.data.data;
 };
 
-export const blockSchool = async (
-  id: number,
-): Promise<School> => {
-  const response = await api.patch<ApiResponse<School>>(
-    `/schools/${id}/block`,
-  );
+export const blockSchool = async (id: number): Promise<School> => {
+  const response = await api.patch<ApiResponse<School>>(`/schools/${id}/block`);
 
   return response.data.data;
 };
 
-export const unblockSchool = async (
-  id: number,
-): Promise<School> => {
+export const unblockSchool = async (id: number): Promise<School> => {
   const response = await api.patch<ApiResponse<School>>(
     `/schools/${id}/unblock`,
   );
@@ -126,22 +116,15 @@ export const deleteSchool = async (
   return response.data.data;
 };
 
-
 // ============================================
 // Public - School Details
 // ============================================
 
-export const getPublicSchoolById = async (
-  id: number,
-): Promise<School> => {
-  const response = await api.get<ApiResponse<School>>(
-    `/schools/${id}/public`,
-  );
+export const getPublicSchoolById = async (id: number): Promise<School> => {
+  const response = await api.get<ApiResponse<School>>(`/schools/${id}/public`);
 
   return response.data.data;
 };
-
-
 
 // ============================================
 // Public - School List
@@ -166,11 +149,12 @@ export interface PublicSchoolListResponse {
 export const getPublicSchools = async (
   params: GetPublicSchoolsParams = {},
 ): Promise<PublicSchoolListResponse> => {
-  const response = await api.get<
-    ApiResponse<PublicSchoolListResponse>
-  >("/schools/public", {
-    params,
-  });
+  const response = await api.get<ApiResponse<PublicSchoolListResponse>>(
+    "/schools/public",
+    {
+      params,
+    },
+  );
 
   return response.data.data;
 };

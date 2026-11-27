@@ -17,8 +17,13 @@ import type { SubscriptionPaymentRecord } from "@/features/payments/types";
 import { getApiErrorMessage } from "@/lib/api";
 
 export default function PendingSubscriptionPaymentsPage() {
-  const { data: payments = [], isLoading, isError, error, refetch } =
-    usePendingSubscriptionPayments();
+  const {
+    data: payments = [],
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = usePendingSubscriptionPayments();
   const verifyMutation = useVerifySubscriptionPayment();
   const rejectMutation = useRejectSubscriptionPayment();
 
@@ -53,7 +58,8 @@ export default function PendingSubscriptionPaymentsPage() {
           Pending Manual Payments
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Verify bKash, Nagad, and Rocket transaction IDs to activate institution subscriptions.
+          Verify bKash, Nagad, and Rocket transaction IDs to activate
+          institution subscriptions.
         </p>
       </div>
 
@@ -80,16 +86,28 @@ export default function PendingSubscriptionPaymentsPage() {
                   </span>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Package: <strong>{payment.subscription?.package?.name ?? "—"}</strong> •
-                  Amount: <strong>৳{Number(payment.paidAmount).toLocaleString()}</strong>
+                  Package:{" "}
+                  <strong>{payment.subscription?.package?.name ?? "—"}</strong>{" "}
+                  • Amount:{" "}
+                  <strong>
+                    ৳{Number(payment.paidAmount).toLocaleString()}
+                  </strong>
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  TrxID: <span className="font-mono font-medium text-foreground">{payment.trxId}</span> •
-                  Sender: <span className="font-mono">{payment.senderNumber}</span>
-                  {payment.receiverNumber ? ` → Receiver: ${payment.receiverNumber}` : ""}
+                  TrxID:{" "}
+                  <span className="font-mono font-medium text-foreground">
+                    {payment.trxId}
+                  </span>{" "}
+                  • Sender:{" "}
+                  <span className="font-mono">{payment.senderNumber}</span>
+                  {payment.receiverNumber
+                    ? ` → Receiver: ${payment.receiverNumber}`
+                    : ""}
                 </p>
                 {payment.remarks && (
-                  <p className="text-xs text-muted-foreground">Note: {payment.remarks}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Note: {payment.remarks}
+                  </p>
                 )}
               </div>
 

@@ -32,7 +32,9 @@ export default function TeacherClassesPage() {
     sectionId: number;
     label: string;
   } | null>(null);
-  const [type, setType] = useState<"ANNOUNCEMENT" | "EMERGENCY">("ANNOUNCEMENT");
+  const [type, setType] = useState<"ANNOUNCEMENT" | "EMERGENCY">(
+    "ANNOUNCEMENT",
+  );
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
 

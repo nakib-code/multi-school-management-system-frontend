@@ -6,9 +6,12 @@ export const getResults = async (
   schoolId: number,
   params?: { studentId?: number; examId?: number; subjectId?: number },
 ): Promise<ResultRecord[]> => {
-  const res = await api.get<ApiResponse<ResultRecord[]>>(`/schools/${schoolId}/results`, {
-    params,
-  });
+  const res = await api.get<ApiResponse<ResultRecord[]>>(
+    `/schools/${schoolId}/results`,
+    {
+      params,
+    },
+  );
   return res.data.data;
 };
 

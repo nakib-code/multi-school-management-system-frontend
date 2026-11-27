@@ -33,3 +33,14 @@ export const changePassword = async (
   );
   return response.data.data;
 };
+
+export interface UpdateMePayload {
+  name?: string;
+  phone?: string | null;
+  avatarUrl?: string | null;
+}
+
+export const updateMe = async (payload: UpdateMePayload): Promise<User> => {
+  const response = await api.patch<ApiResponse<User>>("/auth/me", payload);
+  return response.data.data;
+};

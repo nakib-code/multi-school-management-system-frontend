@@ -1,4 +1,3 @@
-
 import { api } from "@/lib/api";
 import type {
   CreatePackagePayload,
@@ -22,10 +21,7 @@ export const packageApi = {
   },
 
   create: async (payload: CreatePackagePayload): Promise<Package> => {
-    const response = await api.post<PackageResponse>(
-      "/packages",
-      payload,
-    );
+    const response = await api.post<PackageResponse>("/packages", payload);
 
     return response.data.data;
   },
@@ -42,10 +38,7 @@ export const packageApi = {
     return response.data.data;
   },
 
-  updateStatus: async (
-    id: number,
-    isActive: boolean,
-  ): Promise<Package> => {
+  updateStatus: async (id: number, isActive: boolean): Promise<Package> => {
     const response = await api.patch<PackageResponse>(
       `/packages/${id}/status`,
       { isActive },

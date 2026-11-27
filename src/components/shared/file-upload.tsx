@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2, Trash2, UploadCloud } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,7 +17,9 @@ interface FileUploadProps {
   currentUrl?: string | null;
   accept?: string;
   maxSizeMb?: number;
+  disabled?: boolean;
   onUploaded?: (file: UploadedFileRecord) => void;
+  onRemoved?: () => void;
 }
 
 export function FileUpload({
@@ -26,11 +28,19 @@ export function FileUpload({
   currentUrl,
   accept = "image/jpeg,image/png,image/webp",
   maxSizeMb = 5,
+  disabled = false,
   onUploaded,
+  onRemoved,
 }: FileUploadProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(currentUrl ?? null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(
+    currentUrl ?? null,
+  );
   const [uploadedId, setUploadedId] = useState<number | null>(null);
+
+  useEffect(() => {
+    setPreviewUrl(currentUrl ?? null);
+  }, [currentUrl]);
 
   const uploadMut = useUploadFile();
   const deleteMut = useDeleteUploadedFile();
@@ -71,6 +81,7 @@ export function FileUpload({
       setUploadedId(null);
     }
     setPreviewUrl(null);
+    onRemoved?.();
   };
 
   return (
@@ -92,7 +103,8 @@ export function FileUpload({
 
         <div className="flex-1 space-y-1">
           <p className="text-xs text-muted-foreground">
-            Allowed: JPEG, PNG, WEBP{accept.includes("pdf") ? ", PDF" : ""} • Max {maxSizeMb}MB
+            Allowed: JPEG, PNG, WEBP{accept.includes("pdf") ? ", PDF" : ""} •
+            Max {maxSizeMb}MB
           </p>
           <div className="flex flex-wrap gap-2">
             <input
@@ -106,7 +118,7 @@ export function FileUpload({
               type="button"
               size="sm"
               variant="outline"
-              disabled={uploadMut.isPending}
+              disabled={disabled || uploadMut.isPending}
               onClick={() => inputRef.current?.click()}
               className="gap-1.5"
             >
@@ -122,7 +134,7 @@ export function FileUpload({
                   : "Choose File"}
             </Button>
 
-            {previewUrl && (
+            {previewUrl && !disabled && (
               <Button
                 type="button"
                 size="sm"

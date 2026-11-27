@@ -25,8 +25,13 @@ export function ExamsWorkspace() {
   const schoolId = user?.schoolId ?? 0;
   const canManage = user?.role === "ADMIN" || user?.role === "MANAGER";
 
-  const { data: exams = [], isLoading, isError, error, refetch } =
-    useExams(schoolId);
+  const {
+    data: exams = [],
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useExams(schoolId);
   const { data: classes = [] } = useClasses(canManage ? schoolId : 0);
   const createMut = useCreateExam(schoolId);
   const statusMut = useUpdateExamStatus(schoolId);
@@ -114,10 +119,16 @@ export function ExamsWorkspace() {
                 <tr key={ex.id}>
                   <td className="px-4 py-3 font-medium">
                     {ex.name}
-                    <p className="text-xs text-muted-foreground">{ex.academicYear}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {ex.academicYear}
+                    </p>
                   </td>
-                  <td className="px-4 py-3">{ex.class?.name ?? `Class #${ex.classId}`}</td>
-                  <td className="px-4 py-3 text-xs">{ex.type.replaceAll("_", " ")}</td>
+                  <td className="px-4 py-3">
+                    {ex.class?.name ?? `Class #${ex.classId}`}
+                  </td>
+                  <td className="px-4 py-3 text-xs">
+                    {ex.type.replaceAll("_", " ")}
+                  </td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">
                     {new Date(ex.startDate).toLocaleDateString()} –{" "}
                     {new Date(ex.endDate).toLocaleDateString()}
@@ -164,7 +175,11 @@ export function ExamsWorkspace() {
         </div>
       )}
 
-      <Modal open={open} onClose={() => setOpen(false)} title="Schedule Examination">
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Schedule Examination"
+      >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1">
             <Label>Exam Name</Label>
@@ -197,7 +212,9 @@ export function ExamsWorkspace() {
               <Label>Exam Type</Label>
               <select
                 value={form.type}
-                onChange={(e) => setForm({ ...form, type: e.target.value as ExamType })}
+                onChange={(e) =>
+                  setForm({ ...form, type: e.target.value as ExamType })
+                }
                 className="h-9 w-full rounded-md border bg-background px-3 text-sm"
               >
                 <option value="CLASS_TEST">Class Test</option>
@@ -215,7 +232,9 @@ export function ExamsWorkspace() {
               <Input
                 required
                 value={form.academicYear}
-                onChange={(e) => setForm({ ...form, academicYear: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, academicYear: e.target.value })
+                }
               />
             </div>
             <div className="space-y-1">
@@ -224,7 +243,9 @@ export function ExamsWorkspace() {
                 type="date"
                 required
                 value={form.startDate}
-                onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, startDate: e.target.value })
+                }
               />
             </div>
             <div className="space-y-1">
@@ -239,7 +260,11 @@ export function ExamsWorkspace() {
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={createMut.isPending}>

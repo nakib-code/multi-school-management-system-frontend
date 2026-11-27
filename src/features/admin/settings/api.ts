@@ -1,16 +1,11 @@
 import { api } from "@/lib/api";
 
-import type {
-  AdmissionFeeResponse,
-  UpdateAdmissionFeeInput,
-} from "./types";
+import type { AdmissionFeeResponse, UpdateAdmissionFeeInput } from "./types";
 
 export async function getAdmissionFee(
   schoolId: number,
 ): Promise<AdmissionFeeResponse> {
-  const response = await api.get(
-    `/schools/${schoolId}/settings/admission-fee`,
-  );
+  const response = await api.get(`/schools/${schoolId}/settings/admission-fee`);
 
   return response.data.data;
 }

@@ -1,8 +1,4 @@
-export type SchoolStatus =
-  | "PENDING"
-  | "ACTIVE"
-  | "BLOCKED"
-  | "REJECTED";
+export type SchoolStatus = "PENDING" | "ACTIVE" | "BLOCKED" | "REJECTED";
 
 export interface CreateSchoolInput {
   name: string;
@@ -17,7 +13,6 @@ export interface CreateSchoolInput {
   adminPassword: string;
   packageId?: number;
 }
-
 
 export interface RegisteredSchool {
   id: number;
@@ -76,4 +71,3 @@ export interface SchoolListResponse {
 export interface RejectSchoolPayload {
   rejectionReason: string;
 }
-

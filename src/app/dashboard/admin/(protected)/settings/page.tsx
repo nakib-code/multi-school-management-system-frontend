@@ -1,10 +1,18 @@
 "use client";
 
-import { Save, Settings, Smartphone } from "lucide-react";
+import {
+  Globe,
+  Save,
+  Settings,
+  Smartphone,
+  User as UserIcon,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { ExternalWebsiteSettings } from "@/components/school-modules/external-website-settings";
 import { FileUpload } from "@/components/shared/file-upload";
 import { LoadingState } from "@/components/shared/loading";
+import { SelfProfileForm } from "@/components/shared/self-profile-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,7 +24,9 @@ import {
 import type { MobileAccountType } from "@/features/payments/types";
 import {
   useSchoolPaymentMethods,
+  useSchoolProfile,
   useUpdateSchoolPaymentMethods,
+  useUpdateSchoolProfile,
 } from "@/features/school-settings/hooks";
 import { getApiErrorMessage } from "@/lib/api";
 import { useAuth } from "@/providers/auth-provider";
@@ -28,15 +38,17 @@ export function SchoolSettingsView() {
   const schoolId = user?.schoolId ?? 0;
   const isAdmin = user?.role === "ADMIN";
 
-  const [activeTab, setActiveTab] = useState<"general" | "payments">(
-    "payments",
-  );
+  const [activeTab, setActiveTab] = useState<
+    "general" | "payments" | "website" | "profile"
+  >("payments");
 
   const { data: setting, isLoading } = useAdmissionFee(schoolId);
   const { data: paymentMethods, isLoading: pmLoading } =
     useSchoolPaymentMethods(schoolId > 0 ? schoolId : undefined);
+  const { data: schoolProfile } = useSchoolProfile(schoolId);
   const updateFeeMutation = useUpdateAdmissionFee(schoolId);
   const updatePaymentsMutation = useUpdateSchoolPaymentMethods(schoolId);
+  const updateProfileMutation = useUpdateSchoolProfile(schoolId);
 
   const [admissionFee, setAdmissionFee] = useState("");
   const [bkashNumber, setBkashNumber] = useState("");
@@ -138,9 +150,39 @@ export function SchoolSettingsView() {
           <Settings className="h-4 w-4" />
           General &amp; Branding
         </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("website")}
+          className={`inline-flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition ${
+            activeTab === "website"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Globe className="h-4 w-4" />
+          External Website
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("profile")}
+          className={`inline-flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition ${
+            activeTab === "profile"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <UserIcon className="h-4 w-4" />
+          My Profile
+        </button>
       </div>
 
-      {activeTab === "payments" ? (
+      {activeTab === "website" ? (
+        <ExternalWebsiteSettings schoolId={schoolId} isAdmin={isAdmin} />
+      ) : activeTab === "profile" ? (
+        <SelfProfileForm />
+      ) : activeTab === "payments" ? (
         <form
           onSubmit={handleSavePaymentMethods}
           className="space-y-6 rounded-xl border bg-card p-6"
@@ -329,9 +371,22 @@ export function SchoolSettingsView() {
             <FileUpload
               category="SCHOOL_LOGO"
               label="Institution Logo"
+              currentUrl={schoolProfile?.logo ?? null}
               accept="image/jpeg,image/png,image/webp"
               maxSizeMb={5}
+              disabled={!isAdmin || updateProfileMutation.isPending}
+              onUploaded={(file) => {
+                updateProfileMutation.mutate({ logo: file.url });
+              }}
+              onRemoved={() => {
+                updateProfileMutation.mutate({ logo: null });
+              }}
             />
+            {!isAdmin && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Only the School Admin can update the institution logo.
+              </p>
+            )}
           </div>
         </div>
       )}

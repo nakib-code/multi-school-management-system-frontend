@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  ArrowLeft,
-  Building2,
-  Users,
-} from "lucide-react";
+import { ArrowLeft, Building2, Users } from "lucide-react";
 
 import {
   USER_CATEGORIES,
@@ -16,9 +12,7 @@ import type { SchoolUserSummary } from "@/features/super-admin/users/types";
 interface SchoolUserDetailsProps {
   data: SchoolUserSummary;
   onBack: () => void;
-  onSelectCategory: (
-    role: UserCategoryKey,
-  ) => void;
+  onSelectCategory: (role: UserCategoryKey) => void;
 }
 
 export function SchoolUserDetails({
@@ -54,9 +48,7 @@ export function SchoolUserDetails({
               </h1>
 
               <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                <span className="font-mono">
-                  {school.code}
-                </span>
+                <span className="font-mono">{school.code}</span>
 
                 <span>•</span>
 
@@ -71,14 +63,10 @@ export function SchoolUserDetails({
             <div className="flex items-center justify-center gap-2 text-muted-foreground">
               <Users className="h-4 w-4" />
 
-              <span className="text-xs font-medium">
-                Total Users
-              </span>
+              <span className="text-xs font-medium">Total Users</span>
             </div>
 
-            <p className="mt-1 text-2xl font-bold">
-              {counts.total}
-            </p>
+            <p className="mt-1 text-2xl font-bold">{counts.total}</p>
           </div>
         </div>
       </div>
@@ -86,9 +74,7 @@ export function SchoolUserDetails({
       {/* Categories */}
       <section>
         <div className="mb-4">
-          <h2 className="text-lg font-semibold">
-            User Categories
-          </h2>
+          <h2 className="text-lg font-semibold">User Categories</h2>
 
           <p className="mt-1 text-sm text-muted-foreground">
             Select a category to view users from this school.
@@ -104,9 +90,7 @@ export function SchoolUserDetails({
               <button
                 key={category.key}
                 type="button"
-                onClick={() =>
-                  onSelectCategory(category.key)
-                }
+                onClick={() => onSelectCategory(category.key)}
                 className="group rounded-xl border bg-background p-5 text-left transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-sm"
               >
                 <div className="flex items-start justify-between gap-3">
@@ -114,15 +98,11 @@ export function SchoolUserDetails({
                     <Icon className="h-5 w-5 text-muted-foreground transition-colors group-hover:text-primary" />
                   </div>
 
-                  <span className="text-2xl font-bold">
-                    {count}
-                  </span>
+                  <span className="text-2xl font-bold">{count}</span>
                 </div>
 
                 <div className="mt-4">
-                  <h3 className="font-semibold">
-                    {category.label}
-                  </h3>
+                  <h3 className="font-semibold">{category.label}</h3>
 
                   <p className="mt-1 text-xs leading-5 text-muted-foreground">
                     {category.description}

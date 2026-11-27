@@ -7,8 +7,12 @@ import type {
   ResetGuardianPasswordResponse,
 } from "./types";
 
-export const getGuardians = async (schoolId: number): Promise<GuardianRecord[]> => {
-  const res = await api.get<ApiResponse<GuardianRecord[]>>(`/schools/${schoolId}/guardians`);
+export const getGuardians = async (
+  schoolId: number,
+): Promise<GuardianRecord[]> => {
+  const res = await api.get<ApiResponse<GuardianRecord[]>>(
+    `/schools/${schoolId}/guardians`,
+  );
   return res.data.data;
 };
 

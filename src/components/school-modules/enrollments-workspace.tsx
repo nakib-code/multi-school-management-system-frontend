@@ -24,8 +24,13 @@ export function EnrollmentsWorkspace() {
   const schoolId = user?.schoolId ?? 0;
   const canManage = user?.role === "ADMIN" || user?.role === "MANAGER";
 
-  const { data: enrollments = [], isLoading, isError, error, refetch } =
-    useEnrollments(schoolId);
+  const {
+    data: enrollments = [],
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useEnrollments(schoolId);
   const { data: studentsData } = useStudents(schoolId, { page: 1, limit: 100 });
   const { data: classes = [] } = useClasses(schoolId);
   const { data: sections = [] } = useSections(schoolId);
@@ -37,7 +42,9 @@ export function EnrollmentsWorkspace() {
   const [studentId, setStudentId] = useState("");
   const [classId, setClassId] = useState("");
   const [sectionId, setSectionId] = useState("");
-  const [academicYear, setAcademicYear] = useState(String(new Date().getFullYear()));
+  const [academicYear, setAcademicYear] = useState(
+    String(new Date().getFullYear()),
+  );
   const [rollNumber, setRollNumber] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -74,7 +81,8 @@ export function EnrollmentsWorkspace() {
             Student Enrollments
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Assign students to classes, sections, academic years, and roll numbers.
+            Assign students to classes, sections, academic years, and roll
+            numbers.
           </p>
         </div>
 
@@ -132,51 +140,53 @@ export function EnrollmentsWorkspace() {
 
           <div className="surface-panel hidden overflow-x-auto md:block">
             <table className="w-full text-left text-sm">
-            <thead className="border-b bg-muted/40 text-xs uppercase text-muted-foreground">
-              <tr>
-                <th className="px-4 py-3">Student</th>
-                <th className="px-4 py-3">Class &amp; Section</th>
-                <th className="px-4 py-3">Academic Year</th>
-                <th className="px-4 py-3">Roll</th>
-                <th className="px-4 py-3">Status</th>
-                {canManage && <th className="px-4 py-3 text-right">Action</th>}
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {enrollments.map((en) => (
-                <tr key={en.id}>
-                  <td className="px-4 py-3 font-medium">
-                    {en.student
-                      ? `${en.student.firstName} ${en.student.lastName ?? ""} (${en.student.studentId})`
-                      : `Student #${en.studentId}`}
-                  </td>
-                  <td className="px-4 py-3">
-                    {en.class?.name ?? `Class #${en.classId}`}
-                    {en.section ? ` — ${en.section.name}` : ""}
-                  </td>
-                  <td className="px-4 py-3">{en.academicYear}</td>
-                  <td className="px-4 py-3">{en.rollNumber ?? "—"}</td>
-                  <td className="px-4 py-3">
-                    <span className="rounded-full border px-2.5 py-0.5 text-xs font-medium">
-                      {en.status}
-                    </span>
-                  </td>
+              <thead className="border-b bg-muted/40 text-xs uppercase text-muted-foreground">
+                <tr>
+                  <th className="px-4 py-3">Student</th>
+                  <th className="px-4 py-3">Class &amp; Section</th>
+                  <th className="px-4 py-3">Academic Year</th>
+                  <th className="px-4 py-3">Roll</th>
+                  <th className="px-4 py-3">Status</th>
                   {canManage && (
-                    <td className="px-4 py-3 text-right">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => deleteMutation.mutate(en.id)}
-                        disabled={deleteMutation.isPending}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </td>
+                    <th className="px-4 py-3 text-right">Action</th>
                   )}
                 </tr>
-              ))}
-            </tbody>
+              </thead>
+              <tbody className="divide-y">
+                {enrollments.map((en) => (
+                  <tr key={en.id}>
+                    <td className="px-4 py-3 font-medium">
+                      {en.student
+                        ? `${en.student.firstName} ${en.student.lastName ?? ""} (${en.student.studentId})`
+                        : `Student #${en.studentId}`}
+                    </td>
+                    <td className="px-4 py-3">
+                      {en.class?.name ?? `Class #${en.classId}`}
+                      {en.section ? ` — ${en.section.name}` : ""}
+                    </td>
+                    <td className="px-4 py-3">{en.academicYear}</td>
+                    <td className="px-4 py-3">{en.rollNumber ?? "—"}</td>
+                    <td className="px-4 py-3">
+                      <span className="rounded-full border px-2.5 py-0.5 text-xs font-medium">
+                        {en.status}
+                      </span>
+                    </td>
+                    {canManage && (
+                      <td className="px-4 py-3 text-right">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => deleteMutation.mutate(en.id)}
+                          disabled={deleteMutation.isPending}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
             </table>
           </div>
         </>
@@ -260,7 +270,11 @@ export function EnrollmentsWorkspace() {
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={createMutation.isPending}>

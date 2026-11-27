@@ -1,9 +1,4 @@
-import {
-  Building2,
-  CheckCircle2,
-  CreditCard,
-  MailCheck,
-} from "lucide-react";
+import { Building2, CheckCircle2, CreditCard, MailCheck } from "lucide-react";
 
 const steps = [
   {
@@ -38,10 +33,7 @@ const steps = [
 
 export default function HowOnboardingWorks() {
   return (
-    <section
-      id="how-it-works"
-      className="border-y bg-muted/30 py-20 sm:py-24"
-    >
+    <section id="how-it-works" className="border-y bg-muted/30 py-20 sm:py-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
           <p className="text-xs font-semibold uppercase tracking-widest text-primary">

@@ -158,7 +158,9 @@ export default function AdmissionForm({ schoolId }: AdmissionFormProps) {
         result.payment.paymentMethod !== "CASH" &&
         result.payment.amount > 0
       ) {
-        toast.success("Application submitted! Proceed to mobile banking payment.");
+        toast.success(
+          "Application submitted! Proceed to mobile banking payment.",
+        );
         router.push(
           `/admissions/payment?schoolId=${schoolId}&admissionId=${result.id}`,
         );

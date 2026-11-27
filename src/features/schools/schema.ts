@@ -33,9 +33,7 @@ export const createSchoolSchema = z
       .min(2, "Admin name must be at least 2 characters")
       .max(100, "Admin name is too long"),
 
-    adminEmail: z
-      .string()
-      .email("Please provide a valid admin email"),
+    adminEmail: z.string().email("Please provide a valid admin email"),
 
     adminPhone: z.string().optional(),
 
@@ -46,37 +44,24 @@ export const createSchoolSchema = z
 
     confirmPassword: z.string(),
   })
-  .refine(
-    (data) => data.adminPassword === data.confirmPassword,
-    {
-      message: "Passwords do not match",
-      path: ["confirmPassword"],
-    },
-  );
+  .refine((data) => data.adminPassword === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
 
-export type CreateSchoolFormValues = z.infer<
-  typeof createSchoolSchema
->;
+export type CreateSchoolFormValues = z.infer<typeof createSchoolSchema>;
 
 /**
  * Verify Admin Email
  */
 export const verifyAdminEmailSchema = z.object({
-  email: z
-    .string()
-    .trim()
-    .email("Please enter a valid email address"),
+  email: z.string().trim().email("Please enter a valid email address"),
 
   code: z
     .string()
     .trim()
     .length(6, "Verification code must be 6 digits")
-    .regex(
-      /^\d{6}$/,
-      "Verification code must contain only numbers",
-    ),
+    .regex(/^\d{6}$/, "Verification code must contain only numbers"),
 });
 
-export type VerifyEmailAdminFormValues = z.infer<
-  typeof verifyAdminEmailSchema
->;
+export type VerifyEmailAdminFormValues = z.infer<typeof verifyAdminEmailSchema>;

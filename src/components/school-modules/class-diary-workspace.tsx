@@ -97,7 +97,9 @@ export function ClassDiaryWorkspace() {
   const openCreateModal = () => {
     setEditing(null);
     setForm({
-      classId: filterClassId || (availableClasses[0] ? String(availableClasses[0].id) : ""),
+      classId:
+        filterClassId ||
+        (availableClasses[0] ? String(availableClasses[0].id) : ""),
       sectionId: filterSectionId || "",
       subjectId: "",
       diaryDate: filterDate || todayIso(),

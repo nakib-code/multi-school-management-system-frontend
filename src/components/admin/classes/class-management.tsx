@@ -1,7 +1,5 @@
 "use client";
 
-import { useClasses, useCreateClass, useDeleteClass, useToggleClassStatus, useUpdateClass } from "@/features/admin/classes/hooks";
-import { CreateClassPayload, SchoolClass, UpdateClassPayload } from "@/features/admin/classes/types";
 import {
   AlertCircle,
   BookOpen,
@@ -12,7 +10,18 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-
+import {
+  useClasses,
+  useCreateClass,
+  useDeleteClass,
+  useToggleClassStatus,
+  useUpdateClass,
+} from "@/features/admin/classes/hooks";
+import type {
+  CreateClassPayload,
+  SchoolClass,
+  UpdateClassPayload,
+} from "@/features/admin/classes/types";
 
 interface ClassManagementProps {
   schoolId: number;
@@ -30,30 +39,23 @@ export function ClassManagement({
     refetch,
   } = useClasses(schoolId);
 
-  const createMutation =
-    useCreateClass(schoolId);
+  const createMutation = useCreateClass(schoolId);
 
-  const updateMutation =
-    useUpdateClass(schoolId);
+  const updateMutation = useUpdateClass(schoolId);
 
-  const toggleMutation =
-    useToggleClassStatus(schoolId);
+  const toggleMutation = useToggleClassStatus(schoolId);
 
-  const deleteMutation =
-    useDeleteClass(schoolId);
+  const deleteMutation = useDeleteClass(schoolId);
 
-  const [showForm, setShowForm] =
-    useState(false);
+  const [showForm, setShowForm] = useState(false);
 
-  const [editingClass, setEditingClass] =
-    useState<SchoolClass | null>(null);
+  const [editingClass, setEditingClass] = useState<SchoolClass | null>(null);
 
-  const [form, setForm] =
-    useState<CreateClassPayload>({
-      name: "",
-      code: "",
-      description: "",
-    });
+  const [form, setForm] = useState<CreateClassPayload>({
+    name: "",
+    code: "",
+    description: "",
+  });
 
   const resetForm = () => {
     setForm({
@@ -78,30 +80,24 @@ export function ClassManagement({
     setShowForm(true);
   };
 
-  const openEditForm = (
-    schoolClass: SchoolClass,
-  ) => {
+  const openEditForm = (schoolClass: SchoolClass) => {
     setEditingClass(schoolClass);
 
     setForm({
       name: schoolClass.name,
       code: schoolClass.code,
-      description:
-        schoolClass.description ?? "",
+      description: schoolClass.description ?? "",
     });
 
     setShowForm(true);
   };
 
-  const handleSubmit = async (
-    event: React.FormEvent,
-  ) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
     const name = form.name.trim();
     const code = form.code.trim();
-    const description =
-      form.description?.trim() ?? "";
+    const description = form.description?.trim() ?? "";
 
     if (!name) {
       toast.error("Class name is required");
@@ -126,9 +122,7 @@ export function ClassManagement({
           payload,
         });
 
-        toast.success(
-          "Class updated successfully",
-        );
+        toast.success("Class updated successfully");
       } else {
         const payload: CreateClassPayload = {
           name,
@@ -136,48 +130,32 @@ export function ClassManagement({
           description,
         };
 
-        await createMutation.mutateAsync(
-          payload,
-        );
+        await createMutation.mutateAsync(payload);
 
-        toast.success(
-          "Class created successfully",
-        );
+        toast.success("Class created successfully");
       }
 
       resetForm();
     } catch (error: any) {
-      toast.error(
-        error?.response?.data?.message ??
-          "Something went wrong",
-      );
+      toast.error(error?.response?.data?.message ?? "Something went wrong");
     }
   };
 
-  const handleToggle = async (
-    schoolClass: SchoolClass,
-  ) => {
+  const handleToggle = async (schoolClass: SchoolClass) => {
     try {
-      await toggleMutation.mutateAsync(
-        schoolClass.id,
-      );
+      await toggleMutation.mutateAsync(schoolClass.id);
 
       toast.success(
-        schoolClass.isActive
-          ? "Class deactivated"
-          : "Class activated",
+        schoolClass.isActive ? "Class deactivated" : "Class activated",
       );
     } catch (error: any) {
       toast.error(
-        error?.response?.data?.message ??
-          "Failed to update class status",
+        error?.response?.data?.message ?? "Failed to update class status",
       );
     }
   };
 
-  const handleDelete = async (
-    schoolClass: SchoolClass,
-  ) => {
+  const handleDelete = async (schoolClass: SchoolClass) => {
     const confirmed = window.confirm(
       `Are you sure you want to delete "${schoolClass.name}"?`,
     );
@@ -185,33 +163,22 @@ export function ClassManagement({
     if (!confirmed) return;
 
     try {
-      await deleteMutation.mutateAsync(
-        schoolClass.id,
-      );
+      await deleteMutation.mutateAsync(schoolClass.id);
 
-      toast.success(
-        "Class deleted successfully",
-      );
+      toast.success("Class deleted successfully");
     } catch (error: any) {
-      toast.error(
-        error?.response?.data?.message ??
-          "Failed to delete class",
-      );
+      toast.error(error?.response?.data?.message ?? "Failed to delete class");
     }
   };
 
-  const isSubmitting =
-    createMutation.isPending ||
-    updateMutation.isPending;
+  const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h2 className="text-xl font-semibold">
-            Class Management
-          </h2>
+          <h2 className="text-xl font-semibold">Class Management</h2>
 
           <p className="text-sm text-muted-foreground">
             Create and manage school classes.
@@ -236,9 +203,7 @@ export function ClassManagement({
         >
           <div className="mb-5">
             <h3 className="font-semibold">
-              {editingClass
-                ? "Edit Class"
-                : "Create Class"}
+              {editingClass ? "Edit Class" : "Create Class"}
             </h3>
 
             <p className="text-sm text-muted-foreground">
@@ -249,11 +214,12 @@ export function ClassManagement({
           <div className="grid gap-4 sm:grid-cols-2">
             {/* Name */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">
+              <label htmlFor="class-name" className="text-sm font-medium">
                 Class Name
               </label>
 
               <input
+                id="class-name"
                 value={form.name}
                 onChange={(event) =>
                   setForm((prev) => ({
@@ -268,11 +234,12 @@ export function ClassManagement({
 
             {/* Code */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">
+              <label htmlFor="class-code" className="text-sm font-medium">
                 Class Code
               </label>
 
               <input
+                id="class-code"
                 value={form.code}
                 onChange={(event) =>
                   setForm((prev) => ({
@@ -287,17 +254,20 @@ export function ClassManagement({
 
             {/* Description */}
             <div className="space-y-1.5 sm:col-span-2">
-              <label className="text-sm font-medium">
+              <label
+                htmlFor="class-description"
+                className="text-sm font-medium"
+              >
                 Description
               </label>
 
               <textarea
+                id="class-description"
                 value={form.description ?? ""}
                 onChange={(event) =>
                   setForm((prev) => ({
                     ...prev,
-                    description:
-                      event.target.value,
+                    description: event.target.value,
                   }))
                 }
                 placeholder="Optional description"
@@ -321,13 +291,9 @@ export function ClassManagement({
               disabled={isSubmitting}
               className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
             >
-              {isSubmitting && (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              )}
+              {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
 
-              {editingClass
-                ? "Update Class"
-                : "Create Class"}
+              {editingClass ? "Update Class" : "Create Class"}
             </button>
           </div>
         </form>
@@ -360,174 +326,119 @@ export function ClassManagement({
       )}
 
       {/* Empty */}
-      {!isLoading &&
-        !isError &&
-        classes.length === 0 && (
-          <div className="flex min-h-[220px] flex-col items-center justify-center rounded-xl border text-center">
-            <BookOpen className="mb-3 h-8 w-8 text-muted-foreground" />
+      {!isLoading && !isError && classes.length === 0 && (
+        <div className="flex min-h-[220px] flex-col items-center justify-center rounded-xl border text-center">
+          <BookOpen className="mb-3 h-8 w-8 text-muted-foreground" />
 
-            <h3 className="font-medium">
-              No classes found
-            </h3>
+          <h3 className="font-medium">No classes found</h3>
 
-            <p className="mt-1 text-sm text-muted-foreground">
-              Create your first class to continue.
-            </p>
-          </div>
-        )}
+          <p className="mt-1 text-sm text-muted-foreground">
+            Create your first class to continue.
+          </p>
+        </div>
+      )}
 
       {/* Table */}
-      {!isLoading &&
-        !isError &&
-        classes.length > 0 && (
-          <div className="overflow-hidden rounded-xl border bg-background">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="border-b bg-muted/40 text-left text-xs text-muted-foreground">
-                  <tr>
-                    <th className="px-5 py-3 font-medium">
-                      Class
-                    </th>
+      {!isLoading && !isError && classes.length > 0 && (
+        <div className="overflow-hidden rounded-xl border bg-background">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="border-b bg-muted/40 text-left text-xs text-muted-foreground">
+                <tr>
+                  <th className="px-5 py-3 font-medium">Class</th>
 
-                    <th className="px-5 py-3 font-medium">
-                      Code
-                    </th>
+                  <th className="px-5 py-3 font-medium">Code</th>
 
-                    <th className="px-5 py-3 font-medium">
-                      Sections
-                    </th>
+                  <th className="px-5 py-3 font-medium">Sections</th>
 
-                    <th className="px-5 py-3 font-medium">
-                      Students
-                    </th>
+                  <th className="px-5 py-3 font-medium">Students</th>
 
-                    <th className="px-5 py-3 font-medium">
-                      Status
-                    </th>
+                  <th className="px-5 py-3 font-medium">Status</th>
 
-                    <th className="px-5 py-3 text-right font-medium">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
+                  <th className="px-5 py-3 text-right font-medium">Actions</th>
+                </tr>
+              </thead>
 
-                <tbody className="divide-y">
-                  {classes.map(
-                    (schoolClass) => (
-                      <tr
-                        key={schoolClass.id}
-                        className="hover:bg-muted/30"
+              <tbody className="divide-y">
+                {classes.map((schoolClass) => (
+                  <tr key={schoolClass.id} className="hover:bg-muted/30">
+                    <td className="px-5 py-4">
+                      <div className="font-medium">{schoolClass.name}</div>
+
+                      {schoolClass.description && (
+                        <div className="mt-0.5 max-w-xs truncate text-xs text-muted-foreground">
+                          {schoolClass.description}
+                        </div>
+                      )}
+                    </td>
+
+                    <td className="px-5 py-4 font-mono text-xs">
+                      {schoolClass.code}
+                    </td>
+
+                    <td className="px-5 py-4">
+                      {schoolClass._count?.sections ?? 0}
+                    </td>
+
+                    <td className="px-5 py-4">
+                      {schoolClass._count?.enrollments ?? 0}
+                    </td>
+
+                    <td className="px-5 py-4">
+                      <button
+                        type="button"
+                        onClick={() => handleToggle(schoolClass)}
+                        disabled={toggleMutation.isPending}
+                        className={
+                          schoolClass.isActive
+                            ? "rounded-full bg-green-500/10 px-2.5 py-1 text-xs font-medium text-green-600"
+                            : "rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground"
+                        }
                       >
-                        <td className="px-5 py-4">
-                          <div className="font-medium">
-                            {schoolClass.name}
-                          </div>
+                        {schoolClass.isActive ? "Active" : "Inactive"}
+                      </button>
+                    </td>
 
-                          {schoolClass.description && (
-                            <div className="mt-0.5 max-w-xs truncate text-xs text-muted-foreground">
-                              {
-                                schoolClass.description
-                              }
-                            </div>
-                          )}
-                        </td>
-
-                        <td className="px-5 py-4 font-mono text-xs">
-                          {schoolClass.code}
-                        </td>
-
-                        <td className="px-5 py-4">
-                          {
-                            schoolClass._count
-                              ?.sections ?? 0
-                          }
-                        </td>
-
-                        <td className="px-5 py-4">
-                          {
-                            schoolClass._count
-                              ?.enrollments ?? 0
-                          }
-                        </td>
-
-                        <td className="px-5 py-4">
+                    <td className="px-5 py-4">
+                      <div className="flex justify-end gap-1">
+                        {onManageSections && (
                           <button
                             type="button"
-                            onClick={() =>
-                              handleToggle(
-                                schoolClass,
-                              )
-                            }
-                            disabled={
-                              toggleMutation.isPending
-                            }
-                            className={
-                              schoolClass.isActive
-                                ? "rounded-full bg-green-500/10 px-2.5 py-1 text-xs font-medium text-green-600"
-                                : "rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground"
-                            }
+                            onClick={() => onManageSections(schoolClass)}
+                            title="Manage Sections"
+                            className="rounded-md p-2 hover:bg-muted"
                           >
-                            {schoolClass.isActive
-                              ? "Active"
-                              : "Inactive"}
+                            <BookOpen className="h-4 w-4" />
                           </button>
-                        </td>
+                        )}
 
-                        <td className="px-5 py-4">
-                          <div className="flex justify-end gap-1">
-                            {onManageSections && (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  onManageSections(
-                                    schoolClass,
-                                  )
-                                }
-                                title="Manage Sections"
-                                className="rounded-md p-2 hover:bg-muted"
-                              >
-                                <BookOpen className="h-4 w-4" />
-                              </button>
-                            )}
+                        <button
+                          type="button"
+                          onClick={() => openEditForm(schoolClass)}
+                          title="Edit"
+                          className="rounded-md p-2 hover:bg-muted"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
 
-                            <button
-                              type="button"
-                              onClick={() =>
-                                openEditForm(
-                                  schoolClass,
-                                )
-                              }
-                              title="Edit"
-                              className="rounded-md p-2 hover:bg-muted"
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleDelete(
-                                  schoolClass,
-                                )
-                              }
-                              disabled={
-                                deleteMutation.isPending
-                              }
-                              title="Delete"
-                              className="rounded-md p-2 text-destructive hover:bg-destructive/10"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ),
-                  )}
-                </tbody>
-              </table>
-            </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(schoolClass)}
+                          disabled={deleteMutation.isPending}
+                          title="Delete"
+                          className="rounded-md p-2 text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        )}
+        </div>
+      )}
     </div>
   );
 }

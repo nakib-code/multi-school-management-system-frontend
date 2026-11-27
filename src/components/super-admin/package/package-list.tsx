@@ -11,9 +11,9 @@ export function PackageList() {
   if (isLoading) {
     return (
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-        {Array.from({ length: 3 }).map((_, index) => (
+        {["pkg-skel-1", "pkg-skel-2", "pkg-skel-3"].map((id) => (
           <div
-            key={index}
+            key={id}
             className="h-[420px] animate-pulse rounded-2xl border bg-muted/30"
           />
         ))}
@@ -63,10 +63,7 @@ export function PackageList() {
   return (
     <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
       {data.map((packageData) => (
-        <PackageCard
-          key={packageData.id}
-          packageData={packageData}
-        />
+        <PackageCard key={packageData.id} packageData={packageData} />
       ))}
     </div>
   );

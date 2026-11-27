@@ -3,12 +3,8 @@
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-import {
-  type UserCategoryKey,
-} from "@/features/super-admin/users/constants";
-import {
-  useSchoolUserSummary,
-} from "@/features/super-admin/users/hooks";
+import type { UserCategoryKey } from "@/features/super-admin/users/constants";
+import { useSchoolUserSummary } from "@/features/super-admin/users/hooks";
 
 import { SchoolUserDetails } from "./school-user-details";
 
@@ -21,12 +17,7 @@ export function SchoolUserDetailsPageContent({
 }: SchoolUserDetailsPageContentProps) {
   const router = useRouter();
 
-  const {
-    data,
-    isLoading,
-    isError,
-    refetch,
-  } = useSchoolUserSummary(schoolId);
+  const { data, isLoading, isError, refetch } = useSchoolUserSummary(schoolId);
 
   if (isLoading) {
     return (

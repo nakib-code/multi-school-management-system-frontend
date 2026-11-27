@@ -30,7 +30,12 @@ export interface ClassRoutineRecord {
   class?: { id: number; name: string; code: string };
   section?: { id: number; name: string; code: string } | null;
   subject?: { id: number; name: string; code: string };
-  teacher?: { id: number; firstName: string; lastName: string | null; employeeId: string };
+  teacher?: {
+    id: number;
+    firstName: string;
+    lastName: string | null;
+    employeeId: string;
+  };
 }
 
 export interface CreateRoutineInput {
@@ -81,7 +86,8 @@ export const useCreateClassRoutine = (schoolId: number) => {
       toast.success("Class routine added");
       qc.invalidateQueries({ queryKey: routineKeys.all });
     },
-    onError: (err) => toast.error(getApiErrorMessage(err, "Failed to create routine")),
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to create routine")),
   });
 };
 
@@ -95,6 +101,41 @@ export const useDeleteClassRoutine = (schoolId: number) => {
       toast.success("Routine slot removed");
       qc.invalidateQueries({ queryKey: routineKeys.all });
     },
-    onError: (err) => toast.error(getApiErrorMessage(err, "Failed to delete routine")),
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to delete routine")),
   });
 };
+
+export function useUpdateRoutine(schoolId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      payload,
+    }: {
+      id: number;
+      payload: {
+        dayOfWeek?: DayOfWeek;
+        periodNumber?: number;
+        startTime?: string;
+        endTime?: string;
+        roomNumber?: string | null;
+        subjectId?: number;
+        teacherId?: number | null;
+      };
+    }) => {
+      const res = await api.patch(
+        `/schools/${schoolId}/routines/${id}`,
+        payload,
+      );
+      return res.data.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: routineKeys.all });
+      toast.success("Routine period updated");
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, "Failed to update routine period"));
+    },
+  });
+}

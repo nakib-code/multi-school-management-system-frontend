@@ -10,9 +10,20 @@ export interface ResultRecord {
   gradePoint: number | string;
   remarks: string | null;
   publishedAt: string | null;
-  student?: { id: number; firstName: string; lastName: string | null; studentId: string };
+  student?: {
+    id: number;
+    firstName: string;
+    lastName: string | null;
+    studentId: string;
+  };
   exam?: { id: number; name: string; type: string; academicYear: string };
-  subject?: { id: number; name: string; code: string; fullMarks: number; passMarks: number };
+  subject?: {
+    id: number;
+    name: string;
+    code: string;
+    fullMarks: number;
+    passMarks: number;
+  };
 }
 
 export interface CreateResultInput {

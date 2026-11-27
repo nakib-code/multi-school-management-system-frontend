@@ -2,8 +2,12 @@ import { api } from "@/lib/api";
 import type { ApiResponse } from "@/types/api";
 import type { CreateSubjectInput, SubjectRecord } from "./types";
 
-export const getSubjects = async (schoolId: number): Promise<SubjectRecord[]> => {
-  const res = await api.get<ApiResponse<SubjectRecord[]>>(`/schools/${schoolId}/subjects`);
+export const getSubjects = async (
+  schoolId: number,
+): Promise<SubjectRecord[]> => {
+  const res = await api.get<ApiResponse<SubjectRecord[]>>(
+    `/schools/${schoolId}/subjects`,
+  );
   return res.data.data;
 };
 

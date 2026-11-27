@@ -4,7 +4,12 @@ import type { CreateEnrollmentInput, EnrollmentRecord } from "./types";
 
 export const getEnrollments = async (
   schoolId: number,
-  params?: { classId?: number; sectionId?: number; academicYear?: string; status?: string },
+  params?: {
+    classId?: number;
+    sectionId?: number;
+    academicYear?: string;
+    status?: string;
+  },
 ): Promise<EnrollmentRecord[]> => {
   const res = await api.get<ApiResponse<EnrollmentRecord[]>>(
     `/schools/${schoolId}/enrollments`,

@@ -12,8 +12,18 @@ export interface HefzEnrollmentRecord {
   currentSurah: string | null;
   status: string;
   startDate: string;
-  student?: { id: number; firstName: string; lastName: string | null; studentId: string };
-  ustad?: { id: number; firstName: string; lastName: string | null; employeeId: string };
+  student?: {
+    id: number;
+    firstName: string;
+    lastName: string | null;
+    studentId: string;
+  };
+  ustad?: {
+    id: number;
+    firstName: string;
+    lastName: string | null;
+    employeeId: string;
+  };
 }
 
 export interface HefzDailyLogRecord {

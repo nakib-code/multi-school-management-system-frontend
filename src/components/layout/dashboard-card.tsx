@@ -17,18 +17,12 @@ export function DashboardCard({
     <div className="rounded-xl border bg-background p-5 shadow-sm transition-shadow hover:shadow-md">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-sm font-medium text-muted-foreground">
-            {title}
-          </p>
+          <p className="text-sm font-medium text-muted-foreground">{title}</p>
 
-          <p className="mt-2 text-2xl font-bold tracking-tight">
-            {value}
-          </p>
+          <p className="mt-2 text-2xl font-bold tracking-tight">{value}</p>
 
           {description && (
-            <p className="mt-1 text-xs text-muted-foreground">
-              {description}
-            </p>
+            <p className="mt-1 text-xs text-muted-foreground">{description}</p>
           )}
         </div>
 

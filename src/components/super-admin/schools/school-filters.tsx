@@ -69,9 +69,7 @@ export function SchoolFilters({
           <input
             type="text"
             value={searchInput}
-            onChange={(event) =>
-              setSearchInput(event.target.value)
-            }
+            onChange={(event) => setSearchInput(event.target.value)}
             placeholder="Search by school name, code or email..."
             className="h-10 w-full rounded-lg border bg-background pl-9 pr-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
           />
@@ -83,19 +81,14 @@ export function SchoolFilters({
           onChange={(event) => {
             const value = event.target.value as SchoolStatus | "";
 
-            onStatusChange(
-              value === "" ? undefined : value,
-            );
+            onStatusChange(value === "" ? undefined : value);
           }}
           className="h-10 rounded-lg border bg-background px-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 lg:w-44"
         >
           <option value="">All Statuses</option>
 
           {statuses.map((item) => (
-            <option
-              key={item.value}
-              value={item.value}
-            >
+            <option key={item.value} value={item.value}>
               {item.label}
             </option>
           ))}

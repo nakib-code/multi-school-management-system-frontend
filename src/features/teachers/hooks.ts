@@ -37,7 +37,8 @@ export const useTeachers = (schoolId: number, search?: string) =>
 export const useCreateTeacher = (schoolId: number) => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (payload: CreateTeacherInput) => createTeacher(schoolId, payload),
+    mutationFn: (payload: CreateTeacherInput) =>
+      createTeacher(schoolId, payload),
     onSuccess: () => {
       toast.success("Teacher created! Verification code emailed to teacher.");
       qc.invalidateQueries({ queryKey: teacherKeys.all });
@@ -133,5 +134,71 @@ export const useDeleteTeacherAssignment = (schoolId: number) => {
     },
     onError: (err) =>
       toast.error(getApiErrorMessage(err, "Failed to remove assignment")),
+  });
+};
+
+export const useUpdateTeacher = (schoolId: number) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      teacherId,
+      payload,
+    }: {
+      teacherId: number;
+      payload: {
+        firstName?: string;
+        lastName?: string;
+        phone?: string;
+        designation?: string;
+        department?: string;
+        qualification?: string;
+        isActive?: boolean;
+      };
+    }) => {
+      const { api } = await import("@/lib/api");
+      const res = await api.patch(
+        `/schools/${schoolId}/teachers/${teacherId}`,
+        payload,
+      );
+      return res.data.data;
+    },
+    onSuccess: () => {
+      toast.success("Teacher updated successfully");
+      qc.invalidateQueries({ queryKey: teacherKeys.all });
+    },
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to update teacher")),
+  });
+};
+
+export const useUpdateTeacherAssignment = (schoolId: number) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      payload,
+    }: {
+      id: number;
+      payload: {
+        classId?: number;
+        sectionId?: number | null;
+        subjectId?: number | null;
+        academicYear?: string;
+        isClassTeacher?: boolean;
+      };
+    }) => {
+      const { api } = await import("@/lib/api");
+      const res = await api.patch(
+        `/schools/${schoolId}/teacher-assignments/${id}`,
+        payload,
+      );
+      return res.data.data;
+    },
+    onSuccess: () => {
+      toast.success("Teacher assignment updated");
+      qc.invalidateQueries({ queryKey: teacherKeys.all });
+    },
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to update assignment")),
   });
 };

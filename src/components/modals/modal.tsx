@@ -34,13 +34,17 @@ export function Modal({
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 backdrop-blur-xs sm:items-center sm:p-4"
-      onClick={onClose}
       role="dialog"
       aria-modal="true"
     >
+      <button
+        type="button"
+        aria-label="Close dialog"
+        onClick={onClose}
+        className="fixed inset-0 cursor-default"
+      />
       <div
-        className={`safe-bottom relative max-h-[90dvh] w-full ${maxWidthClass} overflow-y-auto rounded-t-[18px] border bg-background p-3.5 shadow-xl sm:rounded-[11px] sm:p-6`}
-        onClick={(e) => e.stopPropagation()}
+        className={`safe-bottom relative z-10 max-h-[90dvh] w-full ${maxWidthClass} overflow-y-auto rounded-t-[18px] border bg-background p-3.5 shadow-xl sm:rounded-[11px] sm:p-6`}
       >
         <div className="mx-auto mb-2.5 h-1 w-10 rounded-full bg-muted sm:hidden" />
         <div className="mb-3.5 flex items-start justify-between gap-3 border-b pb-3">

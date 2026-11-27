@@ -65,7 +65,10 @@ export const resetTeacherPassword = async (
   return res.data.data;
 };
 
-export const deactivateTeacher = async (schoolId: number, teacherId: number) => {
+export const deactivateTeacher = async (
+  schoolId: number,
+  teacherId: number,
+) => {
   const res = await api.delete<ApiResponse<TeacherRecord>>(
     `/schools/${schoolId}/teachers/${teacherId}`,
   );

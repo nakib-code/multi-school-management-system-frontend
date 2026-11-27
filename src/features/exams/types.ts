@@ -1,4 +1,9 @@
-export type ExamType = "CLASS_TEST" | "HALF_YEARLY" | "ANNUAL" | "MODEL_TEST" | "FINAL";
+export type ExamType =
+  | "CLASS_TEST"
+  | "HALF_YEARLY"
+  | "ANNUAL"
+  | "MODEL_TEST"
+  | "FINAL";
 export type ExamStatus = "UPCOMING" | "ONGOING" | "COMPLETED" | "CANCELLED";
 
 export interface ExamRecord {

@@ -85,7 +85,11 @@ export default function ForgotPasswordPage() {
                 />
               </div>
 
-              <Button type="submit" disabled={isSubmitting} className="w-full gap-2">
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full gap-2"
+              >
                 {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
                 {isSubmitting ? "Sending link..." : "Send Reset Link"}
               </Button>

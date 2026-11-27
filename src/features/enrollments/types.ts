@@ -1,4 +1,8 @@
-export type EnrollmentStatus = "ACTIVE" | "COMPLETED" | "TRANSFERRED" | "DROPPED";
+export type EnrollmentStatus =
+  | "ACTIVE"
+  | "COMPLETED"
+  | "TRANSFERRED"
+  | "DROPPED";
 
 export interface EnrollmentRecord {
   id: number;
@@ -10,7 +14,12 @@ export interface EnrollmentRecord {
   rollNumber: number | null;
   status: EnrollmentStatus;
   enrolledAt: string;
-  student?: { id: number; firstName: string; lastName: string | null; studentId: string };
+  student?: {
+    id: number;
+    firstName: string;
+    lastName: string | null;
+    studentId: string;
+  };
   class?: { id: number; name: string; code: string };
   section?: { id: number; name: string; code: string } | null;
 }

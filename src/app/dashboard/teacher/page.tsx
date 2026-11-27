@@ -35,7 +35,8 @@ export default function TeacherDashboardPage() {
           Welcome, {user?.name ?? "Teacher"}
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Manage your assigned classes, daily attendance, exam marks, and Hefz Sobok logs.
+          Manage your assigned classes, daily attendance, exam marks, and Hefz
+          Sobok logs.
         </p>
       </div>
 
@@ -61,11 +62,31 @@ export default function TeacherDashboardPage() {
 
       <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
         {[
-          { label: "Daily Class Diary", href: "/dashboard/teacher/diary", icon: BookOpen },
-          { label: "Mark Attendance", href: "/dashboard/teacher/attendance", icon: CalendarCheck },
-          { label: "My Classes & Alerts", href: "/dashboard/teacher/classes", icon: BookOpen },
-          { label: "Record Exam Results", href: "/dashboard/teacher/results", icon: Award },
-          { label: "Hefz Daily Sobok", href: "/dashboard/teacher/hefz", icon: BookOpenCheck },
+          {
+            label: "Daily Class Diary",
+            href: "/dashboard/teacher/diary",
+            icon: BookOpen,
+          },
+          {
+            label: "Mark Attendance",
+            href: "/dashboard/teacher/attendance",
+            icon: CalendarCheck,
+          },
+          {
+            label: "My Classes & Alerts",
+            href: "/dashboard/teacher/classes",
+            icon: BookOpen,
+          },
+          {
+            label: "Record Exam Results",
+            href: "/dashboard/teacher/results",
+            icon: Award,
+          },
+          {
+            label: "Hefz Daily Sobok",
+            href: "/dashboard/teacher/hefz",
+            icon: BookOpenCheck,
+          },
         ].map((item) => {
           const Icon = item.icon;
           return (

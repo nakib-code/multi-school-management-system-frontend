@@ -38,8 +38,9 @@ export default function Hero() {
 
             <p className="mt-6 max-w-2xl text-base leading-7 text-white/75 sm:text-lg">
               Manage your entire institution from one unified platform—students,
-              teachers, classes, Hefz &amp; Najera daily logs, attendance, exams,
-              GPA results, student fees, and payroll with role-based security.
+              teachers, classes, Hefz &amp; Najera daily logs, attendance,
+              exams, GPA results, student fees, and payroll with role-based
+              security.
             </p>
 
             <div className="mt-8 flex flex-wrap items-center gap-4">

@@ -8,7 +8,10 @@ import {
   createTeacherSalary,
   getTeacherSalaries,
 } from "./api";
-import type { CreateSalaryPaymentInput, CreateTeacherSalaryInput } from "./types";
+import type {
+  CreateSalaryPaymentInput,
+  CreateTeacherSalaryInput,
+} from "./types";
 
 export const salaryKeys = {
   all: ["teacher-salaries"] as const,
@@ -18,7 +21,12 @@ export const salaryKeys = {
 
 export const useTeacherSalaries = (
   schoolId: number,
-  params?: { teacherId?: number; month?: number; year?: number; status?: string },
+  params?: {
+    teacherId?: number;
+    month?: number;
+    year?: number;
+    status?: string;
+  },
 ) =>
   useQuery({
     queryKey: salaryKeys.list(schoolId, params),
@@ -35,7 +43,8 @@ export const useCreateTeacherSalary = (schoolId: number) => {
       toast.success("Teacher salary sheet created");
       qc.invalidateQueries({ queryKey: salaryKeys.all });
     },
-    onError: (err) => toast.error(getApiErrorMessage(err, "Failed to create salary")),
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to create salary")),
   });
 };
 
@@ -48,6 +57,38 @@ export const useCreateSalaryPayment = (schoolId: number) => {
       toast.success("Salary payment recorded");
       qc.invalidateQueries({ queryKey: salaryKeys.all });
     },
-    onError: (err) => toast.error(getApiErrorMessage(err, "Failed to record salary payment")),
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to record salary payment")),
+  });
+};
+
+export const useUpdateTeacherSalary = (schoolId: number) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      payload,
+    }: {
+      id: number;
+      payload: {
+        basicSalary?: number;
+        allowance?: number;
+        deduction?: number;
+        remarks?: string;
+      };
+    }) => {
+      const { api } = await import("@/lib/api");
+      const res = await api.patch(
+        `/schools/${schoolId}/teacher-salaries/${id}`,
+        payload,
+      );
+      return res.data.data;
+    },
+    onSuccess: () => {
+      toast.success("Salary record updated");
+      qc.invalidateQueries({ queryKey: salaryKeys.all });
+    },
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to update salary record")),
   });
 };

@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Wallet } from "lucide-react";
+import { Pencil, Plus, Wallet } from "lucide-react";
 import { useState } from "react";
 import { Modal } from "@/components/modals/modal";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -13,8 +13,12 @@ import {
   useCreateSalaryPayment,
   useCreateTeacherSalary,
   useTeacherSalaries,
+  useUpdateTeacherSalary,
 } from "@/features/salaries/hooks";
-import type { SalaryPaymentMethod, TeacherSalaryRecord } from "@/features/salaries/types";
+import type {
+  SalaryPaymentMethod,
+  TeacherSalaryRecord,
+} from "@/features/salaries/types";
 import { useTeachers } from "@/features/teachers/hooks";
 import { getApiErrorMessage } from "@/lib/api";
 import { useAuth } from "@/providers/auth-provider";
@@ -24,14 +28,23 @@ export function SalariesWorkspace() {
   const schoolId = user?.schoolId ?? 0;
   const canManage = user?.role === "ADMIN" || user?.role === "MANAGER";
 
-  const { data: salaries = [], isLoading, isError, error, refetch } =
-    useTeacherSalaries(schoolId);
+  const {
+    data: salaries = [],
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useTeacherSalaries(schoolId);
   const { data: teachers = [] } = useTeachers(canManage ? schoolId : 0);
 
   const createSalMut = useCreateTeacherSalary(schoolId);
+  const updateSalMut = useUpdateTeacherSalary(schoolId);
   const paySalMut = useCreateSalaryPayment(schoolId);
 
   const [createOpen, setCreateOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<TeacherSalaryRecord | null>(
+    null,
+  );
   const [payTarget, setPayTarget] = useState<TeacherSalaryRecord | null>(null);
   const [payAmount, setPayAmount] = useState("");
   const [payMethod, setPayMethod] = useState<SalaryPaymentMethod>("BANK");
@@ -45,6 +58,13 @@ export function SalariesWorkspace() {
     deduction: "0",
   });
 
+  const [editForm, setEditForm] = useState({
+    basicSalary: "",
+    allowance: "0",
+    deduction: "0",
+    remarks: "",
+  });
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     await createSalMut.mutateAsync({
@@ -56,7 +76,39 @@ export function SalariesWorkspace() {
       deduction: Number(form.deduction) || 0,
     });
     setCreateOpen(false);
-    setForm((prev) => ({ ...prev, basicSalary: "", bonus: "0", deduction: "0" }));
+    setForm((prev) => ({
+      ...prev,
+      basicSalary: "",
+      bonus: "0",
+      deduction: "0",
+    }));
+  };
+
+  const openEdit = (s: TeacherSalaryRecord) => {
+    setEditTarget(s);
+    setEditForm({
+      basicSalary: String(s.basicSalary),
+      allowance: String(s.bonus ?? 0),
+      deduction: String(s.deduction ?? 0),
+      remarks: s.remarks ?? "",
+    });
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editTarget) return;
+    await updateSalMut.mutateAsync({
+      id: editTarget.id,
+      payload: {
+        basicSalary: Number(editForm.basicSalary),
+        allowance: Number(editForm.allowance) || 0,
+        deduction: Number(editForm.deduction) || 0,
+        ...(editForm.remarks.trim()
+          ? { remarks: editForm.remarks.trim() }
+          : {}),
+      },
+    });
+    setEditTarget(null);
   };
 
   const handlePay = async (e: React.FormEvent) => {
@@ -85,9 +137,12 @@ export function SalariesWorkspace() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Teacher Salaries</h1>
+          <h1 className="text-2xl font-bold tracking-tight">
+            Teacher Salaries
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Monthly payroll sheets, bonuses, deductions, and disbursement tracking.
+            Monthly payroll sheets, bonuses, deductions, and disbursement
+            tracking.
           </p>
         </div>
         {canManage && (
@@ -129,7 +184,9 @@ export function SalariesWorkspace() {
                     {s.month}/{s.year}
                   </td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">
-                    ৳{Number(s.basicSalary).toLocaleString()} + ৳{Number(s.bonus).toLocaleString()} − ৳{Number(s.deduction).toLocaleString()}
+                    ৳{Number(s.basicSalary).toLocaleString()} + ৳
+                    {Number(s.bonus).toLocaleString()} − ৳
+                    {Number(s.deduction).toLocaleString()}
                   </td>
                   <td className="px-4 py-3 font-semibold">
                     ৳{Number(s.netSalary).toLocaleString()}
@@ -142,16 +199,26 @@ export function SalariesWorkspace() {
                   {canManage && (
                     <td className="px-4 py-3 text-right">
                       {s.status !== "PAID" && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setPayTarget(s);
-                            setPayAmount(String(s.netSalary));
-                          }}
-                        >
-                          Record Payment
-                        </Button>
+                        <div className="inline-flex items-center gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => openEdit(s)}
+                            title="Edit salary"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setPayTarget(s);
+                              setPayAmount(String(s.netSalary));
+                            }}
+                          >
+                            Record Payment
+                          </Button>
+                        </div>
                       )}
                     </td>
                   )}
@@ -162,7 +229,11 @@ export function SalariesWorkspace() {
         </div>
       )}
 
-      <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Generate Teacher Salary">
+      <Modal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        title="Generate Teacher Salary"
+      >
         <form onSubmit={handleCreate} className="space-y-4">
           <div className="space-y-1">
             <Label>Teacher</Label>
@@ -211,7 +282,9 @@ export function SalariesWorkspace() {
                 min={1}
                 required
                 value={form.basicSalary}
-                onChange={(e) => setForm({ ...form, basicSalary: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, basicSalary: e.target.value })
+                }
               />
             </div>
             <div className="space-y-1">
@@ -229,12 +302,18 @@ export function SalariesWorkspace() {
                 type="number"
                 min={0}
                 value={form.deduction}
-                onChange={(e) => setForm({ ...form, deduction: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, deduction: e.target.value })
+                }
               />
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setCreateOpen(false)}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={createSalMut.isPending}>
@@ -265,7 +344,9 @@ export function SalariesWorkspace() {
             <Label>Payment Method</Label>
             <select
               value={payMethod}
-              onChange={(e) => setPayMethod(e.target.value as SalaryPaymentMethod)}
+              onChange={(e) =>
+                setPayMethod(e.target.value as SalaryPaymentMethod)
+              }
               className="h-9 w-full rounded-md border bg-background px-3 text-sm"
             >
               <option value="CASH">Cash</option>
@@ -275,11 +356,82 @@ export function SalariesWorkspace() {
             </select>
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={() => setPayTarget(null)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setPayTarget(null)}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={paySalMut.isPending}>
               Record Payment
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        open={!!editTarget}
+        onClose={() => setEditTarget(null)}
+        title="Edit Teacher Salary"
+      >
+        <form onSubmit={handleUpdate} className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="space-y-1">
+              <Label>Basic Salary (BDT)</Label>
+              <Input
+                type="number"
+                min={1}
+                required
+                value={editForm.basicSalary}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, basicSalary: e.target.value })
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Allowance (BDT)</Label>
+              <Input
+                type="number"
+                min={0}
+                value={editForm.allowance}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, allowance: e.target.value })
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Deduction (BDT)</Label>
+              <Input
+                type="number"
+                min={0}
+                value={editForm.deduction}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, deduction: e.target.value })
+                }
+              />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Label>Remarks (Optional)</Label>
+            <Input
+              placeholder="Optional salary adjustment notes"
+              value={editForm.remarks}
+              onChange={(e) =>
+                setEditForm({ ...editForm, remarks: e.target.value })
+              }
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setEditTarget(null)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={updateSalMut.isPending}>
+              {updateSalMut.isPending ? "Saving..." : "Save Changes"}
             </Button>
           </div>
         </form>

@@ -66,8 +66,13 @@ export const useMyStudentProfile = (schoolId: number) =>
 export const useUpdateStudent = (schoolId: number) => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, payload }: { id: number; payload: UpdateStudentInput }) =>
-      updateStudent(schoolId, id, payload),
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: number;
+      payload: UpdateStudentInput;
+    }) => updateStudent(schoolId, id, payload),
     onSuccess: (_data, variables) => {
       toast.success("Student profile saved");
       qc.invalidateQueries({ queryKey: studentKeys.all });
@@ -105,3 +110,35 @@ export const useActivateStudent = (schoolId: number) => {
       toast.error(getApiErrorMessage(err, "Failed to activate student")),
   });
 };
+
+export interface ResetStudentPasswordResponse {
+  studentId: number;
+  studentCode: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  temporaryPassword: string;
+}
+
+export const useResetStudentPassword = (schoolId: number) =>
+  useMutation({
+    mutationFn: async ({
+      studentId,
+      newPassword,
+    }: {
+      studentId: number;
+      newPassword?: string;
+    }) => {
+      const { api } = await import("@/lib/api");
+      const res = await api.post<{ data: ResetStudentPasswordResponse }>(
+        `/schools/${schoolId}/students/${studentId}/reset-password`,
+        newPassword ? { newPassword } : {},
+      );
+      return res.data.data;
+    },
+    onSuccess: () => {
+      toast.success("Student password reset successfully");
+    },
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to reset student password")),
+  });

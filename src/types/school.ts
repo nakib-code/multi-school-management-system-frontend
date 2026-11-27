@@ -1,8 +1,4 @@
-export type SchoolStatus =
-  | "PENDING"
-  | "ACTIVE"
-  | "BLOCKED"
-  | "REJECTED";
+export type SchoolStatus = "PENDING" | "ACTIVE" | "BLOCKED" | "REJECTED";
 
 export interface School {
   id: number;

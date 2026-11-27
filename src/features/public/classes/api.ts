@@ -19,9 +19,7 @@ export interface PublicSection {
 export const getPublicActiveClasses = async (
   schoolId: number,
 ): Promise<PublicClass[]> => {
-  const response = await api.get(
-    `/public/schools/${schoolId}/classes/active`,
-  );
+  const response = await api.get(`/public/schools/${schoolId}/classes/active`);
 
   return response.data.data;
 };
@@ -33,10 +31,7 @@ export const getPublicActiveSections = async (
   const response = await api.get(
     `/public/schools/${schoolId}/sections/active`,
     {
-      params:
-        classId !== undefined
-          ? { classId }
-          : undefined,
+      params: classId !== undefined ? { classId } : undefined,
     },
   );
 

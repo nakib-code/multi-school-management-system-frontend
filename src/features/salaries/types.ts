@@ -13,7 +13,12 @@ export interface TeacherSalaryRecord {
   netSalary: number | string;
   status: SalaryStatus;
   remarks: string | null;
-  teacher?: { id: number; firstName: string; lastName: string | null; employeeId: string };
+  teacher?: {
+    id: number;
+    firstName: string;
+    lastName: string | null;
+    employeeId: string;
+  };
 }
 
 export interface CreateTeacherSalaryInput {

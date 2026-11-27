@@ -15,7 +15,11 @@ export function AuditLogsWorkspace() {
   const schoolId = user?.schoolId ?? 0;
   const [page, setPage] = useState(1);
 
-  const { data, isLoading, isError, error, refetch } = useAuditLogs(schoolId, page, 20);
+  const { data, isLoading, isError, error, refetch } = useAuditLogs(
+    schoolId,
+    page,
+    20,
+  );
 
   if (isLoading) return <LoadingState message="Loading audit logs..." />;
   if (isError) {
@@ -90,7 +94,12 @@ export function AuditLogsWorkspace() {
             Page {meta.page} of {meta.totalPages}
           </span>
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => p - 1)}
+            >
               Previous
             </Button>
             <Button

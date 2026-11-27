@@ -11,8 +11,13 @@ export default function StudentProfilePage() {
   const { user } = useAuth();
   const schoolId = user?.schoolId ?? 0;
 
-  const { data: profile, isLoading, isError, error, refetch } =
-    useMyStudentProfile(schoolId);
+  const {
+    data: profile,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useMyStudentProfile(schoolId);
 
   if (isLoading) return <LoadingState message="Loading your profile..." />;
   if (isError || !profile) {

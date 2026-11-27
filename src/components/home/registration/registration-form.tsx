@@ -19,8 +19,8 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import {
-  createSchoolSchema,
   type CreateSchoolFormValues,
+  createSchoolSchema,
 } from "@/features/schools/schema";
 
 import type {
@@ -31,14 +31,10 @@ import type {
 import { RegistrationFormField } from "./registration-form-field";
 
 interface RegistrationFormProps {
-  registerSchool: (
-    payload: CreateSchoolInput,
-  ) => Promise<CreateSchoolResponse>;
+  registerSchool: (payload: CreateSchoolInput) => Promise<CreateSchoolResponse>;
 }
 
-export function RegistrationForm({
-  registerSchool,
-}: RegistrationFormProps) {
+export function RegistrationForm({ registerSchool }: RegistrationFormProps) {
   const router = useRouter();
 
   const [showPassword, setShowPassword] = useState(false);
@@ -88,24 +84,16 @@ export function RegistrationForm({
 
       const adminEmail = result.admin.email;
 
-      sessionStorage.setItem(
-        "schoolRegistrationEmail",
-        adminEmail,
-      );
+      sessionStorage.setItem("schoolRegistrationEmail", adminEmail);
 
       toast.success("Registration submitted", {
-        description:
-          "Please verify your admin email to continue.",
+        description: "Please verify your admin email to continue.",
       });
 
-      router.push(
-        `/auth/verify-email?email=${encodeURIComponent(adminEmail)}`,
-      );
+      router.push(`/auth/verify-email?email=${encodeURIComponent(adminEmail)}`);
     } catch (error) {
       const message =
-        error instanceof Error
-          ? error.message
-          : "Failed to register school";
+        error instanceof Error ? error.message : "Failed to register school";
 
       toast.error("Registration failed", {
         description: message,
@@ -114,10 +102,7 @@ export function RegistrationForm({
   };
 
   return (
-    <form
-      onSubmit={handleSubmit(onSubmit)}
-      className="p-6 sm:p-8 lg:p-10"
-    >
+    <form onSubmit={handleSubmit(onSubmit)} className="p-6 sm:p-8 lg:p-10">
       <div className="space-y-10">
         {/* ==================================================
             SCHOOL INFORMATION
@@ -344,22 +329,14 @@ export function RegistrationForm({
                   autoComplete="new-password"
                   placeholder="Minimum 8 characters"
                   {...register("adminPassword")}
-                  className={`${inputClass(
-                    !!errors.adminPassword,
-                  )} pr-11`}
+                  className={`${inputClass(!!errors.adminPassword)} pr-11`}
                 />
 
                 <button
                   type="button"
-                  onClick={() =>
-                    setShowPassword((value) => !value)
-                  }
+                  onClick={() => setShowPassword((value) => !value)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-[#061842]"
-                  aria-label={
-                    showPassword
-                      ? "Hide password"
-                      : "Show password"
-                  }
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? (
                     <EyeOff className="h-4 w-4" />
@@ -381,27 +358,19 @@ export function RegistrationForm({
               <div className="relative">
                 <input
                   id="confirmPassword"
-                  type={
-                    showConfirmPassword ? "text" : "password"
-                  }
+                  type={showConfirmPassword ? "text" : "password"}
                   autoComplete="new-password"
                   placeholder="Re-enter your password"
                   {...register("confirmPassword")}
-                  className={`${inputClass(
-                    !!errors.confirmPassword,
-                  )} pr-11`}
+                  className={`${inputClass(!!errors.confirmPassword)} pr-11`}
                 />
 
                 <button
                   type="button"
-                  onClick={() =>
-                    setShowConfirmPassword((value) => !value)
-                  }
+                  onClick={() => setShowConfirmPassword((value) => !value)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-[#061842]"
                   aria-label={
-                    showConfirmPassword
-                      ? "Hide password"
-                      : "Show password"
+                    showConfirmPassword ? "Hide password" : "Show password"
                   }
                 >
                   {showConfirmPassword ? (
@@ -424,9 +393,7 @@ export function RegistrationForm({
             disabled={isSubmitting}
             className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#061842] px-5 text-sm font-bold text-white shadow-lg shadow-slate-900/10 transition hover:bg-[#0b285f] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isSubmitting && (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            )}
+            {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
 
             {isSubmitting
               ? "Submitting Registration..."
@@ -434,8 +401,8 @@ export function RegistrationForm({
           </button>
 
           <p className="mt-4 text-center text-xs leading-5 text-slate-400">
-            After registration, you&apos;ll need to verify the admin email.
-            Your school will then be reviewed by the Super Admin.
+            After registration, you&apos;ll need to verify the admin email. Your
+            school will then be reviewed by the Super Admin.
           </p>
         </div>
       </div>

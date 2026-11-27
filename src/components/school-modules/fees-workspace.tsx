@@ -3,6 +3,7 @@
 import {
   CheckCircle2,
   CreditCard,
+  Pencil,
   Plus,
   Smartphone,
   Trash2,
@@ -25,6 +26,7 @@ import {
   useStudentFees,
   useStudentPayments,
   useSubmitStudentPayment,
+  useUpdateStudentFee,
   useVerifyStudentPayment,
 } from "@/features/fees/hooks";
 import type { FeeType, StudentFeeRecord } from "@/features/fees/types";
@@ -41,6 +43,7 @@ export function FeesWorkspace() {
 
   const [tab, setTab] = useState<"fees" | "payments">("fees");
   const [createOpen, setCreateOpen] = useState(false);
+  const [editFee, setEditFee] = useState<StudentFeeRecord | null>(null);
   const [payFee, setPayFee] = useState<StudentFeeRecord | null>(null);
   const [rejectId, setRejectId] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState("");
@@ -51,6 +54,14 @@ export function FeesWorkspace() {
     title: "",
     amount: "",
     dueDate: "",
+  });
+
+  const [editFeeForm, setEditFeeForm] = useState({
+    title: "",
+    amount: "",
+    discount: "",
+    dueDate: "",
+    remarks: "",
   });
 
   const [payForm, setPayForm] = useState({
@@ -69,6 +80,7 @@ export function FeesWorkspace() {
   const { data: enrollments = [] } = useEnrollments(canManage ? schoolId : 0);
 
   const createFeeMut = useCreateStudentFee(schoolId);
+  const updateFeeMut = useUpdateStudentFee(schoolId);
   const deleteFeeMut = useDeleteStudentFee(schoolId);
   const submitPayMut = useSubmitStudentPayment(schoolId);
   const verifyPayMut = useVerifyStudentPayment(schoolId);
@@ -110,6 +122,39 @@ export function FeesWorkspace() {
       amount: "",
       dueDate: "",
     });
+  };
+
+  const openEditFee = (fee: StudentFeeRecord) => {
+    setEditFee(fee);
+    setEditFeeForm({
+      title: fee.title,
+      amount: String(fee.amount),
+      discount: "",
+      dueDate: fee.dueDate
+        ? new Date(fee.dueDate).toISOString().slice(0, 10)
+        : "",
+      remarks: fee.description ?? "",
+    });
+  };
+
+  const handleUpdateFee = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editFee) return;
+    await updateFeeMut.mutateAsync({
+      id: editFee.id,
+      payload: {
+        title: editFeeForm.title.trim(),
+        amount: Number(editFeeForm.amount),
+        ...(editFeeForm.discount !== ""
+          ? { discount: Number(editFeeForm.discount) }
+          : {}),
+        dueDate: editFeeForm.dueDate,
+        ...(editFeeForm.remarks.trim()
+          ? { remarks: editFeeForm.remarks.trim() }
+          : {}),
+      },
+    });
+    setEditFee(null);
   };
 
   const handlePaySubmit = async (e: React.FormEvent) => {
@@ -251,6 +296,16 @@ export function FeesWorkspace() {
                           >
                             <Smartphone className="h-3.5 w-3.5" />
                             Submit Payment
+                          </Button>
+                        )}
+                        {canManage && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => openEditFee(f)}
+                            title="Edit fee"
+                          >
+                            <Pencil className="h-4 w-4" />
                           </Button>
                         )}
                         {isAdmin && (
@@ -618,6 +673,86 @@ export function FeesWorkspace() {
             </Button>
           </div>
         </div>
+      </Modal>
+
+      <Modal
+        open={!!editFee}
+        onClose={() => setEditFee(null)}
+        title="Edit Student Fee"
+      >
+        <form onSubmit={handleUpdateFee} className="space-y-4">
+          <div className="space-y-1">
+            <Label>Title</Label>
+            <Input
+              required
+              placeholder="November Tuition Fee"
+              value={editFeeForm.title}
+              onChange={(e) =>
+                setEditFeeForm({ ...editFeeForm, title: e.target.value })
+              }
+            />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label>Amount (BDT)</Label>
+              <Input
+                type="number"
+                min={1}
+                required
+                value={editFeeForm.amount}
+                onChange={(e) =>
+                  setEditFeeForm({ ...editFeeForm, amount: e.target.value })
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Discount (BDT)</Label>
+              <Input
+                type="number"
+                min={0}
+                placeholder="0"
+                value={editFeeForm.discount}
+                onChange={(e) =>
+                  setEditFeeForm({ ...editFeeForm, discount: e.target.value })
+                }
+              />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Label>Due Date</Label>
+            <Input
+              type="date"
+              required
+              value={editFeeForm.dueDate}
+              onChange={(e) =>
+                setEditFeeForm({ ...editFeeForm, dueDate: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-1">
+            <Label>Remarks (Optional)</Label>
+            <Textarea
+              rows={2}
+              placeholder="Optional notes or adjustment reason..."
+              value={editFeeForm.remarks}
+              onChange={(e) =>
+                setEditFeeForm({ ...editFeeForm, remarks: e.target.value })
+              }
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setEditFee(null)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={updateFeeMut.isPending}>
+              {updateFeeMut.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
+        </form>
       </Modal>
     </div>
   );

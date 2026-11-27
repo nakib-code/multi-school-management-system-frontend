@@ -1,10 +1,14 @@
 "use client";
 
+import {
+  ArrowLeft,
+  Building2,
+  CheckCircle2,
+  GraduationCap,
+} from "lucide-react";
 import Link from "next/link";
-import { ArrowLeft, Building2, CheckCircle2, GraduationCap } from "lucide-react";
-
-import { useCreateSchool } from "@/features/schools/hooks";
 import { RegistrationForm } from "@/components/home/registration/registration-form";
+import { useCreateSchool } from "@/features/schools/hooks";
 
 export default function RegisterSchoolPage() {
   const { mutateAsync: registerSchool } = useCreateSchool();
@@ -37,9 +41,7 @@ export default function RegisterSchoolPage() {
 
               <h1 className="text-4xl font-black leading-tight tracking-tight sm:text-5xl lg:text-6xl">
                 Bring Your School
-                <span className="block text-[#00d2c4]">
-                  Online With Us
-                </span>
+                <span className="block text-[#00d2c4]">Online With Us</span>
               </h1>
 
               <p className="mt-5 max-w-xl text-base leading-7 text-white/60 sm:text-lg">

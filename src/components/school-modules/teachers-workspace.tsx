@@ -4,6 +4,7 @@ import {
   Copy,
   KeyRound,
   LockKeyhole,
+  Pencil,
   Plus,
   RefreshCw,
   Trash2,
@@ -29,8 +30,14 @@ import {
   useResetTeacherPassword,
   useTeacherAssignments,
   useTeachers,
+  useUpdateTeacher,
+  useUpdateTeacherAssignment,
   useVerifyTeacherEmail,
 } from "@/features/teachers/hooks";
+import type {
+  TeacherAssignmentRecord,
+  TeacherRecord,
+} from "@/features/teachers/types";
 import { getApiErrorMessage } from "@/lib/api";
 import { useAuth } from "@/providers/auth-provider";
 
@@ -98,6 +105,27 @@ export function TeachersWorkspace() {
     academicYear: String(new Date().getFullYear()),
   });
 
+  const [editTeacherTarget, setEditTeacherTarget] =
+    useState<TeacherRecord | null>(null);
+  const [editTeacherForm, setEditTeacherForm] = useState({
+    firstName: "",
+    lastName: "",
+    phone: "",
+    designation: "",
+    department: "",
+    qualification: "",
+  });
+
+  const [editAssignTarget, setEditAssignTarget] =
+    useState<TeacherAssignmentRecord | null>(null);
+  const [editAssignForm, setEditAssignForm] = useState({
+    classId: "",
+    sectionId: "",
+    subjectId: "",
+    academicYear: "",
+    isClassTeacher: false,
+  });
+
   const teachersQuery = useTeachers(schoolId);
   const assignmentsQuery = useTeacherAssignments(schoolId);
   const { data: classes = [] } = useClasses(schoolId);
@@ -105,11 +133,13 @@ export function TeachersWorkspace() {
   const { data: subjects = [] } = useSubjects(schoolId);
 
   const createTeacherMut = useCreateTeacher(schoolId);
+  const updateTeacherMut = useUpdateTeacher(schoolId);
   const verifyEmailMut = useVerifyTeacherEmail(schoolId);
   const resendOtpMut = useResendTeacherOtp(schoolId);
   const resetPasswordMut = useResetTeacherPassword(schoolId);
   const deactivateMut = useDeactivateTeacher(schoolId);
   const createAssignMut = useCreateTeacherAssignment(schoolId);
+  const updateAssignMut = useUpdateTeacherAssignment(schoolId);
   const deleteAssignMut = useDeleteTeacherAssignment(schoolId);
 
   if (teachersQuery.isLoading)
@@ -216,6 +246,82 @@ export function TeachersWorkspace() {
       academicYear: assignForm.academicYear.trim(),
     });
     setAssignOpen(false);
+  };
+
+  const openEditTeacherModal = (t: TeacherRecord) => {
+    setEditTeacherTarget(t);
+    setEditTeacherForm({
+      firstName: t.firstName,
+      lastName: t.lastName ?? "",
+      phone: t.phone ?? "",
+      designation: t.designation ?? "",
+      department:
+        "department" in t && typeof t.department === "string"
+          ? t.department
+          : "",
+      qualification: t.qualification ?? "",
+    });
+  };
+
+  const handleUpdateTeacher = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editTeacherTarget) return;
+    await updateTeacherMut.mutateAsync({
+      teacherId: editTeacherTarget.id,
+      payload: {
+        firstName: editTeacherForm.firstName.trim(),
+        ...(editTeacherForm.lastName.trim()
+          ? { lastName: editTeacherForm.lastName.trim() }
+          : {}),
+        ...(editTeacherForm.phone.trim()
+          ? { phone: editTeacherForm.phone.trim() }
+          : {}),
+        ...(editTeacherForm.designation.trim()
+          ? { designation: editTeacherForm.designation.trim() }
+          : {}),
+        ...(editTeacherForm.department.trim()
+          ? { department: editTeacherForm.department.trim() }
+          : {}),
+        ...(editTeacherForm.qualification.trim()
+          ? { qualification: editTeacherForm.qualification.trim() }
+          : {}),
+      },
+    });
+    setEditTeacherTarget(null);
+  };
+
+  const openEditAssignmentModal = (a: TeacherAssignmentRecord) => {
+    setEditAssignTarget(a);
+    setEditAssignForm({
+      classId: String(a.classId),
+      sectionId: a.sectionId ? String(a.sectionId) : "",
+      subjectId: a.subjectId ? String(a.subjectId) : "",
+      academicYear: a.academicYear,
+      isClassTeacher:
+        "isClassTeacher" in a && typeof a.isClassTeacher === "boolean"
+          ? a.isClassTeacher
+          : false,
+    });
+  };
+
+  const handleUpdateAssignment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editAssignTarget) return;
+    await updateAssignMut.mutateAsync({
+      id: editAssignTarget.id,
+      payload: {
+        classId: Number(editAssignForm.classId),
+        sectionId: editAssignForm.sectionId
+          ? Number(editAssignForm.sectionId)
+          : null,
+        subjectId: editAssignForm.subjectId
+          ? Number(editAssignForm.subjectId)
+          : null,
+        academicYear: editAssignForm.academicYear.trim(),
+        isClassTeacher: editAssignForm.isClassTeacher,
+      },
+    });
+    setEditAssignTarget(null);
   };
 
   const copyText = async (text: string, label: string) => {
@@ -354,6 +460,15 @@ export function TeachersWorkspace() {
                         <Button
                           size="sm"
                           variant="outline"
+                          onClick={() => openEditTeacherModal(t)}
+                          className="min-h-[40px] flex-1 gap-1 rounded-[11px] text-xs"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
                           onClick={() =>
                             setResetTarget({ id: t.id, name: fullName })
                           }
@@ -401,7 +516,8 @@ export function TeachersWorkspace() {
                       t.status ??
                       (t.isActive ? "ACTIVE" : "INACTIVE");
                     const cd = cooldowns[t.id] ?? 0;
-                    const fullName = `${t.firstName} ${t.lastName ?? ""}`.trim();
+                    const fullName =
+                      `${t.firstName} ${t.lastName ?? ""}`.trim();
 
                     return (
                       <tr key={t.id}>
@@ -445,6 +561,15 @@ export function TeachersWorkspace() {
                                   </Button>
                                 </>
                               )}
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => openEditTeacherModal(t)}
+                                className="gap-1"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                                Edit
+                              </Button>
                               <Button
                                 size="sm"
                                 variant="outline"
@@ -513,14 +638,25 @@ export function TeachersWorkspace() {
                   <td className="px-4 py-3">{a.academicYear}</td>
                   {canManage && (
                     <td className="px-4 py-3 text-right">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => deleteAssignMut.mutate(a.id)}
-                        className="text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="inline-flex items-center gap-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openEditAssignmentModal(a)}
+                          className="gap-1"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => deleteAssignMut.mutate(a.id)}
+                          className="text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </td>
                   )}
                 </tr>
@@ -942,6 +1078,235 @@ export function TeachersWorkspace() {
             </Button>
             <Button type="submit" disabled={resetPasswordMut.isPending}>
               {resetPasswordMut.isPending ? "Updating..." : "Update Password"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Edit Teacher Modal */}
+      <Modal
+        open={!!editTeacherTarget}
+        onClose={() => setEditTeacherTarget(null)}
+        title="Edit Teacher"
+      >
+        <form onSubmit={handleUpdateTeacher} className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label>First Name *</Label>
+              <Input
+                required
+                value={editTeacherForm.firstName}
+                onChange={(e) =>
+                  setEditTeacherForm({
+                    ...editTeacherForm,
+                    firstName: e.target.value,
+                  })
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Last Name</Label>
+              <Input
+                value={editTeacherForm.lastName}
+                onChange={(e) =>
+                  setEditTeacherForm({
+                    ...editTeacherForm,
+                    lastName: e.target.value,
+                  })
+                }
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label>Phone</Label>
+              <Input
+                value={editTeacherForm.phone}
+                onChange={(e) =>
+                  setEditTeacherForm({
+                    ...editTeacherForm,
+                    phone: e.target.value,
+                  })
+                }
+                placeholder="01XXXXXXXXX"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Designation</Label>
+              <Input
+                value={editTeacherForm.designation}
+                onChange={(e) =>
+                  setEditTeacherForm({
+                    ...editTeacherForm,
+                    designation: e.target.value,
+                  })
+                }
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label>Department</Label>
+              <Input
+                value={editTeacherForm.department}
+                onChange={(e) =>
+                  setEditTeacherForm({
+                    ...editTeacherForm,
+                    department: e.target.value,
+                  })
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Qualification</Label>
+              <Input
+                value={editTeacherForm.qualification}
+                onChange={(e) =>
+                  setEditTeacherForm({
+                    ...editTeacherForm,
+                    qualification: e.target.value,
+                  })
+                }
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setEditTeacherTarget(null)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={updateTeacherMut.isPending}>
+              {updateTeacherMut.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Edit Teacher Assignment Modal */}
+      <Modal
+        open={!!editAssignTarget}
+        onClose={() => setEditAssignTarget(null)}
+        title="Edit Teacher Assignment"
+      >
+        <form onSubmit={handleUpdateAssignment} className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label>Class *</Label>
+              <select
+                required
+                value={editAssignForm.classId}
+                onChange={(e) =>
+                  setEditAssignForm({
+                    ...editAssignForm,
+                    classId: e.target.value,
+                    sectionId: "",
+                  })
+                }
+                className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+              >
+                <option value="">Select class...</option>
+                {classes.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <Label>Section</Label>
+              <select
+                value={editAssignForm.sectionId}
+                onChange={(e) =>
+                  setEditAssignForm({
+                    ...editAssignForm,
+                    sectionId: e.target.value,
+                  })
+                }
+                className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+              >
+                <option value="">None</option>
+                {sections
+                  .filter(
+                    (s) =>
+                      !editAssignForm.classId ||
+                      s.classId === Number(editAssignForm.classId),
+                  )
+                  .map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label>Subject</Label>
+              <select
+                value={editAssignForm.subjectId}
+                onChange={(e) =>
+                  setEditAssignForm({
+                    ...editAssignForm,
+                    subjectId: e.target.value,
+                  })
+                }
+                className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+              >
+                <option value="">None</option>
+                {subjects.map((sub) => (
+                  <option key={sub.id} value={sub.id}>
+                    {sub.name} ({sub.code})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <Label>Academic Year *</Label>
+              <Input
+                required
+                value={editAssignForm.academicYear}
+                onChange={(e) =>
+                  setEditAssignForm({
+                    ...editAssignForm,
+                    academicYear: e.target.value,
+                  })
+                }
+              />
+            </div>
+          </div>
+
+          <label className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={editAssignForm.isClassTeacher}
+              onChange={(e) =>
+                setEditAssignForm({
+                  ...editAssignForm,
+                  isClassTeacher: e.target.checked,
+                })
+              }
+              className="h-4 w-4 rounded border"
+            />
+            Assign as Class Teacher
+          </label>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setEditAssignTarget(null)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={updateAssignMut.isPending}>
+              {updateAssignMut.isPending ? "Saving..." : "Save Changes"}
             </Button>
           </div>
         </form>

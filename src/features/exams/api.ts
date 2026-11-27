@@ -6,9 +6,12 @@ export const getExams = async (
   schoolId: number,
   params?: { classId?: number; status?: string; academicYear?: string },
 ): Promise<ExamRecord[]> => {
-  const res = await api.get<ApiResponse<ExamRecord[]>>(`/schools/${schoolId}/exams`, {
-    params,
-  });
+  const res = await api.get<ApiResponse<ExamRecord[]>>(
+    `/schools/${schoolId}/exams`,
+    {
+      params,
+    },
+  );
   return res.data.data;
 };
 

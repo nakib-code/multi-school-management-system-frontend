@@ -30,10 +30,7 @@ export function RegistrationFormField({
         <span>{label}</span>
 
         {required && (
-          <span
-            className="text-red-500"
-            aria-hidden="true"
-          >
+          <span className="text-red-500" aria-hidden="true">
             *
           </span>
         )}
@@ -42,10 +39,7 @@ export function RegistrationFormField({
       {children}
 
       {error && (
-        <p
-          className="text-xs font-medium text-red-500"
-          role="alert"
-        >
+        <p className="text-xs font-medium text-red-500" role="alert">
           {error}
         </p>
       )}

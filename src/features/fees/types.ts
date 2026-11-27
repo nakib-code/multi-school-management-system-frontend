@@ -1,6 +1,12 @@
 import type { MobilePaymentMethod } from "@/features/payments/types";
 
-export type FeeType = "ADMISSION" | "MONTHLY" | "EXAM" | "TRANSPORT" | "LIBRARY" | "OTHER";
+export type FeeType =
+  | "ADMISSION"
+  | "MONTHLY"
+  | "EXAM"
+  | "TRANSPORT"
+  | "LIBRARY"
+  | "OTHER";
 export type FeeStatus = "PENDING" | "PARTIAL" | "PAID" | "WAIVED";
 export type StudentPaymentStatus = "PENDING" | "VERIFIED" | "REJECTED";
 
@@ -18,8 +24,18 @@ export interface StudentPaymentRecord {
   paidAt: string;
   rejectionReason?: string | null;
   remarks?: string | null;
-  student?: { id: number; firstName: string; lastName: string | null; studentId: string };
-  fee?: { id: number; title: string; feeType: FeeType; amount: number | string };
+  student?: {
+    id: number;
+    firstName: string;
+    lastName: string | null;
+    studentId: string;
+  };
+  fee?: {
+    id: number;
+    title: string;
+    feeType: FeeType;
+    amount: number | string;
+  };
 }
 
 export interface StudentFeeRecord {
@@ -33,7 +49,12 @@ export interface StudentFeeRecord {
   dueDate: string;
   status: FeeStatus;
   description: string | null;
-  student?: { id: number; firstName: string; lastName: string | null; studentId: string };
+  student?: {
+    id: number;
+    firstName: string;
+    lastName: string | null;
+    studentId: string;
+  };
   payments?: StudentPaymentRecord[];
 }
 

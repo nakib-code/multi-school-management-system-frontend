@@ -18,8 +18,13 @@ const statusStyle: Record<string, string> = {
 };
 
 export default function SubscriptionList() {
-  const { data: subscriptions = [], isLoading, isError, error, refetch } =
-    useSubscriptions();
+  const {
+    data: subscriptions = [],
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useSubscriptions();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
 

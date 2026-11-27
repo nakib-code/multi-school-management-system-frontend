@@ -11,14 +11,19 @@ import {
   getStudentHefzProgress,
   upsertHefzDailyLog,
 } from "./api";
-import type { CreateHefzEnrollmentInput, UpsertHefzDailyLogInput } from "./types";
+import type {
+  CreateHefzEnrollmentInput,
+  UpsertHefzDailyLogInput,
+} from "./types";
 
 export const hefzKeys = {
   all: ["hefz"] as const,
-  enrollments: (schoolId: number) => [...hefzKeys.all, "enrollments", schoolId] as const,
+  enrollments: (schoolId: number) =>
+    [...hefzKeys.all, "enrollments", schoolId] as const,
   logs: (schoolId: number, hefzEnrollmentId?: number) =>
     [...hefzKeys.all, "logs", schoolId, hefzEnrollmentId] as const,
-  guardianProgress: (schoolId: number) => [...hefzKeys.all, "guardian", schoolId] as const,
+  guardianProgress: (schoolId: number) =>
+    [...hefzKeys.all, "guardian", schoolId] as const,
   studentProgress: (schoolId: number, studentId: number) =>
     [...hefzKeys.all, "student", schoolId, studentId] as const,
 };
@@ -39,14 +44,19 @@ export const useCreateHefzEnrollment = (schoolId: number) => {
       toast.success("Student enrolled in Hefz/Najera");
       qc.invalidateQueries({ queryKey: hefzKeys.enrollments(schoolId) });
     },
-    onError: (err) => toast.error(getApiErrorMessage(err, "Failed to enroll in Hefz")),
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to enroll in Hefz")),
   });
 };
 
 export const useHefzDailyLogs = (schoolId: number, hefzEnrollmentId?: number) =>
   useQuery({
     queryKey: hefzKeys.logs(schoolId, hefzEnrollmentId),
-    queryFn: () => getHefzDailyLogs(schoolId, hefzEnrollmentId ? { hefzEnrollmentId } : undefined),
+    queryFn: () =>
+      getHefzDailyLogs(
+        schoolId,
+        hefzEnrollmentId ? { hefzEnrollmentId } : undefined,
+      ),
     enabled: schoolId > 0,
   });
 
@@ -59,7 +69,8 @@ export const useUpsertHefzDailyLog = (schoolId: number) => {
       toast.success("Daily Sobok/Manzil log saved");
       qc.invalidateQueries({ queryKey: hefzKeys.all });
     },
-    onError: (err) => toast.error(getApiErrorMessage(err, "Failed to save daily log")),
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to save daily log")),
   });
 };
 
@@ -76,3 +87,66 @@ export const useStudentHefzProgress = (schoolId: number, studentId: number) =>
     queryFn: () => getStudentHefzProgress(schoolId, studentId),
     enabled: schoolId > 0 && studentId > 0,
   });
+
+export const useUpdateHefzEnrollment = (schoolId: number) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      payload,
+    }: {
+      id: number;
+      payload: {
+        wing?: string;
+        currentPara?: number;
+        currentSurah?: string;
+        status?: string;
+        ustadId?: number | null;
+      };
+    }) => {
+      const { api } = await import("@/lib/api");
+      const res = await api.patch(
+        `/schools/${schoolId}/hefz/enrollments/${id}`,
+        payload,
+      );
+      return res.data.data;
+    },
+    onSuccess: () => {
+      toast.success("Hefz enrollment updated");
+      qc.invalidateQueries({ queryKey: hefzKeys.all });
+    },
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to update Hefz enrollment")),
+  });
+};
+
+export const useUpdateHefzDailyLog = (schoolId: number) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      payload,
+    }: {
+      id: number;
+      payload: {
+        sabak?: string;
+        satsabak?: string;
+        amukhta?: string;
+        remarks?: string;
+      };
+    }) => {
+      const { api } = await import("@/lib/api");
+      const res = await api.patch(
+        `/schools/${schoolId}/hefz/daily-logs/${id}`,
+        payload,
+      );
+      return res.data.data;
+    },
+    onSuccess: () => {
+      toast.success("Daily log updated");
+      qc.invalidateQueries({ queryKey: hefzKeys.all });
+    },
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to update daily log")),
+  });
+};

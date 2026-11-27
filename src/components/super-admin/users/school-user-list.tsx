@@ -3,13 +3,11 @@
 import { useQueries } from "@tanstack/react-query";
 import { AlertCircle, Building2, Loader2, Users } from "lucide-react";
 import { useMemo } from "react";
-
+import { useSchools } from "@/features/schools/hooks";
 // Adjust to where your useSchools hook lives
 import { getSchoolUserSummary } from "@/features/super-admin/users/api";
 import { schoolUsersKeys } from "@/features/super-admin/users/hooks";
-
 import { SchoolUserCard } from "./school-user-card";
-import { useSchools } from "@/features/schools/hooks";
 
 interface SchoolUserListProps {
   onSelectSchool: (schoolId: number) => void;

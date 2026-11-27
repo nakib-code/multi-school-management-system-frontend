@@ -2,8 +2,12 @@ import { api } from "@/lib/api";
 import type { ApiResponse } from "@/types/api";
 import type { CreateManagerInput, ManagerRecord } from "./types";
 
-export const getManagers = async (schoolId: number): Promise<ManagerRecord[]> => {
-  const res = await api.get<ApiResponse<ManagerRecord[]>>(`/schools/${schoolId}/managers`);
+export const getManagers = async (
+  schoolId: number,
+): Promise<ManagerRecord[]> => {
+  const res = await api.get<ApiResponse<ManagerRecord[]>>(
+    `/schools/${schoolId}/managers`,
+  );
   return res.data.data;
 };
 

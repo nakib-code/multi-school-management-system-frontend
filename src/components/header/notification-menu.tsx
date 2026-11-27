@@ -71,7 +71,9 @@ export function NotificationMenu() {
             ) : notifications.length === 0 ? (
               <div className="py-6 text-center">
                 <Bell className="mx-auto mb-2 h-6 w-6 text-muted-foreground/50" />
-                <p className="text-sm font-medium text-foreground">All caught up</p>
+                <p className="text-sm font-medium text-foreground">
+                  All caught up
+                </p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   No notifications yet.
                 </p>

@@ -28,13 +28,6 @@ const FEATURE_CONTROLS: {
       "Ustad-based Halqa enrollment and daily Sabak, Satsabak, and Amukhta logs.",
   },
   {
-    key: "hasPublicWebsite",
-    title: "Public Website Builder",
-    description:
-      "Subdomain landing page, notices, gallery, and public contact form.",
-    badge: "Add-on",
-  },
-  {
     key: "hasOnlineAdmission",
     title: "Online Admissions",
     description:

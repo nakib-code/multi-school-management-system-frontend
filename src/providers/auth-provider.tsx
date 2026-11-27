@@ -2,11 +2,7 @@
 
 import { createContext, useContext, useMemo } from "react";
 
-import {
-  useCurrentUser,
-  useLogin,
-  useLogout,
-} from "@/features/auth/hooks";
+import { useCurrentUser, useLogin, useLogout } from "@/features/auth/hooks";
 
 import type { LoginPayload, User } from "@/features/auth/types";
 
@@ -18,19 +14,10 @@ interface AuthContextValue {
   logout: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextValue | undefined>(
-  undefined,
-);
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-export function AuthProvider({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const {
-    data: user,
-    isLoading,
-  } = useCurrentUser();
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const { data: user, isLoading } = useCurrentUser();
 
   const loginMutation = useLogin();
   const logoutMutation = useLogout();
@@ -40,9 +27,7 @@ export function AuthProvider({
       user: user ?? null,
 
       isLoading:
-        isLoading ||
-        loginMutation.isPending ||
-        logoutMutation.isPending,
+        isLoading || loginMutation.isPending || logoutMutation.isPending,
 
       isAuthenticated: !!user,
 
@@ -54,28 +39,17 @@ export function AuthProvider({
         await logoutMutation.mutateAsync();
       },
     }),
-    [
-      user,
-      isLoading,
-      loginMutation,
-      logoutMutation,
-    ],
+    [user, isLoading, loginMutation, logoutMutation],
   );
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
   const context = useContext(AuthContext);
 
   if (!context) {
-    throw new Error(
-      "useAuth must be used inside AuthProvider",
-    );
+    throw new Error("useAuth must be used inside AuthProvider");
   }
 
   return context;

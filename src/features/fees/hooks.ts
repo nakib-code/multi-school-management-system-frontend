@@ -35,12 +35,14 @@ export const useStudentFees = (
 export const useCreateStudentFee = (schoolId: number) => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (payload: CreateStudentFeeInput) => createStudentFee(schoolId, payload),
+    mutationFn: (payload: CreateStudentFeeInput) =>
+      createStudentFee(schoolId, payload),
     onSuccess: () => {
       toast.success("Student fee invoice created");
       qc.invalidateQueries({ queryKey: feeKeys.all });
     },
-    onError: (err) => toast.error(getApiErrorMessage(err, "Failed to create fee")),
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to create fee")),
   });
 };
 
@@ -52,7 +54,8 @@ export const useDeleteStudentFee = (schoolId: number) => {
       toast.success("Fee invoice deleted");
       qc.invalidateQueries({ queryKey: feeKeys.all });
     },
-    onError: (err) => toast.error(getApiErrorMessage(err, "Failed to delete fee")),
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to delete fee")),
   });
 };
 
@@ -75,7 +78,8 @@ export const useSubmitStudentPayment = (schoolId: number) => {
       toast.success("Payment submitted and pending school verification");
       qc.invalidateQueries({ queryKey: feeKeys.all });
     },
-    onError: (err) => toast.error(getApiErrorMessage(err, "Failed to submit payment")),
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to submit payment")),
   });
 };
 
@@ -87,19 +91,58 @@ export const useVerifyStudentPayment = (schoolId: number) => {
       toast.success("Student payment verified");
       qc.invalidateQueries({ queryKey: feeKeys.all });
     },
-    onError: (err) => toast.error(getApiErrorMessage(err, "Failed to verify payment")),
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to verify payment")),
   });
 };
 
 export const useRejectStudentPayment = (schoolId: number) => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, rejectionReason }: { id: number; rejectionReason: string }) =>
-      rejectStudentPayment(schoolId, id, rejectionReason),
+    mutationFn: ({
+      id,
+      rejectionReason,
+    }: {
+      id: number;
+      rejectionReason: string;
+    }) => rejectStudentPayment(schoolId, id, rejectionReason),
     onSuccess: () => {
       toast.success("Student payment rejected");
       qc.invalidateQueries({ queryKey: feeKeys.all });
     },
-    onError: (err) => toast.error(getApiErrorMessage(err, "Failed to reject payment")),
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to reject payment")),
+  });
+};
+
+export const useUpdateStudentFee = (schoolId: number) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      payload,
+    }: {
+      id: number;
+      payload: {
+        title?: string;
+        amount?: number;
+        discount?: number;
+        dueDate?: string;
+        remarks?: string;
+      };
+    }) => {
+      const { api } = await import("@/lib/api");
+      const res = await api.patch(
+        `/schools/${schoolId}/student-fees/${id}`,
+        payload,
+      );
+      return res.data.data;
+    },
+    onSuccess: () => {
+      toast.success("Fee invoice updated");
+      qc.invalidateQueries({ queryKey: feeKeys.all });
+    },
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to update fee invoice")),
   });
 };

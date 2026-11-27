@@ -2,50 +2,27 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import {
-  getSchoolUserSummary,
-  getSchoolUsers,
-} from "./api";
+import { getSchoolUserSummary, getSchoolUsers } from "./api";
 
-import type {
-  GetSchoolUsersParams,
-} from "./types";
+import type { GetSchoolUsersParams } from "./types";
 
 export const schoolUsersKeys = {
   all: ["school-users"] as const,
 
   summary: (schoolId: number) =>
-    [
-      ...schoolUsersKeys.all,
-      "summary",
-      schoolId,
-    ] as const,
+    [...schoolUsersKeys.all, "summary", schoolId] as const,
 
-  list: (
-    schoolId: number,
-    params: GetSchoolUsersParams,
-  ) =>
-    [
-      ...schoolUsersKeys.all,
-      "list",
-      schoolId,
-      params,
-    ] as const,
+  list: (schoolId: number, params: GetSchoolUsersParams) =>
+    [...schoolUsersKeys.all, "list", schoolId, params] as const,
 };
 
-export const useSchoolUserSummary = (
-  schoolId: number,
-) => {
+export const useSchoolUserSummary = (schoolId: number) => {
   return useQuery({
-    queryKey:
-      schoolUsersKeys.summary(schoolId),
+    queryKey: schoolUsersKeys.summary(schoolId),
 
-    queryFn: () =>
-      getSchoolUserSummary(schoolId),
+    queryFn: () => getSchoolUserSummary(schoolId),
 
-    enabled:
-      Number.isInteger(schoolId) &&
-      schoolId > 0,
+    enabled: Number.isInteger(schoolId) && schoolId > 0,
   });
 };
 
@@ -54,20 +31,10 @@ export const useSchoolUsers = (
   params: GetSchoolUsersParams = {},
 ) => {
   return useQuery({
-    queryKey:
-      schoolUsersKeys.list(
-        schoolId,
-        params,
-      ),
+    queryKey: schoolUsersKeys.list(schoolId, params),
 
-    queryFn: () =>
-      getSchoolUsers(
-        schoolId,
-        params,
-      ),
+    queryFn: () => getSchoolUsers(schoolId, params),
 
-    enabled:
-      Number.isInteger(schoolId) &&
-      schoolId > 0,
+    enabled: Number.isInteger(schoolId) && schoolId > 0,
   });
 };

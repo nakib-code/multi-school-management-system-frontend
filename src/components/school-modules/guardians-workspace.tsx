@@ -1,6 +1,13 @@
 "use client";
 
-import { HeartHandshake, Link2, LockKeyhole, Plus, Trash2 } from "lucide-react";
+import {
+  HeartHandshake,
+  Link2,
+  LockKeyhole,
+  Pencil,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { useState } from "react";
 import { Modal } from "@/components/modals/modal";
 import {
@@ -19,7 +26,9 @@ import {
   useGuardians,
   useLinkStudentToGuardian,
   useResetGuardianPassword,
+  useUpdateGuardian,
 } from "@/features/guardians/hooks";
+import type { GuardianRecord } from "@/features/guardians/types";
 import { useStudents } from "@/features/students/hooks";
 import { getApiErrorMessage } from "@/lib/api";
 import { useAuth } from "@/providers/auth-provider";
@@ -44,11 +53,21 @@ export function GuardiansWorkspace() {
   } = useGuardians(schoolId);
   const { data: studentsData } = useStudents(schoolId, { page: 1, limit: 100 });
   const createMut = useCreateGuardian(schoolId);
+  const updateMut = useUpdateGuardian(schoolId);
   const linkMut = useLinkStudentToGuardian(schoolId);
   const resetPasswordMut = useResetGuardianPassword(schoolId);
   const deleteMut = useDeleteGuardian(schoolId);
 
   const [open, setOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<GuardianRecord | null>(null);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    phone: "",
+    relation: "",
+    occupation: "",
+    address: "",
+    nid: "",
+  });
   const [linkGuardianId, setLinkGuardianId] = useState<number | null>(null);
   const [linkStudentId, setLinkStudentId] = useState("");
   const [resetTarget, setResetTarget] = useState<{
@@ -136,6 +155,41 @@ export function GuardiansWorkspace() {
     setLinkStudentId("");
   };
 
+  const openEditModal = (g: GuardianRecord) => {
+    setEditTarget(g);
+    setEditForm({
+      name: g.user?.name ?? "",
+      phone: g.user?.phone ?? "",
+      relation: g.relation ?? "",
+      occupation: g.occupation ?? "",
+      address: g.address ?? "",
+      nid: g.nid ?? "",
+    });
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editTarget) return;
+    await updateMut.mutateAsync({
+      id: editTarget.id,
+      payload: {
+        name: editForm.name.trim(),
+        phone: editForm.phone.trim(),
+        ...(editForm.relation.trim()
+          ? { relation: editForm.relation.trim() }
+          : {}),
+        ...(editForm.occupation.trim()
+          ? { occupation: editForm.occupation.trim() }
+          : {}),
+        ...(editForm.address.trim()
+          ? { address: editForm.address.trim() }
+          : {}),
+        ...(editForm.nid.trim() ? { nid: editForm.nid.trim() } : {}),
+      },
+    });
+    setEditTarget(null);
+  };
+
   if (isLoading) return <LoadingState message="Loading guardians..." />;
   if (isError) {
     return (
@@ -209,6 +263,15 @@ export function GuardiansWorkspace() {
                     <Button
                       size="sm"
                       variant="outline"
+                      onClick={() => openEditModal(g)}
+                      className="min-h-[40px] flex-1 gap-1 rounded-[11px]"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      Edit
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
                       onClick={() => setLinkGuardianId(g.id)}
                       className="min-h-[40px] flex-1 gap-1 rounded-[11px]"
                     >
@@ -248,87 +311,98 @@ export function GuardiansWorkspace() {
 
           <div className="surface-panel hidden overflow-x-auto md:block">
             <table className="w-full text-left text-sm">
-            <thead className="border-b bg-muted/40 text-xs uppercase text-muted-foreground">
-              <tr>
-                <th className="px-4 py-3">Name</th>
-                <th className="px-4 py-3">Phone &amp; Email</th>
-                <th className="px-4 py-3">Relation &amp; NID</th>
-                <th className="px-4 py-3">Linked Students</th>
-                {canManage && <th className="px-4 py-3 text-right">Actions</th>}
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {guardians.map((g) => (
-                <tr key={g.id}>
-                  <td className="px-4 py-3 font-medium">
-                    {g.user?.name ?? `Guardian #${g.id}`}
-                  </td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">
-                    <p className="font-medium text-foreground">
-                      {g.user?.phone ?? "—"}
-                    </p>
-                    <p>{formatGuardianEmail(g.user?.email)}</p>
-                  </td>
-                  <td className="px-4 py-3 text-xs">
-                    <p>{g.relation ?? "—"}</p>
-                    {g.nid && (
-                      <p className="text-muted-foreground">NID: {g.nid}</p>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-xs">
-                    {g.students && g.students.length > 0
-                      ? g.students
-                          .map((s) =>
-                            s.student
-                              ? `${s.student.firstName} (${s.student.studentId})`
-                              : `#${s.studentId}`,
-                          )
-                          .join(", ")
-                      : "None"}
-                  </td>
+              <thead className="border-b bg-muted/40 text-xs uppercase text-muted-foreground">
+                <tr>
+                  <th className="px-4 py-3">Name</th>
+                  <th className="px-4 py-3">Phone &amp; Email</th>
+                  <th className="px-4 py-3">Relation &amp; NID</th>
+                  <th className="px-4 py-3">Linked Students</th>
                   {canManage && (
-                    <td className="px-4 py-3 text-right">
-                      <div className="inline-flex items-center gap-1">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setLinkGuardianId(g.id)}
-                          className="gap-1"
-                        >
-                          <Link2 className="h-3.5 w-3.5" />
-                          Link Student
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() =>
-                            setResetTarget({
-                              id: g.id,
-                              name: g.user?.name ?? `Guardian #${g.id}`,
-                              phone: g.user?.phone ?? "",
-                            })
-                          }
-                          className="gap-1"
-                        >
-                          <LockKeyhole className="h-3.5 w-3.5" />
-                          Reset Password
-                        </Button>
-                        {isAdmin && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => deleteMut.mutate(g.id)}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </td>
+                    <th className="px-4 py-3 text-right">Actions</th>
                   )}
                 </tr>
-              ))}
-            </tbody>
+              </thead>
+              <tbody className="divide-y">
+                {guardians.map((g) => (
+                  <tr key={g.id}>
+                    <td className="px-4 py-3 font-medium">
+                      {g.user?.name ?? `Guardian #${g.id}`}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground">
+                      <p className="font-medium text-foreground">
+                        {g.user?.phone ?? "—"}
+                      </p>
+                      <p>{formatGuardianEmail(g.user?.email)}</p>
+                    </td>
+                    <td className="px-4 py-3 text-xs">
+                      <p>{g.relation ?? "—"}</p>
+                      {g.nid && (
+                        <p className="text-muted-foreground">NID: {g.nid}</p>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-xs">
+                      {g.students && g.students.length > 0
+                        ? g.students
+                            .map((s) =>
+                              s.student
+                                ? `${s.student.firstName} (${s.student.studentId})`
+                                : `#${s.studentId}`,
+                            )
+                            .join(", ")
+                        : "None"}
+                    </td>
+                    {canManage && (
+                      <td className="px-4 py-3 text-right">
+                        <div className="inline-flex items-center gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openEditModal(g)}
+                            className="gap-1"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                            Edit
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setLinkGuardianId(g.id)}
+                            className="gap-1"
+                          >
+                            <Link2 className="h-3.5 w-3.5" />
+                            Link Student
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              setResetTarget({
+                                id: g.id,
+                                name: g.user?.name ?? `Guardian #${g.id}`,
+                                phone: g.user?.phone ?? "",
+                              })
+                            }
+                            className="gap-1"
+                          >
+                            <LockKeyhole className="h-3.5 w-3.5" />
+                            Reset Password
+                          </Button>
+                          {isAdmin && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => deleteMut.mutate(g.id)}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
             </table>
           </div>
         </>
@@ -486,7 +560,9 @@ export function GuardiansWorkspace() {
       >
         <form onSubmit={handleResetPassword} className="space-y-4">
           <div className="space-y-1.5">
-            <Label>New Password (Optional — leave blank to auto-generate)</Label>
+            <Label>
+              New Password (Optional — leave blank to auto-generate)
+            </Label>
             <Input
               type="password"
               minLength={6}
@@ -519,6 +595,94 @@ export function GuardiansWorkspace() {
         credentials={credentials}
         onClose={() => setCredentials(null)}
       />
+
+      {/* Edit Guardian Modal */}
+      <Modal
+        open={!!editTarget}
+        onClose={() => setEditTarget(null)}
+        title="Edit Guardian"
+      >
+        <form onSubmit={handleEditSubmit} className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label>Full Name *</Label>
+              <Input
+                required
+                value={editForm.name}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, name: e.target.value })
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Phone Number *</Label>
+              <Input
+                required
+                value={editForm.phone}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, phone: e.target.value })
+                }
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label>Relation</Label>
+              <Input
+                value={editForm.relation}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, relation: e.target.value })
+                }
+                placeholder="Father / Mother / Guardian"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>NID</Label>
+              <Input
+                value={editForm.nid}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, nid: e.target.value })
+                }
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label>Occupation</Label>
+              <Input
+                value={editForm.occupation}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, occupation: e.target.value })
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Address</Label>
+              <Input
+                value={editForm.address}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, address: e.target.value })
+                }
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setEditTarget(null)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={updateMut.isPending}>
+              {updateMut.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

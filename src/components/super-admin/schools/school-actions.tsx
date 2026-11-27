@@ -44,9 +44,7 @@ export function SchoolActions({
           className="inline-flex h-8 w-8 items-center justify-center rounded-md text-green-600 transition hover:bg-green-50 disabled:pointer-events-none disabled:opacity-50 dark:hover:bg-green-500/10"
         >
           <Check className="h-4 w-4" />
-          <span className="sr-only">
-            Approve school
-          </span>
+          <span className="sr-only">Approve school</span>
         </button>
       )}
 
@@ -60,9 +58,7 @@ export function SchoolActions({
           className="inline-flex h-8 w-8 items-center justify-center rounded-md text-red-600 transition hover:bg-red-50 disabled:pointer-events-none disabled:opacity-50 dark:hover:bg-red-500/10"
         >
           <ShieldBan className="h-4 w-4" />
-          <span className="sr-only">
-            Block school
-          </span>
+          <span className="sr-only">Block school</span>
         </button>
       )}
 
@@ -76,9 +72,7 @@ export function SchoolActions({
           className="inline-flex h-8 w-8 items-center justify-center rounded-md text-green-600 transition hover:bg-green-50 disabled:pointer-events-none disabled:opacity-50 dark:hover:bg-green-500/10"
         >
           <ShieldCheck className="h-4 w-4" />
-          <span className="sr-only">
-            Unblock school
-          </span>
+          <span className="sr-only">Unblock school</span>
         </button>
       )}
 
@@ -92,9 +86,7 @@ export function SchoolActions({
           className="inline-flex h-8 w-8 items-center justify-center rounded-md text-orange-600 transition hover:bg-orange-50 disabled:pointer-events-none disabled:opacity-50 dark:hover:bg-orange-500/10"
         >
           <X className="h-4 w-4" />
-          <span className="sr-only">
-            Reject school
-          </span>
+          <span className="sr-only">Reject school</span>
         </button>
       )}
 
@@ -108,9 +100,7 @@ export function SchoolActions({
           className="inline-flex h-8 w-8 items-center justify-center rounded-md text-red-600 transition hover:bg-red-50 disabled:pointer-events-none disabled:opacity-50 dark:hover:bg-red-500/10"
         >
           <Trash2 className="h-4 w-4" />
-          <span className="sr-only">
-            Delete school
-          </span>
+          <span className="sr-only">Delete school</span>
         </button>
       )}
 
@@ -119,9 +109,7 @@ export function SchoolActions({
         school.status !== "ACTIVE" &&
         school.status !== "BLOCKED" &&
         school.status !== "REJECTED" && (
-          <span className="text-muted-foreground">
-            —
-          </span>
+          <span className="text-muted-foreground">—</span>
         )}
     </div>
   );

@@ -14,7 +14,12 @@ export const enrollmentKeys = {
 
 export const useEnrollments = (
   schoolId: number,
-  params?: { classId?: number; sectionId?: number; academicYear?: string; status?: string },
+  params?: {
+    classId?: number;
+    sectionId?: number;
+    academicYear?: string;
+    status?: string;
+  },
 ) =>
   useQuery({
     queryKey: enrollmentKeys.list(schoolId, params),
@@ -25,12 +30,14 @@ export const useEnrollments = (
 export const useCreateEnrollment = (schoolId: number) => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (payload: CreateEnrollmentInput) => createEnrollment(schoolId, payload),
+    mutationFn: (payload: CreateEnrollmentInput) =>
+      createEnrollment(schoolId, payload),
     onSuccess: () => {
       toast.success("Student enrolled successfully");
       qc.invalidateQueries({ queryKey: enrollmentKeys.all });
     },
-    onError: (err) => toast.error(getApiErrorMessage(err, "Failed to enroll student")),
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to enroll student")),
   });
 };
 
@@ -42,6 +49,7 @@ export const useDeleteEnrollment = (schoolId: number) => {
       toast.success("Enrollment removed");
       qc.invalidateQueries({ queryKey: enrollmentKeys.all });
     },
-    onError: (err) => toast.error(getApiErrorMessage(err, "Failed to delete enrollment")),
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to delete enrollment")),
   });
 };

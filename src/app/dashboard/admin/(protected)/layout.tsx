@@ -14,11 +14,7 @@ export default function AdminProtectedLayout({
 }>) {
   const router = useRouter();
 
-  const {
-    data: subscription,
-    isLoading,
-    isError,
-  } = useMySubscription();
+  const { data: subscription, isLoading, isError } = useMySubscription();
 
   useEffect(() => {
     if (isLoading || isError) {

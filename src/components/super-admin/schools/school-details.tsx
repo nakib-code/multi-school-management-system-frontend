@@ -19,9 +19,7 @@ interface SchoolDetailsProps {
   school: School;
 }
 
-export function SchoolDetails({
-  school,
-}: SchoolDetailsProps) {
+export function SchoolDetails({ school }: SchoolDetailsProps) {
   return (
     <div className="space-y-6">
       {/* Back */}
@@ -77,17 +75,9 @@ export function SchoolDetails({
         </div>
 
         <div className="grid gap-5 p-6 sm:grid-cols-2">
-          <InfoItem
-            icon={Mail}
-            label="School Email"
-            value={school.email}
-          />
+          <InfoItem icon={Mail} label="School Email" value={school.email} />
 
-          <InfoItem
-            icon={Phone}
-            label="School Phone"
-            value={school.phone}
-          />
+          <InfoItem icon={Phone} label="School Phone" value={school.phone} />
 
           <InfoItem
             icon={MapPin}
@@ -120,17 +110,9 @@ export function SchoolDetails({
         </div>
 
         <div className="grid gap-5 p-6 sm:grid-cols-2">
-          <InfoItem
-            icon={User}
-            label="Admin Name"
-            value={school.adminName}
-          />
+          <InfoItem icon={User} label="Admin Name" value={school.adminName} />
 
-          <InfoItem
-            icon={Mail}
-            label="Admin Email"
-            value={school.adminEmail}
-          />
+          <InfoItem icon={Mail} label="Admin Email" value={school.adminEmail} />
 
           <InfoItem
             icon={Phone}
@@ -149,9 +131,7 @@ export function SchoolDetails({
               </p>
 
               <p className="mt-1 text-sm font-medium">
-                {school.adminEmailVerified
-                  ? "Verified"
-                  : "Not verified"}
+                {school.adminEmailVerified ? "Verified" : "Not verified"}
               </p>
             </div>
           </div>
@@ -159,20 +139,17 @@ export function SchoolDetails({
       </section>
 
       {/* Rejection */}
-      {school.status === "REJECTED" &&
-        school.rejectionReason && (
-          <section className="rounded-xl border border-destructive/20 bg-destructive/5">
-            <div className="p-6">
-              <h2 className="font-semibold text-destructive">
-                Rejection Reason
-              </h2>
+      {school.status === "REJECTED" && school.rejectionReason && (
+        <section className="rounded-xl border border-destructive/20 bg-destructive/5">
+          <div className="p-6">
+            <h2 className="font-semibold text-destructive">Rejection Reason</h2>
 
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                {school.rejectionReason}
-              </p>
-            </div>
-          </section>
-        )}
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              {school.rejectionReason}
+            </p>
+          </div>
+        </section>
+      )}
     </div>
   );
 }
@@ -184,30 +161,17 @@ interface InfoItemProps {
   className?: string;
 }
 
-function InfoItem({
-  icon: Icon,
-  label,
-  value,
-  className,
-}: InfoItemProps) {
+function InfoItem({ icon: Icon, label, value, className }: InfoItemProps) {
   return (
-    <div
-      className={`flex items-start gap-3 ${
-        className ?? ""
-      }`}
-    >
+    <div className={`flex items-start gap-3 ${className ?? ""}`}>
       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
         <Icon className="h-4 w-4 text-muted-foreground" />
       </div>
 
       <div className="min-w-0">
-        <p className="text-xs text-muted-foreground">
-          {label}
-        </p>
+        <p className="text-xs text-muted-foreground">{label}</p>
 
-        <p className="mt-1 break-words text-sm font-medium">
-          {value || "—"}
-        </p>
+        <p className="mt-1 break-words text-sm font-medium">{value || "—"}</p>
       </div>
     </div>
   );

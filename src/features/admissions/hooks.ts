@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   approveAdmission,
@@ -12,12 +8,16 @@ import {
   getAdmissionById,
   getAdmissions,
   rejectAdmission,
+  rejectOnlineAdmissionPayment,
+  verifyOnlineAdmissionPayment,
 } from "./api";
 
 import type {
   ConfirmCashPaymentInput,
   GetAdmissionsParams,
   RejectAdmissionInput,
+  RejectOnlinePaymentInput,
+  VerifyOnlinePaymentInput,
 } from "./types";
 
 // Query Keys
@@ -44,10 +44,7 @@ export function useAdmissions(
 }
 
 // Get Admission Details
-export function useAdmissionDetails(
-  schoolId: number,
-  admissionId: number,
-) {
+export function useAdmissionDetails(schoolId: number, admissionId: number) {
   return useQuery({
     queryKey: admissionKeys.details(schoolId, admissionId),
     queryFn: () => getAdmissionById(schoolId, admissionId),
@@ -94,10 +91,7 @@ export function useRejectAdmission(schoolId: number) {
       });
 
       queryClient.invalidateQueries({
-        queryKey: admissionKeys.details(
-          schoolId,
-          variables.admissionId,
-        ),
+        queryKey: admissionKeys.details(schoolId, variables.admissionId),
       });
     },
   });
@@ -114,12 +108,7 @@ export function useConfirmCashPayment(schoolId: number) {
     }: {
       admissionId: number;
       input?: ConfirmCashPaymentInput;
-    }) =>
-      confirmCashPayment(
-        schoolId,
-        admissionId,
-        input ?? {},
-      ),
+    }) => confirmCashPayment(schoolId, admissionId, input ?? {}),
 
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({
@@ -127,10 +116,49 @@ export function useConfirmCashPayment(schoolId: number) {
       });
 
       queryClient.invalidateQueries({
-        queryKey: admissionKeys.details(
-          schoolId,
-          variables.admissionId,
-        ),
+        queryKey: admissionKeys.details(schoolId, variables.admissionId),
+      });
+    },
+  });
+}
+
+export function useVerifyOnlineAdmissionPayment(schoolId: number) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      admissionId,
+      input,
+    }: {
+      admissionId: number;
+      input?: VerifyOnlinePaymentInput;
+    }) => verifyOnlineAdmissionPayment(schoolId, admissionId, input ?? {}),
+
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: admissionKeys.all });
+      queryClient.invalidateQueries({
+        queryKey: admissionKeys.details(schoolId, variables.admissionId),
+      });
+    },
+  });
+}
+
+export function useRejectOnlineAdmissionPayment(schoolId: number) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      admissionId,
+      input,
+    }: {
+      admissionId: number;
+      input: RejectOnlinePaymentInput;
+    }) => rejectOnlineAdmissionPayment(schoolId, admissionId, input),
+
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: admissionKeys.all });
+      queryClient.invalidateQueries({
+        queryKey: admissionKeys.details(schoolId, variables.admissionId),
       });
     },
   });

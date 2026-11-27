@@ -1,24 +1,20 @@
 "use client";
 
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   approveSchool,
   blockSchool,
   createSchool,
   deleteSchool,
+  type GetPublicSchoolsParams,
+  type GetSchoolsParams,
   getPublicSchoolById,
   getPublicSchools,
-  GetPublicSchoolsParams,
   getSchools,
   rejectSchool,
   unblockSchool,
   verifyAdminEmail,
-  type GetSchoolsParams,
 } from "./api";
 
 import type {
@@ -50,8 +46,7 @@ export const useCreateSchool = () => {
 
 export const useVerifyAdminEmail = () => {
   return useMutation({
-    mutationFn: (payload: VerifyAdminEmailPayload) =>
-      verifyAdminEmail(payload),
+    mutationFn: (payload: VerifyAdminEmailPayload) => verifyAdminEmail(payload),
   });
 };
 
@@ -134,7 +129,6 @@ export const useDeleteSchool = () => {
   });
 };
 
-
 // ============================================
 // Public - School Details
 // ============================================
@@ -151,9 +145,7 @@ export const useSchool = (schoolId: number) => {
 // Public - School List
 // ============================================
 
-export const usePublicSchools = (
-  params: GetPublicSchoolsParams = {},
-) => {
+export const usePublicSchools = (params: GetPublicSchoolsParams = {}) => {
   return useQuery({
     queryKey: ["schools", "public", params],
     queryFn: () => getPublicSchools(params),

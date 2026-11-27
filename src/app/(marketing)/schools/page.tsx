@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  AlertCircle,
-  ArrowRight,
-  Loader2,
-  MapPin,
-  Search,
-} from "lucide-react";
+import { AlertCircle, ArrowRight, Loader2, MapPin, Search } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -29,12 +23,11 @@ export default function SchoolsPage() {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  const { data, isLoading, isError, isFetching, refetch } =
-    usePublicSchools({
-      page,
-      limit: PAGE_SIZE,
-      search: search || undefined,
-    });
+  const { data, isLoading, isError, isFetching, refetch } = usePublicSchools({
+    page,
+    limit: PAGE_SIZE,
+    search: search || undefined,
+  });
 
   const schools = data?.schools ?? [];
   const meta = data?.meta;
@@ -54,9 +47,7 @@ export default function SchoolsPage() {
 
             <h1 className="mt-5 text-4xl font-black tracking-tight sm:text-5xl lg:text-6xl">
               Find the Right
-              <span className="block text-[#00d2c4]">
-                School for You
-              </span>
+              <span className="block text-[#00d2c4]">School for You</span>
             </h1>
 
             <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-white/65 sm:text-lg">
@@ -329,7 +320,6 @@ export default function SchoolsPage() {
                                 className="group/apply inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-[#00d2c4] px-3 text-xs font-bold text-[#061842] transition hover:bg-[#00bdb1]"
                               >
                                 Apply
-
                                 <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover/apply:translate-x-0.5" />
                               </Link>
                             </div>
@@ -346,16 +336,12 @@ export default function SchoolsPage() {
                 <div className="mt-4 flex items-center justify-between rounded-xl border border-slate-200 bg-white px-5 py-4">
                   <div className="text-sm text-slate-500">
                     Page {meta.page} of {meta.totalPages}
-
                     <span className="hidden sm:inline">
                       {" "}
                       · {meta.total} schools
                     </span>
-
                     {isFetching && (
-                      <span className="ml-2 text-[#008f87]">
-                        Updating...
-                      </span>
+                      <span className="ml-2 text-[#008f87]">Updating...</span>
                     )}
                   </div>
 
@@ -371,9 +357,7 @@ export default function SchoolsPage() {
 
                     <button
                       type="button"
-                      disabled={
-                        page >= meta.totalPages || isFetching
-                      }
+                      disabled={page >= meta.totalPages || isFetching}
                       onClick={() => setPage((current) => current + 1)}
                       className="rounded-lg bg-[#061842] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#0b285f] disabled:cursor-not-allowed disabled:opacity-40"
                     >

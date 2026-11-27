@@ -1,15 +1,8 @@
 "use client";
 
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import {
-  getMySubscription,
-  selectPackage,
-} from "./api";
+import { getMySubscription, selectPackage } from "./api";
 
 export const subscriptionKeys = {
   all: ["subscriptions"] as const,

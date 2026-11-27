@@ -1,5 +1,5 @@
-import { SchoolTable } from "@/components/super-admin/schools/school-table";
 import { PageHeader } from "@/components/shared/page-header";
+import { SchoolTable } from "@/components/super-admin/schools/school-table";
 
 export default function SuperAdminSchoolsPage() {
   return (

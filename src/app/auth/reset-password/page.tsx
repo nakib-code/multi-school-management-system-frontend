@@ -1,6 +1,12 @@
 "use client";
 
-import { AlertTriangle, ArrowLeft, CheckCircle2, KeyRound, Loader2 } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  CheckCircle2,
+  KeyRound,
+  Loader2,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
@@ -95,7 +101,8 @@ function ResetPasswordContent() {
               <CheckCircle2 className="mx-auto h-10 w-10 text-emerald-600" />
               <h1 className="text-xl font-bold">Password Updated</h1>
               <p className="text-sm text-muted-foreground">
-                Your password has been reset and previous sessions have been invalidated. Redirecting to sign in...
+                Your password has been reset and previous sessions have been
+                invalidated. Redirecting to sign in...
               </p>
               <Button asChild className="w-full">
                 <Link href="/auth/login">Sign In Now</Link>
@@ -106,10 +113,13 @@ function ResetPasswordContent() {
               <AlertTriangle className="mx-auto h-10 w-10 text-destructive" />
               <h1 className="text-xl font-bold">Invalid or Expired Link</h1>
               <p className="text-sm text-muted-foreground">
-                This password reset link is invalid, has expired, or has already been used.
+                This password reset link is invalid, has expired, or has already
+                been used.
               </p>
               <Button asChild className="w-full">
-                <Link href="/auth/forgot-password">Request a New Reset Link</Link>
+                <Link href="/auth/forgot-password">
+                  Request a New Reset Link
+                </Link>
               </Button>
             </div>
           ) : (
@@ -149,7 +159,11 @@ function ResetPasswordContent() {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                   />
                 </div>
-                <Button type="submit" disabled={submitting} className="w-full gap-2">
+                <Button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full gap-2"
+                >
                   {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
                   {submitting ? "Updating Password..." : "Reset Password"}
                 </Button>

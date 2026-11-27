@@ -30,7 +30,8 @@ export const useCreateResult = (schoolId: number) => {
       toast.success("Result recorded with auto-computed GPA");
       qc.invalidateQueries({ queryKey: resultKeys.all });
     },
-    onError: (err) => toast.error(getApiErrorMessage(err, "Failed to record result")),
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to record result")),
   });
 };
 
@@ -42,6 +43,37 @@ export const useDeleteResult = (schoolId: number) => {
       toast.success("Result deleted");
       qc.invalidateQueries({ queryKey: resultKeys.all });
     },
-    onError: (err) => toast.error(getApiErrorMessage(err, "Failed to delete result")),
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to delete result")),
+  });
+};
+
+export const useUpdateResult = (schoolId: number) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      payload,
+    }: {
+      id: number;
+      payload: {
+        marksObtained?: number;
+        totalMarks?: number;
+        remarks?: string;
+      };
+    }) => {
+      const { api } = await import("@/lib/api");
+      const res = await api.patch(
+        `/schools/${schoolId}/results/${id}`,
+        payload,
+      );
+      return res.data.data;
+    },
+    onSuccess: () => {
+      toast.success("Result updated");
+      qc.invalidateQueries({ queryKey: resultKeys.all });
+    },
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to update result")),
   });
 };

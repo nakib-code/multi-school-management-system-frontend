@@ -22,11 +22,7 @@ export const admissionSchema = z.object({
     .default("NON_RESIDENTIAL"),
 
   // Stage 1 — Required Academic Info
-  academicYear: z
-    .string()
-    .trim()
-    .min(4, "Academic year is required")
-    .max(20),
+  academicYear: z.string().trim().min(4, "Academic year is required").max(20),
 
   classId: z.coerce.number().int().positive("Please select a class"),
 
@@ -48,11 +44,7 @@ export const admissionSchema = z.object({
   ),
 
   // Stage 1 — Required Guardian Info
-  guardianName: z
-    .string()
-    .trim()
-    .min(2, "Guardian name is required")
-    .max(150),
+  guardianName: z.string().trim().min(2, "Guardian name is required").max(150),
 
   guardianPhone: z
     .string()

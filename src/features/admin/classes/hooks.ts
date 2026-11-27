@@ -1,8 +1,4 @@
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   createClass,
@@ -33,8 +29,7 @@ import type {
 // ==================================================
 
 export const classKeys = {
-  all: (schoolId: number) =>
-    ["admin", "classes", schoolId] as const,
+  all: (schoolId: number) => ["admin", "classes", schoolId] as const,
 
   active: (schoolId: number) =>
     ["admin", "classes", schoolId, "active"] as const,
@@ -48,13 +43,7 @@ export const sectionKeys = {
     ["admin", "sections", schoolId, classId ?? "all"] as const,
 
   active: (schoolId: number, classId?: number) =>
-    [
-      "admin",
-      "sections",
-      schoolId,
-      classId ?? "all",
-      "active",
-    ] as const,
+    ["admin", "sections", schoolId, classId ?? "all", "active"] as const,
 
   detail: (schoolId: number, sectionId: number) =>
     ["admin", "sections", schoolId, sectionId] as const,
@@ -80,22 +69,11 @@ export const useActiveClasses = (schoolId: number) => {
   });
 };
 
-export const useClass = (
-  schoolId: number,
-  classId: number,
-) => {
+export const useClass = (schoolId: number, classId: number) => {
   return useQuery({
-    queryKey: classKeys.detail(
-      schoolId,
-      classId,
-    ),
-    queryFn: () =>
-      getClassById(
-        schoolId,
-        classId,
-      ),
-    enabled:
-      !!schoolId && !!classId,
+    queryKey: classKeys.detail(schoolId, classId),
+    queryFn: () => getClassById(schoolId, classId),
+    enabled: !!schoolId && !!classId,
   });
 };
 
@@ -103,44 +81,26 @@ export const useClass = (
 // Class Mutations
 // ==================================================
 
-export const useCreateClass = (
-  schoolId: number,
-) => {
-  const queryClient =
-    useQueryClient();
+export const useCreateClass = (schoolId: number) => {
+  const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (
-      payload: CreateClassPayload,
-    ) =>
-      createClass(
-        schoolId,
-        payload,
-      ),
+    mutationFn: (payload: CreateClassPayload) => createClass(schoolId, payload),
 
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey:
-          classKeys.all(
-            schoolId,
-          ),
+        queryKey: classKeys.all(schoolId),
       });
 
       queryClient.invalidateQueries({
-        queryKey:
-          classKeys.active(
-            schoolId,
-          ),
+        queryKey: classKeys.active(schoolId),
       });
     },
   });
 };
 
-export const useUpdateClass = (
-  schoolId: number,
-) => {
-  const queryClient =
-    useQueryClient();
+export const useUpdateClass = (schoolId: number) => {
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: ({
@@ -149,107 +109,59 @@ export const useUpdateClass = (
     }: {
       classId: number;
       payload: UpdateClassPayload;
-    }) =>
-      updateClass(
-        schoolId,
-        classId,
-        payload,
-      ),
+    }) => updateClass(schoolId, classId, payload),
 
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey:
-          classKeys.all(
-            schoolId,
-          ),
+        queryKey: classKeys.all(schoolId),
       });
 
       queryClient.invalidateQueries({
-        queryKey:
-          classKeys.active(
-            schoolId,
-          ),
+        queryKey: classKeys.active(schoolId),
       });
 
       queryClient.invalidateQueries({
-        queryKey:
-          classKeys.detail(
-            schoolId,
-            variables.classId,
-          ),
+        queryKey: classKeys.detail(schoolId, variables.classId),
       });
     },
   });
 };
 
-export const useToggleClassStatus = (
-  schoolId: number,
-) => {
-  const queryClient =
-    useQueryClient();
+export const useToggleClassStatus = (schoolId: number) => {
+  const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (
-      classId: number,
-    ) =>
-      toggleClassStatus(
-        schoolId,
-        classId,
-      ),
+    mutationFn: (classId: number) => toggleClassStatus(schoolId, classId),
 
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey:
-          classKeys.all(
-            schoolId,
-          ),
+        queryKey: classKeys.all(schoolId),
       });
 
       queryClient.invalidateQueries({
-        queryKey:
-          classKeys.active(
-            schoolId,
-          ),
+        queryKey: classKeys.active(schoolId),
       });
     },
   });
 };
 
-export const useDeleteClass = (
-  schoolId: number,
-) => {
-  const queryClient =
-    useQueryClient();
+export const useDeleteClass = (schoolId: number) => {
+  const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (
-      classId: number,
-    ) =>
-      deleteClass(
-        schoolId,
-        classId,
-      ),
+    mutationFn: (classId: number) => deleteClass(schoolId, classId),
 
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey:
-          classKeys.all(
-            schoolId,
-          ),
+        queryKey: classKeys.all(schoolId),
       });
 
       queryClient.invalidateQueries({
-        queryKey:
-          classKeys.active(
-            schoolId,
-          ),
+        queryKey: classKeys.active(schoolId),
       });
 
       queryClient.invalidateQueries({
-        queryKey:
-          sectionKeys.all(
-            schoolId,
-          ),
+        queryKey: sectionKeys.all(schoolId),
       });
     },
   });
@@ -259,68 +171,33 @@ export const useDeleteClass = (
 // Section Queries
 // ==================================================
 
-export const useSections = (
-  schoolId: number,
-  classId?: number,
-) => {
+export const useSections = (schoolId: number, classId?: number) => {
   return useQuery({
-    queryKey:
-      sectionKeys.all(
-        schoolId,
-        classId,
-      ),
+    queryKey: sectionKeys.all(schoolId, classId),
 
-    queryFn: () =>
-      getSections(
-        schoolId,
-        classId,
-      ),
+    queryFn: () => getSections(schoolId, classId),
 
     enabled: !!schoolId,
   });
 };
 
-export const useActiveSections = (
-  schoolId: number,
-  classId?: number,
-) => {
+export const useActiveSections = (schoolId: number, classId?: number) => {
   return useQuery({
-    queryKey:
-      sectionKeys.active(
-        schoolId,
-        classId,
-      ),
+    queryKey: sectionKeys.active(schoolId, classId),
 
-    queryFn: () =>
-      getActiveSections(
-        schoolId,
-        classId,
-      ),
+    queryFn: () => getActiveSections(schoolId, classId),
 
     enabled: !!schoolId,
   });
 };
 
-export const useSection = (
-  schoolId: number,
-  sectionId: number,
-) => {
+export const useSection = (schoolId: number, sectionId: number) => {
   return useQuery({
-    queryKey:
-      sectionKeys.detail(
-        schoolId,
-        sectionId,
-      ),
+    queryKey: sectionKeys.detail(schoolId, sectionId),
 
-    queryFn: () =>
-      getSectionById(
-        schoolId,
-        sectionId,
-      ),
+    queryFn: () => getSectionById(schoolId, sectionId),
 
-    enabled:
-      !!schoolId &&
-      !!sectionId,
+    enabled: !!schoolId && !!sectionId,
   });
 };
 
@@ -328,59 +205,35 @@ export const useSection = (
 // Section Mutations
 // ==================================================
 
-export const useCreateSection = (
-  schoolId: number,
-) => {
-  const queryClient =
-    useQueryClient();
+export const useCreateSection = (schoolId: number) => {
+  const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (
-      payload: CreateSectionPayload,
-    ) =>
-      createSection(
-        schoolId,
-        payload,
-      ),
+    mutationFn: (payload: CreateSectionPayload) =>
+      createSection(schoolId, payload),
 
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey:
-          sectionKeys.all(
-            schoolId,
-          ),
+        queryKey: sectionKeys.all(schoolId),
       });
 
       queryClient.invalidateQueries({
-        queryKey:
-          sectionKeys.active(
-            schoolId,
-          ),
+        queryKey: sectionKeys.active(schoolId),
       });
 
       queryClient.invalidateQueries({
-        queryKey:
-          classKeys.detail(
-            schoolId,
-            variables.classId,
-          ),
+        queryKey: classKeys.detail(schoolId, variables.classId),
       });
 
       queryClient.invalidateQueries({
-        queryKey:
-          classKeys.all(
-            schoolId,
-          ),
+        queryKey: classKeys.all(schoolId),
       });
     },
   });
 };
 
-export const useUpdateSection = (
-  schoolId: number,
-) => {
-  const queryClient =
-    useQueryClient();
+export const useUpdateSection = (schoolId: number) => {
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: ({
@@ -389,99 +242,55 @@ export const useUpdateSection = (
     }: {
       sectionId: number;
       payload: UpdateSectionPayload;
-    }) =>
-      updateSection(
-        schoolId,
-        sectionId,
-        payload,
-      ),
+    }) => updateSection(schoolId, sectionId, payload),
 
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey:
-          sectionKeys.all(
-            schoolId,
-          ),
+        queryKey: sectionKeys.all(schoolId),
       });
 
       queryClient.invalidateQueries({
-        queryKey:
-          sectionKeys.active(
-            schoolId,
-          ),
+        queryKey: sectionKeys.active(schoolId),
       });
     },
   });
 };
 
-export const useToggleSectionStatus = (
-  schoolId: number,
-) => {
-  const queryClient =
-    useQueryClient();
+export const useToggleSectionStatus = (schoolId: number) => {
+  const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (
-      sectionId: number,
-    ) =>
-      toggleSectionStatus(
-        schoolId,
-        sectionId,
-      ),
+    mutationFn: (sectionId: number) => toggleSectionStatus(schoolId, sectionId),
 
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey:
-          sectionKeys.all(
-            schoolId,
-          ),
+        queryKey: sectionKeys.all(schoolId),
       });
 
       queryClient.invalidateQueries({
-        queryKey:
-          sectionKeys.active(
-            schoolId,
-          ),
+        queryKey: sectionKeys.active(schoolId),
       });
     },
   });
 };
 
-export const useDeleteSection = (
-  schoolId: number,
-) => {
-  const queryClient =
-    useQueryClient();
+export const useDeleteSection = (schoolId: number) => {
+  const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (
-      sectionId: number,
-    ) =>
-      deleteSection(
-        schoolId,
-        sectionId,
-      ),
+    mutationFn: (sectionId: number) => deleteSection(schoolId, sectionId),
 
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey:
-          sectionKeys.all(
-            schoolId,
-          ),
+        queryKey: sectionKeys.all(schoolId),
       });
 
       queryClient.invalidateQueries({
-        queryKey:
-          sectionKeys.active(
-            schoolId,
-          ),
+        queryKey: sectionKeys.active(schoolId),
       });
 
       queryClient.invalidateQueries({
-        queryKey:
-          classKeys.all(
-            schoolId,
-          ),
+        queryKey: classKeys.all(schoolId),
       });
     },
   });

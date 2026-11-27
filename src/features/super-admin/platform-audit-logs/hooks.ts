@@ -32,7 +32,12 @@ export const usePlatformAuditLogs = (params?: {
       const res = await api.get<{
         success: boolean;
         data: PlatformAuditLogItem[];
-        meta?: { page: number; limit: number; total: number; totalPages: number };
+        meta?: {
+          page: number;
+          limit: number;
+          total: number;
+          totalPages: number;
+        };
       }>("/platform-audit-logs", { params });
       return { logs: res.data.data, meta: res.data.meta };
     },

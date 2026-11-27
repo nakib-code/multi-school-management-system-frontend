@@ -23,6 +23,8 @@ import {
   useApproveAdmission,
   useConfirmCashPayment,
   useRejectAdmission,
+  useRejectOnlineAdmissionPayment,
+  useVerifyOnlineAdmissionPayment,
 } from "@/features/admissions/hooks";
 import type {
   AdmissionPaymentStatus,
@@ -65,6 +67,8 @@ export default function AdminAdmissionsPage() {
   const approveMutation = useApproveAdmission(schoolId);
   const rejectMutation = useRejectAdmission(schoolId);
   const cashPaymentMutation = useConfirmCashPayment(schoolId);
+  const verifyOnlineMutation = useVerifyOnlineAdmissionPayment(schoolId);
+  const rejectOnlineMutation = useRejectOnlineAdmissionPayment(schoolId);
 
   const admissions = data?.admissions ?? [];
   const meta = data?.meta;
@@ -85,7 +89,9 @@ export default function AdminAdmissionsPage() {
 
     try {
       const approved = await approveMutation.mutateAsync(admissionId);
-      toast.success("Admission approved — Student, Enrollment & Guardian created");
+      toast.success(
+        "Admission approved — Student, Enrollment & Guardian created",
+      );
       setDetailId(null);
       if (approved.guardian?.temporaryPassword) {
         setGuardianCredentials({
@@ -118,6 +124,47 @@ export default function AdminAdmissionsPage() {
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Failed to confirm payment",
+      );
+    }
+  }
+
+  async function handleVerifyOnlinePayment(admissionId: number) {
+    if (
+      !window.confirm(
+        "Verify this mobile banking transaction ID and mark the admission fee as PAID?",
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await verifyOnlineMutation.mutateAsync({
+        admissionId,
+        input: { remarks: "Online TrxID verified by staff" },
+      });
+      toast.success("Online payment verified");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to verify payment",
+      );
+    }
+  }
+
+  async function handleRejectOnlinePayment(admissionId: number) {
+    const reason = window.prompt(
+      "Enter reason for rejecting this transaction ID:",
+    );
+    if (!reason || reason.trim().length < 3) return;
+
+    try {
+      await rejectOnlineMutation.mutateAsync({
+        admissionId,
+        input: { remarks: reason.trim() },
+      });
+      toast.success("Online payment rejected — applicant can resubmit TrxID");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to reject payment",
       );
     }
   }
@@ -212,9 +259,7 @@ export default function AdminAdmissionsPage() {
         <select
           value={paymentStatus}
           onChange={(event) => {
-            setPaymentStatus(
-              event.target.value as AdmissionPaymentStatus | "",
-            );
+            setPaymentStatus(event.target.value as AdmissionPaymentStatus | "");
             setPage(1);
           }}
           className="h-10 rounded-lg border bg-background px-3 text-sm"
@@ -322,16 +367,24 @@ export default function AdminAdmissionsPage() {
 
                     <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
                       <div>
-                        <span className="block text-[10px] uppercase">Class</span>
+                        <span className="block text-[10px] uppercase">
+                          Class
+                        </span>
                         <span className="font-medium text-foreground">
                           {admission.class.name}
-                          {admission.section ? ` • ${admission.section.name}` : ""}
+                          {admission.section
+                            ? ` • ${admission.section.name}`
+                            : ""}
                         </span>
                       </div>
                       <div>
-                        <span className="block text-[10px] uppercase">Guardian</span>
+                        <span className="block text-[10px] uppercase">
+                          Guardian
+                        </span>
                         <span className="font-medium text-foreground">
-                          {admission.guardianPhone ?? admission.guardianName ?? "—"}
+                          {admission.guardianPhone ??
+                            admission.guardianName ??
+                            "—"}
                         </span>
                       </div>
                     </div>
@@ -391,148 +444,188 @@ export default function AdminAdmissionsPage() {
             {/* Desktop Admissions Table */}
             <div className="hidden overflow-x-auto md:block">
               <table className="w-full min-w-[1050px] text-left text-sm">
-              <thead className="border-b bg-muted/40 text-xs text-muted-foreground">
-                <tr>
-                  <th className="px-4 py-3 font-medium">Application</th>
-                  <th className="px-4 py-3 font-medium">Student &amp; Guardian</th>
-                  <th className="px-4 py-3 font-medium">Class &amp; Type</th>
-                  <th className="px-4 py-3 font-medium">Status</th>
-                  <th className="px-4 py-3 font-medium">Payment</th>
-                  <th className="px-4 py-3 font-medium">Applied on</th>
-                  <th className="px-4 py-3 font-medium">Actions</th>
-                </tr>
-              </thead>
+                <thead className="border-b bg-muted/40 text-xs text-muted-foreground">
+                  <tr>
+                    <th className="px-4 py-3 font-medium">Application</th>
+                    <th className="px-4 py-3 font-medium">
+                      Student &amp; Guardian
+                    </th>
+                    <th className="px-4 py-3 font-medium">Class &amp; Type</th>
+                    <th className="px-4 py-3 font-medium">Status</th>
+                    <th className="px-4 py-3 font-medium">Payment</th>
+                    <th className="px-4 py-3 font-medium">Applied on</th>
+                    <th className="px-4 py-3 font-medium">Actions</th>
+                  </tr>
+                </thead>
 
-              <tbody className="divide-y">
-                {admissions.map((admission) => {
-                  const isPending = admission.status === "PENDING";
-                  const hasPaidOrNoFee =
-                    !admission.payment ||
-                    admission.payment.amount <= 0 ||
-                    admission.payment.status === "PAID";
-                  const isCash = admission.payment?.paymentMethod === "CASH";
+                <tbody className="divide-y">
+                  {admissions.map((admission) => {
+                    const isPending = admission.status === "PENDING";
+                    const hasPaidOrNoFee =
+                      !admission.payment ||
+                      admission.payment.amount <= 0 ||
+                      admission.payment.status === "PAID";
+                    const isCash = admission.payment?.paymentMethod === "CASH";
 
-                  return (
-                    <tr
-                      key={admission.id}
-                      className="align-top hover:bg-muted/20"
-                    >
-                      <td className="px-4 py-4">
-                        <p className="font-medium">{admission.applicationNo}</p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          ID: {admission.id}
-                        </p>
-                      </td>
-
-                      <td className="px-4 py-4">
-                        <p className="font-medium">{admission.studentName}</p>
-                        {admission.guardianName && (
-                          <p className="mt-0.5 text-xs text-muted-foreground">
-                            Guardian: {admission.guardianName}
+                    return (
+                      <tr
+                        key={admission.id}
+                        className="align-top hover:bg-muted/20"
+                      >
+                        <td className="px-4 py-4">
+                          <p className="font-medium">
+                            {admission.applicationNo}
                           </p>
-                        )}
-                        {admission.guardianPhone && (
-                          <p className="text-xs text-muted-foreground">
-                            {admission.guardianPhone}
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            ID: {admission.id}
                           </p>
-                        )}
-                      </td>
+                        </td>
 
-                      <td className="px-4 py-4">
-                        <p>
-                          {admission.class.name}
-                          {admission.section
-                            ? ` • ${admission.section.name}`
-                            : ""}
-                        </p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {admission.academicYear}
-                          {admission.residentialType
-                            ? ` • ${admission.residentialType.replace("_", " ")}`
-                            : ""}
-                          {admission.quranWing
-                            ? ` • ${admission.quranWing}`
-                            : ""}
-                        </p>
-                      </td>
-
-                      <td className="px-4 py-4">
-                        <StatusBadge status={admission.status} />
-                      </td>
-
-                      <td className="px-4 py-4">
-                        {admission.payment ? (
-                          <>
-                            <StatusBadge status={admission.payment.status} />
-                            <p className="mt-1 text-xs text-muted-foreground">
-                              {admission.payment.amount.toLocaleString()} ·{" "}
-                              {admission.payment.paymentMethod}
+                        <td className="px-4 py-4">
+                          <p className="font-medium">{admission.studentName}</p>
+                          {admission.guardianName && (
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                              Guardian: {admission.guardianName}
                             </p>
-                          </>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">
-                            No upfront fee
-                          </span>
-                        )}
-                      </td>
+                          )}
+                          {admission.guardianPhone && (
+                            <p className="text-xs text-muted-foreground">
+                              {admission.guardianPhone}
+                            </p>
+                          )}
+                        </td>
 
-                      <td className="px-4 py-4 text-muted-foreground">
-                        {new Date(admission.createdAt).toLocaleDateString()}
-                      </td>
+                        <td className="px-4 py-4">
+                          <p>
+                            {admission.class.name}
+                            {admission.section
+                              ? ` • ${admission.section.name}`
+                              : ""}
+                          </p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {admission.academicYear}
+                            {admission.residentialType
+                              ? ` • ${admission.residentialType.replace("_", " ")}`
+                              : ""}
+                            {admission.quranWing
+                              ? ` • ${admission.quranWing}`
+                              : ""}
+                          </p>
+                        </td>
 
-                      <td className="px-4 py-4">
-                        <div className="flex min-w-36 flex-col items-start gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setDetailId(admission.id)}
-                            className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-xs font-medium hover:bg-muted"
-                          >
-                            <Eye className="h-3.5 w-3.5" />
-                            View Details
-                          </button>
+                        <td className="px-4 py-4">
+                          <StatusBadge status={admission.status} />
+                        </td>
 
-                          {isPending &&
-                            isCash &&
-                            admission.payment?.status !== "PAID" && (
+                        <td className="px-4 py-4">
+                          {admission.payment ? (
+                            <>
+                              <StatusBadge status={admission.payment.status} />
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                {admission.payment.amount.toLocaleString()} ·{" "}
+                                {admission.payment.paymentMethod}
+                              </p>
+                              {admission.payment.transactionId && (
+                                <p className="mt-0.5 font-mono text-[11px] text-foreground">
+                                  TrxID: {admission.payment.transactionId}
+                                </p>
+                              )}
+                            </>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">
+                              No upfront fee
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="px-4 py-4 text-muted-foreground">
+                          {new Date(admission.createdAt).toLocaleDateString()}
+                        </td>
+
+                        <td className="px-4 py-4">
+                          <div className="flex min-w-36 flex-col items-start gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setDetailId(admission.id)}
+                              className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-xs font-medium hover:bg-muted"
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                              View Details
+                            </button>
+
+                            {isPending &&
+                              isCash &&
+                              admission.payment?.status !== "PAID" && (
+                                <button
+                                  type="button"
+                                  disabled={cashPaymentMutation.isPending}
+                                  onClick={() =>
+                                    handleCashPayment(admission.id)
+                                  }
+                                  className="rounded-md border px-3 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-50"
+                                >
+                                  Confirm cash
+                                </button>
+                              )}
+
+                            {isPending &&
+                              !isCash &&
+                              admission.payment &&
+                              admission.payment.status !== "PAID" &&
+                              Boolean(admission.payment.transactionId) && (
+                                <>
+                                  <button
+                                    type="button"
+                                    disabled={verifyOnlineMutation.isPending}
+                                    onClick={() =>
+                                      handleVerifyOnlinePayment(admission.id)
+                                    }
+                                    className="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
+                                  >
+                                    Verify TrxID
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={rejectOnlineMutation.isPending}
+                                    onClick={() =>
+                                      handleRejectOnlinePayment(admission.id)
+                                    }
+                                    className="rounded-md border border-amber-300 px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-50 disabled:opacity-50"
+                                  >
+                                    Reject TrxID
+                                  </button>
+                                </>
+                              )}
+
+                            {isPending && hasPaidOrNoFee && (
                               <button
                                 type="button"
-                                disabled={cashPaymentMutation.isPending}
-                                onClick={() => handleCashPayment(admission.id)}
-                                className="rounded-md border px-3 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-50"
+                                disabled={approveMutation.isPending}
+                                onClick={() => handleApprove(admission.id)}
+                                className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-50"
                               >
-                                Confirm cash
+                                Approve
                               </button>
                             )}
 
-                          {isPending && hasPaidOrNoFee && (
-                            <button
-                              type="button"
-                              disabled={approveMutation.isPending}
-                              onClick={() => handleApprove(admission.id)}
-                              className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-50"
-                            >
-                              Approve
-                            </button>
-                          )}
-
-                          {isPending && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setRejectId(admission.id);
-                                setRejectionReason("");
-                              }}
-                              className="rounded-md border border-destructive/30 px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/5"
-                            >
-                              Reject
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
+                            {isPending && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setRejectId(admission.id);
+                                  setRejectionReason("");
+                                }}
+                                className="rounded-md border border-destructive/30 px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/5"
+                              >
+                                Reject
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
               </table>
             </div>
           </>
@@ -657,7 +750,10 @@ export default function AdminAdmissionsPage() {
               <div className="grid gap-3 sm:grid-cols-2">
                 {[
                   { label: "Student Photo", url: detail.studentPhotoUrl },
-                  { label: "Birth Certificate", url: detail.birthCertificateUrl },
+                  {
+                    label: "Birth Certificate",
+                    url: detail.birthCertificateUrl,
+                  },
                   { label: "Guardian NID", url: detail.guardianNidUrl },
                   {
                     label: "Previous TC / Certificate",
@@ -680,7 +776,9 @@ export default function AdminAdmissionsPage() {
                         Preview <ExternalLink className="h-3 w-3" />
                       </a>
                     ) : (
-                      <span className="text-muted-foreground">Not uploaded</span>
+                      <span className="text-muted-foreground">
+                        Not uploaded
+                      </span>
                     )}
                   </div>
                 ))}

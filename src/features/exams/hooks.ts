@@ -30,7 +30,8 @@ export const useCreateExam = (schoolId: number) => {
       toast.success("Exam created successfully");
       qc.invalidateQueries({ queryKey: examKeys.all });
     },
-    onError: (err) => toast.error(getApiErrorMessage(err, "Failed to create exam")),
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to create exam")),
   });
 };
 
@@ -43,7 +44,8 @@ export const useUpdateExamStatus = (schoolId: number) => {
       toast.success("Exam status updated");
       qc.invalidateQueries({ queryKey: examKeys.all });
     },
-    onError: (err) => toast.error(getApiErrorMessage(err, "Failed to update exam")),
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to update exam")),
   });
 };
 
@@ -55,6 +57,7 @@ export const useDeleteExam = (schoolId: number) => {
       toast.success("Exam deleted");
       qc.invalidateQueries({ queryKey: examKeys.all });
     },
-    onError: (err) => toast.error(getApiErrorMessage(err, "Failed to delete exam")),
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to delete exam")),
   });
 };

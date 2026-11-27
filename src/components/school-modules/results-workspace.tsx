@@ -1,6 +1,6 @@
 "use client";
 
-import { Award, Plus, Trash2 } from "lucide-react";
+import { Award, Pencil, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Modal } from "@/components/modals/modal";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -15,7 +15,9 @@ import {
   useCreateResult,
   useDeleteResult,
   useResults,
+  useUpdateResult,
 } from "@/features/results/hooks";
+import type { ResultRecord } from "@/features/results/types";
 import { useSubjects } from "@/features/subjects/hooks";
 import { getApiErrorMessage } from "@/lib/api";
 import { useAuth } from "@/providers/auth-provider";
@@ -29,13 +31,19 @@ export function ResultsWorkspace() {
     user?.role === "TEACHER";
   const canDelete = user?.role === "ADMIN" || user?.role === "MANAGER";
 
-  const { data: results = [], isLoading, isError, error, refetch } =
-    useResults(schoolId);
+  const {
+    data: results = [],
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useResults(schoolId);
   const { data: enrollments = [] } = useEnrollments(canRecord ? schoolId : 0);
   const { data: exams = [] } = useExams(canRecord ? schoolId : 0);
   const { data: subjects = [] } = useSubjects(canRecord ? schoolId : 0);
 
   const createMut = useCreateResult(schoolId);
+  const updateMut = useUpdateResult(schoolId);
   const deleteMut = useDeleteResult(schoolId);
 
   const [open, setOpen] = useState(false);
@@ -44,6 +52,13 @@ export function ResultsWorkspace() {
   const [subjectId, setSubjectId] = useState("");
   const [marks, setMarks] = useState("");
   const [remarks, setRemarks] = useState("");
+
+  const [editResult, setEditResult] = useState<ResultRecord | null>(null);
+  const [editForm, setEditForm] = useState({
+    marksObtained: "",
+    totalMarks: "",
+    remarks: "",
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,6 +75,33 @@ export function ResultsWorkspace() {
     setOpen(false);
     setMarks("");
     setRemarks("");
+  };
+
+  const openEdit = (r: ResultRecord) => {
+    setEditResult(r);
+    setEditForm({
+      marksObtained: String(r.marks),
+      totalMarks: String(r.subject?.fullMarks ?? 100),
+      remarks: r.remarks ?? "",
+    });
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editResult) return;
+    await updateMut.mutateAsync({
+      id: editResult.id,
+      payload: {
+        marksObtained: Number(editForm.marksObtained),
+        ...(editForm.totalMarks !== ""
+          ? { totalMarks: Number(editForm.totalMarks) }
+          : {}),
+        ...(editForm.remarks.trim()
+          ? { remarks: editForm.remarks.trim() }
+          : {}),
+      },
+    });
+    setEditResult(null);
   };
 
   if (isLoading) return <LoadingState message="Loading results..." />;
@@ -107,7 +149,7 @@ export function ResultsWorkspace() {
                 <th className="px-4 py-3">Subject</th>
                 <th className="px-4 py-3">Marks</th>
                 <th className="px-4 py-3">Grade / GPA</th>
-                {canDelete && <th className="px-4 py-3 text-right">Action</th>}
+                {canRecord && <th className="px-4 py-3 text-right">Action</th>}
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -118,26 +160,44 @@ export function ResultsWorkspace() {
                       ? `${r.student.firstName} ${r.student.lastName ?? ""}`
                       : `Student #${r.studentId}`}
                   </td>
-                  <td className="px-4 py-3">{r.exam?.name ?? `Exam #${r.examId}`}</td>
-                  <td className="px-4 py-3">{r.subject?.name ?? `Subject #${r.subjectId}`}</td>
+                  <td className="px-4 py-3">
+                    {r.exam?.name ?? `Exam #${r.examId}`}
+                  </td>
+                  <td className="px-4 py-3">
+                    {r.subject?.name ?? `Subject #${r.subjectId}`}
+                  </td>
                   <td className="px-4 py-3 font-medium">
                     {r.marks} / {r.subject?.fullMarks ?? 100}
                   </td>
                   <td className="px-4 py-3">
                     <span className="rounded-full border bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
-                      {r.grade.replace("_PLUS", "+").replace("_MINUS", "-")} ({r.gradePoint})
+                      {r.grade.replace("_PLUS", "+").replace("_MINUS", "-")} (
+                      {r.gradePoint})
                     </span>
                   </td>
-                  {canDelete && (
+                  {canRecord && (
                     <td className="px-4 py-3 text-right">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => deleteMut.mutate(r.id)}
-                        className="text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="inline-flex items-center gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => openEdit(r)}
+                          title="Edit result"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        {canDelete && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => deleteMut.mutate(r.id)}
+                            className="text-destructive"
+                            title="Delete result"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </td>
                   )}
                 </tr>
@@ -147,7 +207,11 @@ export function ResultsWorkspace() {
         </div>
       )}
 
-      <Modal open={open} onClose={() => setOpen(false)} title="Record Exam Result">
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Record Exam Result"
+      >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1">
             <Label>Enrolled Student</Label>
@@ -225,11 +289,74 @@ export function ResultsWorkspace() {
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={createMut.isPending}>
               {createMut.isPending ? "Saving..." : "Save Result"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        open={!!editResult}
+        onClose={() => setEditResult(null)}
+        title="Edit Exam Result"
+      >
+        <form onSubmit={handleUpdate} className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label>Marks Obtained</Label>
+              <Input
+                type="number"
+                step="0.5"
+                min={0}
+                required
+                value={editForm.marksObtained}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, marksObtained: e.target.value })
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Total Marks</Label>
+              <Input
+                type="number"
+                step="0.5"
+                min={1}
+                value={editForm.totalMarks}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, totalMarks: e.target.value })
+                }
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <Label>Remarks (Optional)</Label>
+            <Input
+              value={editForm.remarks}
+              onChange={(e) =>
+                setEditForm({ ...editForm, remarks: e.target.value })
+              }
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setEditResult(null)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={updateMut.isPending}>
+              {updateMut.isPending ? "Saving..." : "Save Changes"}
             </Button>
           </div>
         </form>

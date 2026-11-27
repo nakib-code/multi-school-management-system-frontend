@@ -8,8 +8,13 @@ import { useSubscriptionPaymentHistory } from "@/features/payments/hooks";
 import { getApiErrorMessage } from "@/lib/api";
 
 export default function VerifiedMobilePaymentsPage() {
-  const { data: payments = [], isLoading, isError, error, refetch } =
-    useSubscriptionPaymentHistory({ status: "VERIFIED" });
+  const {
+    data: payments = [],
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useSubscriptionPaymentHistory({ status: "VERIFIED" });
 
   if (isLoading) return <LoadingState message="Loading verified payments..." />;
   if (isError) {
@@ -59,12 +64,16 @@ export default function VerifiedMobilePaymentsPage() {
                   </td>
                   <td className="px-4 py-3">{p.paymentMethod}</td>
                   <td className="px-4 py-3 font-mono text-xs">{p.trxId}</td>
-                  <td className="px-4 py-3 font-mono text-xs">{p.senderNumber}</td>
+                  <td className="px-4 py-3 font-mono text-xs">
+                    {p.senderNumber}
+                  </td>
                   <td className="px-4 py-3 font-medium">
                     ৳{Number(p.paidAmount).toLocaleString()}
                   </td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">
-                    {p.verifiedAt ? new Date(p.verifiedAt).toLocaleString() : "—"}
+                    {p.verifiedAt
+                      ? new Date(p.verifiedAt).toLocaleString()
+                      : "—"}
                   </td>
                 </tr>
               ))}

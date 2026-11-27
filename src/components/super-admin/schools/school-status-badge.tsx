@@ -25,8 +25,7 @@ const statusConfig: Record<
 
   BLOCKED: {
     label: "Blocked",
-    className:
-      "bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400",
+    className: "bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400",
   },
 
   REJECTED: {
@@ -36,9 +35,7 @@ const statusConfig: Record<
   },
 };
 
-export function SchoolStatusBadge({
-  status,
-}: SchoolStatusBadgeProps) {
+export function SchoolStatusBadge({ status }: SchoolStatusBadgeProps) {
   const config = statusConfig[status];
 
   return (

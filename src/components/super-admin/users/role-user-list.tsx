@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  AlertCircle,
-  ArrowLeft,
-  Loader2,
-  Search,
-} from "lucide-react";
+import { AlertCircle, ArrowLeft, Loader2, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import {
@@ -14,8 +9,8 @@ import {
 } from "@/features/super-admin/users/constants";
 
 import {
-  useSchoolUsers,
   useSchoolUserSummary,
+  useSchoolUsers,
 } from "@/features/super-admin/users/hooks";
 
 import type { SchoolUserStatus } from "@/features/super-admin/users/types";
@@ -28,20 +23,12 @@ interface RoleUserListProps {
   onBack: () => void;
 }
 
-export function RoleUserList({
-  schoolId,
-  role,
-  onBack,
-}: RoleUserListProps) {
-  const category = USER_CATEGORIES.find(
-    (item) => item.key === role,
-  );
+export function RoleUserList({ schoolId, role, onBack }: RoleUserListProps) {
+  const category = USER_CATEGORIES.find((item) => item.key === role);
 
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<
-    SchoolUserStatus | ""
-  >("");
+  const [status, setStatus] = useState<SchoolUserStatus | "">("");
   const [page, setPage] = useState(1);
 
   useEffect(() => {
@@ -55,19 +42,16 @@ export function RoleUserList({
 
   const { data: summary } = useSchoolUserSummary(schoolId);
 
-  const {
-    data,
-    isLoading,
-    isError,
-    isFetching,
-    refetch,
-  } = useSchoolUsers(schoolId, {
-    role: category?.role,
-    page,
-    limit: PAGE_SIZE,
-    search: search || undefined,
-    status: status || undefined,
-  });
+  const { data, isLoading, isError, isFetching, refetch } = useSchoolUsers(
+    schoolId,
+    {
+      role: category?.role,
+      page,
+      limit: PAGE_SIZE,
+      search: search || undefined,
+      status: status || undefined,
+    },
+  );
 
   const users = data?.users ?? [];
   const meta = data?.meta;
@@ -75,9 +59,7 @@ export function RoleUserList({
   if (!category) {
     return (
       <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-6">
-        <p className="font-medium text-destructive">
-          Invalid user category.
-        </p>
+        <p className="font-medium text-destructive">Invalid user category.</p>
 
         <button
           type="button"
@@ -109,10 +91,7 @@ export function RoleUserList({
           </p>
 
           <h2 className="text-2xl font-semibold tracking-tight">
-            {category.label}s
-            {summary
-              ? ` (${summary.counts[role]})`
-              : ""}
+            {category.label}s{summary ? ` (${summary.counts[role]})` : ""}
           </h2>
         </div>
       </div>
@@ -124,9 +103,7 @@ export function RoleUserList({
 
           <input
             value={searchInput}
-            onChange={(event) =>
-              setSearchInput(event.target.value)
-            }
+            onChange={(event) => setSearchInput(event.target.value)}
             placeholder={`Search ${category.label.toLowerCase()}s...`}
             className="h-10 w-full rounded-lg border bg-background pl-9 pr-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
           />
@@ -135,9 +112,7 @@ export function RoleUserList({
         <select
           value={status}
           onChange={(event) => {
-            setStatus(
-              event.target.value as SchoolUserStatus | "",
-            );
+            setStatus(event.target.value as SchoolUserStatus | "");
             setPage(1);
           }}
           className="h-10 rounded-lg border bg-background px-3 text-sm outline-none transition focus:border-primary"
@@ -188,29 +163,17 @@ export function RoleUserList({
             <table className="w-full text-sm">
               <thead className="border-b bg-muted/40 text-left text-xs text-muted-foreground">
                 <tr>
-                  <th className="px-5 py-3 font-medium">
-                    Name
-                  </th>
+                  <th className="px-5 py-3 font-medium">Name</th>
 
-                  <th className="px-5 py-3 font-medium">
-                    Email
-                  </th>
+                  <th className="px-5 py-3 font-medium">Email</th>
 
-                  <th className="px-5 py-3 font-medium">
-                    Phone
-                  </th>
+                  <th className="px-5 py-3 font-medium">Phone</th>
 
-                  <th className="px-5 py-3 font-medium">
-                    Status
-                  </th>
+                  <th className="px-5 py-3 font-medium">Status</th>
 
-                  <th className="px-5 py-3 font-medium">
-                    Last Login
-                  </th>
+                  <th className="px-5 py-3 font-medium">Last Login</th>
 
-                  <th className="px-5 py-3 font-medium">
-                    Created
-                  </th>
+                  <th className="px-5 py-3 font-medium">Created</th>
                 </tr>
               </thead>
 
@@ -220,13 +183,9 @@ export function RoleUserList({
                     key={user.id}
                     className="transition-colors hover:bg-muted/30"
                   >
-                    <td className="px-5 py-3 font-medium">
-                      {user.name}
-                    </td>
+                    <td className="px-5 py-3 font-medium">{user.name}</td>
 
-                    <td className="px-5 py-3">
-                      {user.email}
-                    </td>
+                    <td className="px-5 py-3">{user.email}</td>
 
                     <td className="px-5 py-3 text-muted-foreground">
                       {user.phone ?? "—"}
@@ -246,16 +205,12 @@ export function RoleUserList({
 
                     <td className="px-5 py-3 text-muted-foreground">
                       {user.lastLoginAt
-                        ? new Date(
-                            user.lastLoginAt,
-                          ).toLocaleDateString("en-BD")
+                        ? new Date(user.lastLoginAt).toLocaleDateString("en-BD")
                         : "Never"}
                     </td>
 
                     <td className="px-5 py-3 text-muted-foreground">
-                      {new Date(
-                        user.createdAt,
-                      ).toLocaleDateString("en-BD")}
+                      {new Date(user.createdAt).toLocaleDateString("en-BD")}
                     </td>
                   </tr>
                 ))}
@@ -268,8 +223,7 @@ export function RoleUserList({
         {meta && meta.totalPages > 1 && (
           <div className="flex flex-col gap-3 border-t px-5 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
             <span className="text-muted-foreground">
-              Page {meta.page} of {meta.totalPages} ·{" "}
-              {meta.total} users
+              Page {meta.page} of {meta.totalPages} · {meta.total} users
               {isFetching ? " · updating..." : ""}
             </span>
 
@@ -277,9 +231,7 @@ export function RoleUserList({
               <button
                 type="button"
                 disabled={page <= 1 || isFetching}
-                onClick={() =>
-                  setPage((current) => current - 1)
-                }
+                onClick={() => setPage((current) => current - 1)}
                 className="rounded-md border px-3 py-1.5 hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Previous
@@ -287,12 +239,8 @@ export function RoleUserList({
 
               <button
                 type="button"
-                disabled={
-                  page >= meta.totalPages || isFetching
-                }
-                onClick={() =>
-                  setPage((current) => current + 1)
-                }
+                disabled={page >= meta.totalPages || isFetching}
+                onClick={() => setPage((current) => current + 1)}
                 className="rounded-md border px-3 py-1.5 hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Next

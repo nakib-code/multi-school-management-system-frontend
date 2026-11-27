@@ -10,19 +10,66 @@ import {
   XCircle,
 } from "lucide-react";
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { type FormEvent, useState } from "react";
 import { toast } from "sonner";
 
-import { trackAdmission } from "@/features/admissions/api";
-import type {
-  TrackAdmissionResponse,
-} from "@/features/admissions/types";
+import {
+  submitOnlinePaymentTrx,
+  trackAdmission,
+} from "@/features/admissions/api";
+import type { TrackAdmissionResponse } from "@/features/admissions/types";
 
 export default function TrackAdmissionPage() {
   const [applicationNo, setApplicationNo] = useState("");
   const [guardianPhone, setGuardianPhone] = useState("");
   const [result, setResult] = useState<TrackAdmissionResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  const [trxMethod, setTrxMethod] = useState<"BKASH" | "NAGAD" | "ROCKET">(
+    "BKASH",
+  );
+  const [trxId, setTrxId] = useState("");
+  const [senderPhone, setSenderPhone] = useState("");
+  const [isSubmittingTrx, setIsSubmittingTrx] = useState(false);
+
+  const handleSubmitTrx = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!result) return;
+    if (trxId.trim().length < 4) {
+      toast.error("Please enter a valid Transaction ID");
+      return;
+    }
+
+    const contact = guardianPhone.trim();
+    const isEmail = contact.includes("@");
+
+    try {
+      setIsSubmittingTrx(true);
+      await submitOnlinePaymentTrx({
+        applicationNo: result.applicationNo,
+        ...(isEmail ? { studentEmail: contact } : { guardianPhone: contact }),
+        paymentMethod: trxMethod,
+        transactionId: trxId.trim(),
+        ...(senderPhone.trim() ? { senderPhone: senderPhone.trim() } : {}),
+      });
+      toast.success("Transaction ID submitted for verification");
+      setTrxId("");
+      setSenderPhone("");
+      const refreshed = await trackAdmission({
+        applicationNo: result.applicationNo,
+        ...(isEmail ? { studentEmail: contact } : { guardianPhone: contact }),
+      });
+      setResult(refreshed);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to submit transaction ID",
+      );
+    } finally {
+      setIsSubmittingTrx(false);
+    }
+  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -80,18 +127,14 @@ export default function TrackAdmissionPage() {
           </h1>
 
           <p className="mt-2 text-slate-600">
-            Enter your application number and
-            student email to check your admission
-            status.
+            Enter your application number and student email to check your
+            admission status.
           </p>
         </div>
 
         {/* Search Form */}
         <div className="rounded-2xl border bg-white p-6 shadow-sm">
-          <form
-            onSubmit={handleSubmit}
-            className="space-y-5"
-          >
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label
                 htmlFor="applicationNo"
@@ -103,9 +146,7 @@ export default function TrackAdmissionPage() {
               <input
                 id="applicationNo"
                 value={applicationNo}
-                onChange={(event) =>
-                  setApplicationNo(event.target.value)
-                }
+                onChange={(event) => setApplicationNo(event.target.value)}
                 placeholder="ADM-1234567890-1234"
                 className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm outline-none transition focus:border-[#00a99d] focus:ring-2 focus:ring-[#00a99d]/10"
               />
@@ -156,9 +197,7 @@ export default function TrackAdmissionPage() {
             <div className="rounded-2xl border bg-white p-6 shadow-sm">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="text-sm text-slate-500">
-                    Application Number
-                  </p>
+                  <p className="text-sm text-slate-500">Application Number</p>
 
                   <h2 className="mt-1 text-xl font-bold text-[#061842]">
                     {result.applicationNo}
@@ -176,64 +215,34 @@ export default function TrackAdmissionPage() {
               </h2>
 
               <div className="grid gap-5 sm:grid-cols-2">
-                <InfoItem
-                  label="Student Name"
-                  value={result.student.name}
-                />
+                <InfoItem label="Student Name" value={result.student.name} />
 
                 <InfoItem
                   label="Guardian Phone"
                   value={
-                    result.student.guardianPhone ??
-                    result.student.email ??
-                    "—"
+                    result.student.guardianPhone ?? result.student.email ?? "—"
                   }
                 />
 
-                <InfoItem
-                  label="School"
-                  value={result.school.name}
-                />
+                <InfoItem label="School" value={result.school.name} />
 
-                <InfoItem
-                  label="School Code"
-                  value={result.school.code}
-                />
+                <InfoItem label="School Code" value={result.school.code} />
 
                 <InfoItem
                   label="Class"
-                  value={
-                    result.academic.class?.name ??
-                    "—"
-                  }
+                  value={result.academic.class?.name ?? "—"}
                 />
 
                 <InfoItem
                   label="Section"
-                  value={
-                    result.academic.section?.name ??
-                    "—"
-                  }
+                  value={result.academic.section?.name ?? "—"}
                 />
 
-                <InfoItem
-                  label="Academic Year"
-                  value={result.academic.year}
-                />
+                <InfoItem label="Academic Year" value={result.academic.year} />
 
-                <InfoItem
-                  label="Shift"
-                  value={
-                    result.academic.shift ?? "—"
-                  }
-                />
+                <InfoItem label="Shift" value={result.academic.shift ?? "—"} />
 
-                <InfoItem
-                  label="Group"
-                  value={
-                    result.academic.group ?? "—"
-                  }
-                />
+                <InfoItem label="Group" value={result.academic.group ?? "—"} />
 
                 <InfoItem
                   label="Submitted"
@@ -252,16 +261,12 @@ export default function TrackAdmissionPage() {
                 <div className="grid gap-5 sm:grid-cols-2">
                   <InfoItem
                     label="Payment Method"
-                    value={
-                      result.payment.paymentMethod
-                    }
+                    value={result.payment.paymentMethod}
                   />
 
                   <InfoItem
                     label="Payment Status"
-                    value={
-                      result.payment.status
-                    }
+                    value={result.payment.status}
                   />
 
                   <InfoItem
@@ -273,9 +278,7 @@ export default function TrackAdmissionPage() {
                     label="Paid At"
                     value={
                       result.payment.paidAt
-                        ? formatDate(
-                            result.payment.paidAt,
-                          )
+                        ? formatDate(result.payment.paidAt)
                         : "Not paid yet"
                     }
                   />
@@ -283,12 +286,84 @@ export default function TrackAdmissionPage() {
                   {result.payment.transactionId && (
                     <InfoItem
                       label="Transaction ID"
-                      value={
-                        result.payment.transactionId
-                      }
+                      value={result.payment.transactionId}
                     />
                   )}
+
+                  {result.payment.remarks && (
+                    <InfoItem label="Remarks" value={result.payment.remarks} />
+                  )}
                 </div>
+
+                {result.status === "PENDING" &&
+                  result.payment.paymentMethod !== "CASH" &&
+                  result.payment.status !== "PAID" && (
+                    <form
+                      onSubmit={handleSubmitTrx}
+                      className="mt-6 space-y-4 border-t pt-5"
+                    >
+                      <div>
+                        <h3 className="text-sm font-semibold text-[#061842]">
+                          {result.payment.transactionId
+                            ? "Update Mobile Banking Transaction ID"
+                            : "Submit Mobile Banking Transaction ID"}
+                        </h3>
+                        <p className="mt-0.5 text-xs text-slate-600">
+                          Send ৳{result.payment.amount} via bKash, Nagad, or
+                          Rocket and enter your TrxID below for school
+                          verification.
+                        </p>
+                      </div>
+
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <select
+                          value={trxMethod}
+                          onChange={(e) =>
+                            setTrxMethod(
+                              e.target.value as "BKASH" | "NAGAD" | "ROCKET",
+                            )
+                          }
+                          className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm"
+                        >
+                          <option value="BKASH">bKash</option>
+                          <option value="NAGAD">Nagad</option>
+                          <option value="ROCKET">Rocket</option>
+                        </select>
+
+                        <input
+                          type="text"
+                          value={trxId}
+                          onChange={(e) => setTrxId(e.target.value)}
+                          placeholder="Transaction ID (e.g. 9K2L8M4N)"
+                          className="h-10 rounded-lg border border-slate-300 px-3 text-sm"
+                          required
+                        />
+
+                        <input
+                          type="text"
+                          value={senderPhone}
+                          onChange={(e) => setSenderPhone(e.target.value)}
+                          placeholder="Sender Phone (optional)"
+                          className="h-10 rounded-lg border border-slate-300 px-3 text-sm"
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={isSubmittingTrx}
+                        className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#00a99d] px-5 text-sm font-semibold text-white transition hover:bg-[#008f87] disabled:opacity-60"
+                      >
+                        {isSubmittingTrx ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Submitting...
+                          </>
+                        ) : (
+                          "Submit Transaction ID"
+                        )}
+                      </button>
+                    </form>
+                  )}
               </div>
             )}
 
@@ -316,9 +391,7 @@ export default function TrackAdmissionPage() {
               <div className="rounded-2xl border bg-white p-6 shadow-sm">
                 <InfoItem
                   label="Reviewed At"
-                  value={formatDate(
-                    result.reviewedAt,
-                  )}
+                  value={formatDate(result.reviewedAt)}
                 />
               </div>
             )}
@@ -329,11 +402,7 @@ export default function TrackAdmissionPage() {
   );
 }
 
-function StatusBadge({
-  status,
-}: {
-  status: string;
-}) {
+function StatusBadge({ status }: { status: string }) {
   const normalized = status.toUpperCase();
 
   if (normalized === "APPROVED") {
@@ -362,13 +431,7 @@ function StatusBadge({
   );
 }
 
-function InfoItem({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
+function InfoItem({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <p className="text-xs font-medium uppercase tracking-wide text-slate-500">

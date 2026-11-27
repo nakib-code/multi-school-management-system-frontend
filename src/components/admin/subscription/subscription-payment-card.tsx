@@ -8,7 +8,8 @@ export function SubscriptionPaymentCard() {
     <div className="rounded-xl border bg-card p-6">
       <h3 className="text-lg font-semibold">Subscription Payment</h3>
       <p className="mt-1 text-sm text-muted-foreground">
-        Submit your manual bKash, Nagad, or Rocket transaction ID to activate or renew your plan.
+        Submit your manual bKash, Nagad, or Rocket transaction ID to activate or
+        renew your plan.
       </p>
       <div className="mt-4">
         <Button asChild>

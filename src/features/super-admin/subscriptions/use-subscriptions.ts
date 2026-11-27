@@ -1,24 +1,17 @@
 "use client";
 
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { subscriptionApi } from "./api";
-import { SubscriptionStatus } from "./type";
+import type { SubscriptionStatus } from "./type";
 
 export const subscriptionKeys = {
   all: ["super-admin", "subscriptions"] as const,
 
-  lists: () =>
-    [...subscriptionKeys.all, "list"] as const,
+  lists: () => [...subscriptionKeys.all, "list"] as const,
 
-  details: () =>
-    [...subscriptionKeys.all, "detail"] as const,
+  details: () => [...subscriptionKeys.all, "detail"] as const,
 
-  detail: (id: number) =>
-    [...subscriptionKeys.details(), id] as const,
+  detail: (id: number) => [...subscriptionKeys.details(), id] as const,
 };
 
 export const useSubscriptions = () => {
@@ -54,13 +47,7 @@ export const useUpdateSubscriptionStatus = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
-      id,
-      status,
-    }: {
-      id: number;
-      status: SubscriptionStatus;
-    }) =>
+    mutationFn: ({ id, status }: { id: number; status: SubscriptionStatus }) =>
       subscriptionApi.updateStatus(id, status),
 
     onSuccess: (_, variables) => {
@@ -69,9 +56,7 @@ export const useUpdateSubscriptionStatus = () => {
       });
 
       queryClient.invalidateQueries({
-        queryKey: subscriptionKeys.detail(
-          variables.id,
-        ),
+        queryKey: subscriptionKeys.detail(variables.id),
       });
     },
   });

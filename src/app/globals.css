@@ -488,8 +488,7 @@
   background: var(--brand-teal);
   color: var(--brand-navy);
 
-  box-shadow:
-    0 10px 25px rgba(0, 210, 196, 0.18);
+  box-shadow: 0 10px 25px rgba(0, 210, 196, 0.18);
 }
 
 .school-btn-teal:hover {
@@ -504,8 +503,7 @@
   background: var(--brand-yellow);
   color: var(--brand-navy);
 
-  box-shadow:
-    0 10px 25px rgba(250, 204, 21, 0.12);
+  box-shadow: 0 10px 25px rgba(250, 204, 21, 0.12);
 }
 
 .school-btn-accent:hover {
@@ -569,8 +567,7 @@
 
   background: var(--surface);
 
-  box-shadow:
-    0 4px 20px rgba(6, 24, 66, 0.06);
+  box-shadow: 0 4px 20px rgba(6, 24, 66, 0.06);
 
   transition:
     transform 300ms ease,
@@ -583,8 +580,7 @@
 
   border-color: rgba(0, 210, 196, 0.3);
 
-  box-shadow:
-    0 20px 40px rgba(6, 24, 66, 0.12);
+  box-shadow: 0 20px 40px rgba(6, 24, 66, 0.12);
 }
 
 /* =========================================================
@@ -632,8 +628,7 @@
 .school-input:focus {
   border-color: var(--brand-teal);
 
-  box-shadow:
-    0 0 0 4px rgba(0, 210, 196, 0.1);
+  box-shadow: 0 0 0 4px rgba(0, 210, 196, 0.1);
 }
 
 /* =========================================================

@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpenCheck, Plus } from "lucide-react";
+import { BookOpenCheck, Pencil, Plus } from "lucide-react";
 import { useState } from "react";
 import { Modal } from "@/components/modals/modal";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -15,10 +15,14 @@ import {
   useHefzDailyLogs,
   useHefzEnrollments,
   useStudentHefzProgress,
+  useUpdateHefzDailyLog,
+  useUpdateHefzEnrollment,
   useUpsertHefzDailyLog,
 } from "@/features/hefz/hooks";
 import type {
   HefzAttendanceStatus,
+  HefzDailyLogRecord,
+  HefzEnrollmentRecord,
   HefzWing,
   SobokQuality,
 } from "@/features/hefz/types";
@@ -39,7 +43,12 @@ export function HefzWorkspace() {
     return <StudentHefzView schoolId={schoolId} />;
   }
 
-  return <StaffHefzView schoolId={schoolId} canEnroll={role === "ADMIN" || role === "MANAGER"} />;
+  return (
+    <StaffHefzView
+      schoolId={schoolId}
+      canEnroll={role === "ADMIN" || role === "MANAGER"}
+    />
+  );
 }
 
 interface HefzProgressReport {
@@ -60,7 +69,12 @@ interface HefzProgressReport {
   summary: {
     totalLogs: number;
     attendance: { present: number; absent: number; late: number };
-    sobokQuality: { good: number; average: number; weak: number; revise: number };
+    sobokQuality: {
+      good: number;
+      average: number;
+      weak: number;
+      revise: number;
+    };
   };
   recentLogs: Array<{
     id: number;
@@ -107,7 +121,9 @@ function HefzProgressCard({ report }: { report: HefzProgressReport }) {
             >
               <div className="flex items-center justify-between">
                 <span className="font-semibold">{en.wing} Wing</span>
-                <span className="rounded border px-1.5 py-0.5">{en.status}</span>
+                <span className="rounded border px-1.5 py-0.5">
+                  {en.status}
+                </span>
               </div>
               <p className="mt-1 text-muted-foreground">
                 Para {en.currentPara ?? "—"}
@@ -279,18 +295,33 @@ function StudentHefzView({ schoolId }: { schoolId: number }) {
   );
 }
 
-function StaffHefzView({ schoolId, canEnroll }: { schoolId: number; canEnroll: boolean }) {
+function StaffHefzView({
+  schoolId,
+  canEnroll,
+}: {
+  schoolId: number;
+  canEnroll: boolean;
+}) {
   const [tab, setTab] = useState<"enrollments" | "logs">("enrollments");
   const [enrollOpen, setEnrollOpen] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
+  const [editEnroll, setEditEnroll] = useState<HefzEnrollmentRecord | null>(
+    null,
+  );
+  const [editLog, setEditLog] = useState<HefzDailyLogRecord | null>(null);
 
   const enrollmentsQuery = useHefzEnrollments(schoolId);
   const logsQuery = useHefzDailyLogs(schoolId);
-  const { data: studentsData } = useStudents(canEnroll ? schoolId : 0, { page: 1, limit: 100 });
+  const { data: studentsData } = useStudents(canEnroll ? schoolId : 0, {
+    page: 1,
+    limit: 100,
+  });
   const { data: teachers = [] } = useTeachers(canEnroll ? schoolId : 0);
 
   const createEnrollMut = useCreateHefzEnrollment(schoolId);
+  const updateEnrollMut = useUpdateHefzEnrollment(schoolId);
   const upsertLogMut = useUpsertHefzDailyLog(schoolId);
+  const updateLogMut = useUpdateHefzDailyLog(schoolId);
 
   const [enrollForm, setEnrollForm] = useState({
     studentId: "",
@@ -298,6 +329,14 @@ function StaffHefzView({ schoolId, canEnroll }: { schoolId: number; canEnroll: b
     wing: "HEFZ" as HefzWing,
     currentPara: "1",
     currentSurah: "",
+  });
+
+  const [editEnrollForm, setEditEnrollForm] = useState({
+    wing: "HEFZ" as HefzWing,
+    currentPara: "",
+    currentSurah: "",
+    status: "ACTIVE",
+    ustadId: "",
   });
 
   const [logForm, setLogForm] = useState({
@@ -312,11 +351,22 @@ function StaffHefzView({ schoolId, canEnroll }: { schoolId: number; canEnroll: b
     ustadNote: "",
   });
 
-  if (enrollmentsQuery.isLoading) return <LoadingState message="Loading Hefz & Najera..." />;
+  const [editLogForm, setEditLogForm] = useState({
+    sabak: "",
+    satsabak: "",
+    amukhta: "",
+    remarks: "",
+  });
+
+  if (enrollmentsQuery.isLoading)
+    return <LoadingState message="Loading Hefz & Najera..." />;
   if (enrollmentsQuery.isError) {
     return (
       <ErrorState
-        message={getApiErrorMessage(enrollmentsQuery.error, "Failed to load Hefz module")}
+        message={getApiErrorMessage(
+          enrollmentsQuery.error,
+          "Failed to load Hefz module",
+        )}
         onRetry={() => enrollmentsQuery.refetch()}
       />
     );
@@ -331,8 +381,12 @@ function StaffHefzView({ schoolId, canEnroll }: { schoolId: number; canEnroll: b
       studentId: Number(enrollForm.studentId),
       ustadId: Number(enrollForm.ustadId),
       wing: enrollForm.wing,
-      ...(enrollForm.currentPara ? { currentPara: Number(enrollForm.currentPara) } : {}),
-      ...(enrollForm.currentSurah ? { currentSurah: enrollForm.currentSurah.trim() } : {}),
+      ...(enrollForm.currentPara
+        ? { currentPara: Number(enrollForm.currentPara) }
+        : {}),
+      ...(enrollForm.currentSurah
+        ? { currentSurah: enrollForm.currentSurah.trim() }
+        : {}),
     });
     setEnrollOpen(false);
   };
@@ -345,22 +399,97 @@ function StaffHefzView({ schoolId, canEnroll }: { schoolId: number; canEnroll: b
       sobok: logForm.sobok.trim(),
       sobokQuality: logForm.sobokQuality,
       attendanceStatus: logForm.attendanceStatus,
-      ...(logForm.sobokPagesOrLines ? { sobokPagesOrLines: logForm.sobokPagesOrLines.trim() } : {}),
+      ...(logForm.sobokPagesOrLines
+        ? { sobokPagesOrLines: logForm.sobokPagesOrLines.trim() }
+        : {}),
       ...(logForm.sobokAm ? { sobokAm: logForm.sobokAm.trim() } : {}),
       ...(logForm.manzil ? { manzil: logForm.manzil.trim() } : {}),
       ...(logForm.ustadNote ? { ustadNote: logForm.ustadNote.trim() } : {}),
     });
     setLogOpen(false);
-    setLogForm((prev) => ({ ...prev, sobok: "", sobokAm: "", manzil: "", ustadNote: "" }));
+    setLogForm((prev) => ({
+      ...prev,
+      sobok: "",
+      sobokAm: "",
+      manzil: "",
+      ustadNote: "",
+    }));
+  };
+
+  const openEditEnroll = (en: HefzEnrollmentRecord) => {
+    setEditEnroll(en);
+    setEditEnrollForm({
+      wing: en.wing,
+      currentPara: en.currentPara != null ? String(en.currentPara) : "",
+      currentSurah: en.currentSurah ?? "",
+      status: en.status,
+      ustadId: String(en.ustadId),
+    });
+  };
+
+  const handleUpdateEnroll = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editEnroll) return;
+    await updateEnrollMut.mutateAsync({
+      id: editEnroll.id,
+      payload: {
+        wing: editEnrollForm.wing,
+        ...(editEnrollForm.currentPara !== ""
+          ? { currentPara: Number(editEnrollForm.currentPara) }
+          : {}),
+        ...(editEnrollForm.currentSurah.trim()
+          ? { currentSurah: editEnrollForm.currentSurah.trim() }
+          : {}),
+        status: editEnrollForm.status,
+        ustadId: editEnrollForm.ustadId ? Number(editEnrollForm.ustadId) : null,
+      },
+    });
+    setEditEnroll(null);
+  };
+
+  const openEditLog = (l: HefzDailyLogRecord) => {
+    setEditLog(l);
+    setEditLogForm({
+      sabak: l.sobok ?? "",
+      satsabak: l.sobokAm ?? "",
+      amukhta: l.manzil ?? "",
+      remarks: l.ustadNote ?? "",
+    });
+  };
+
+  const handleUpdateLog = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editLog) return;
+    await updateLogMut.mutateAsync({
+      id: editLog.id,
+      payload: {
+        ...(editLogForm.sabak.trim()
+          ? { sabak: editLogForm.sabak.trim() }
+          : {}),
+        ...(editLogForm.satsabak.trim()
+          ? { satsabak: editLogForm.satsabak.trim() }
+          : {}),
+        ...(editLogForm.amukhta.trim()
+          ? { amukhta: editLogForm.amukhta.trim() }
+          : {}),
+        ...(editLogForm.remarks.trim()
+          ? { remarks: editLogForm.remarks.trim() }
+          : {}),
+      },
+    });
+    setEditLog(null);
   };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Hefz &amp; Najera</h1>
+          <h1 className="text-2xl font-bold tracking-tight">
+            Hefz &amp; Najera
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Manage Quran memorization enrollments and daily Sobok / Sobok-e-Am / Manzil logs.
+            Manage Quran memorization enrollments and daily Sobok / Sobok-e-Am /
+            Manzil logs.
           </p>
         </div>
         <div className="flex gap-2">
@@ -370,7 +499,11 @@ function StaffHefzView({ schoolId, canEnroll }: { schoolId: number; canEnroll: b
               Enroll Student
             </Button>
           )}
-          <Button variant="outline" onClick={() => setLogOpen(true)} className="gap-1.5">
+          <Button
+            variant="outline"
+            onClick={() => setLogOpen(true)}
+            className="gap-1.5"
+          >
             <Plus className="h-4 w-4" />
             Record Daily Sobok
           </Button>
@@ -420,9 +553,20 @@ function StaffHefzView({ schoolId, canEnroll }: { schoolId: number; canEnroll: b
                         ? `${en.student.firstName} ${en.student.lastName ?? ""}`
                         : `Student #${en.studentId}`}
                     </p>
-                    <span className="rounded-full border px-2 py-0.5 text-[10px] font-semibold">
-                      {en.wing} • {en.status}
-                    </span>
+                    <div className="flex items-center gap-1">
+                      <span className="rounded-full border px-2 py-0.5 text-[10px] font-semibold">
+                        {en.wing} • {en.status}
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => openEditEnroll(en)}
+                        className="h-7 w-7 p-0"
+                        title="Edit enrollment"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </div>
                   <p className="text-muted-foreground">
                     Ustad:{" "}
@@ -447,6 +591,7 @@ function StaffHefzView({ schoolId, canEnroll }: { schoolId: number; canEnroll: b
                     <th className="px-4 py-3">Wing</th>
                     <th className="px-4 py-3">Current Para / Surah</th>
                     <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3 text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -471,6 +616,16 @@ function StaffHefzView({ schoolId, canEnroll }: { schoolId: number; canEnroll: b
                         <span className="rounded-full border px-2.5 py-0.5 text-xs font-medium">
                           {en.status}
                         </span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => openEditEnroll(en)}
+                          title="Edit enrollment"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
                       </td>
                     </tr>
                   ))}
@@ -502,9 +657,20 @@ function StaffHefzView({ schoolId, canEnroll }: { schoolId: number; canEnroll: b
                       {l.attendanceStatus}
                     </p>
                   </div>
-                  <span className="rounded-full border px-2 py-0.5 text-[10px] font-semibold">
-                    {l.sobokQuality}
-                  </span>
+                  <div className="flex items-center gap-1">
+                    <span className="rounded-full border px-2 py-0.5 text-[10px] font-semibold">
+                      {l.sobokQuality}
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => openEditLog(l)}
+                      className="h-7 w-7 p-0"
+                      title="Edit daily log"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </div>
                 <p className="font-medium">Sobok: {l.sobok}</p>
                 {l.manzil && (
@@ -524,6 +690,7 @@ function StaffHefzView({ schoolId, canEnroll }: { schoolId: number; canEnroll: b
                   <th className="px-4 py-3">Quality</th>
                   <th className="px-4 py-3">Manzil</th>
                   <th className="px-4 py-3">Attendance</th>
+                  <th className="px-4 py-3 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -547,6 +714,16 @@ function StaffHefzView({ schoolId, canEnroll }: { schoolId: number; canEnroll: b
                       {l.manzil ?? "—"}
                     </td>
                     <td className="px-4 py-3 text-xs">{l.attendanceStatus}</td>
+                    <td className="px-4 py-3 text-right">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => openEditLog(l)}
+                        title="Edit daily log"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -555,14 +732,20 @@ function StaffHefzView({ schoolId, canEnroll }: { schoolId: number; canEnroll: b
         </>
       )}
 
-      <Modal open={enrollOpen} onClose={() => setEnrollOpen(false)} title="Enroll in Hefz / Najera">
+      <Modal
+        open={enrollOpen}
+        onClose={() => setEnrollOpen(false)}
+        title="Enroll in Hefz / Najera"
+      >
         <form onSubmit={handleEnroll} className="space-y-4">
           <div className="space-y-1">
             <Label>Student</Label>
             <select
               required
               value={enrollForm.studentId}
-              onChange={(e) => setEnrollForm({ ...enrollForm, studentId: e.target.value })}
+              onChange={(e) =>
+                setEnrollForm({ ...enrollForm, studentId: e.target.value })
+              }
               className="h-9 w-full rounded-md border bg-background px-3 text-sm"
             >
               <option value="">Select student...</option>
@@ -578,7 +761,9 @@ function StaffHefzView({ schoolId, canEnroll }: { schoolId: number; canEnroll: b
             <select
               required
               value={enrollForm.ustadId}
-              onChange={(e) => setEnrollForm({ ...enrollForm, ustadId: e.target.value })}
+              onChange={(e) =>
+                setEnrollForm({ ...enrollForm, ustadId: e.target.value })
+              }
               className="h-9 w-full rounded-md border bg-background px-3 text-sm"
             >
               <option value="">Select Ustad...</option>
@@ -594,7 +779,12 @@ function StaffHefzView({ schoolId, canEnroll }: { schoolId: number; canEnroll: b
               <Label>Wing</Label>
               <select
                 value={enrollForm.wing}
-                onChange={(e) => setEnrollForm({ ...enrollForm, wing: e.target.value as HefzWing })}
+                onChange={(e) =>
+                  setEnrollForm({
+                    ...enrollForm,
+                    wing: e.target.value as HefzWing,
+                  })
+                }
                 className="h-9 w-full rounded-md border bg-background px-3 text-sm"
               >
                 <option value="NOORANI">NOORANI</option>
@@ -611,7 +801,9 @@ function StaffHefzView({ schoolId, canEnroll }: { schoolId: number; canEnroll: b
                 min={1}
                 max={30}
                 value={enrollForm.currentPara}
-                onChange={(e) => setEnrollForm({ ...enrollForm, currentPara: e.target.value })}
+                onChange={(e) =>
+                  setEnrollForm({ ...enrollForm, currentPara: e.target.value })
+                }
               />
             </div>
             <div className="space-y-1">
@@ -619,12 +811,18 @@ function StaffHefzView({ schoolId, canEnroll }: { schoolId: number; canEnroll: b
               <Input
                 placeholder="Al-Baqarah"
                 value={enrollForm.currentSurah}
-                onChange={(e) => setEnrollForm({ ...enrollForm, currentSurah: e.target.value })}
+                onChange={(e) =>
+                  setEnrollForm({ ...enrollForm, currentSurah: e.target.value })
+                }
               />
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={() => setEnrollOpen(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setEnrollOpen(false)}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={createEnrollMut.isPending}>
@@ -634,7 +832,11 @@ function StaffHefzView({ schoolId, canEnroll }: { schoolId: number; canEnroll: b
         </form>
       </Modal>
 
-      <Modal open={logOpen} onClose={() => setLogOpen(false)} title="Record Daily Sobok / Manzil Log">
+      <Modal
+        open={logOpen}
+        onClose={() => setLogOpen(false)}
+        title="Record Daily Sobok / Manzil Log"
+      >
         <form onSubmit={handleLog} className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1">
@@ -642,7 +844,9 @@ function StaffHefzView({ schoolId, canEnroll }: { schoolId: number; canEnroll: b
               <select
                 required
                 value={logForm.hefzEnrollmentId}
-                onChange={(e) => setLogForm({ ...logForm, hefzEnrollmentId: e.target.value })}
+                onChange={(e) =>
+                  setLogForm({ ...logForm, hefzEnrollmentId: e.target.value })
+                }
                 className="h-9 w-full rounded-md border bg-background px-3 text-sm"
               >
                 <option value="">Select student...</option>
@@ -661,7 +865,9 @@ function StaffHefzView({ schoolId, canEnroll }: { schoolId: number; canEnroll: b
                 type="date"
                 required
                 value={logForm.logDate}
-                onChange={(e) => setLogForm({ ...logForm, logDate: e.target.value })}
+                onChange={(e) =>
+                  setLogForm({ ...logForm, logDate: e.target.value })
+                }
               />
             </div>
           </div>
@@ -672,7 +878,9 @@ function StaffHefzView({ schoolId, canEnroll }: { schoolId: number; canEnroll: b
                 required
                 placeholder="Surah Yaseen 1–15"
                 value={logForm.sobok}
-                onChange={(e) => setLogForm({ ...logForm, sobok: e.target.value })}
+                onChange={(e) =>
+                  setLogForm({ ...logForm, sobok: e.target.value })
+                }
               />
             </div>
             <div className="space-y-1">
@@ -680,7 +888,10 @@ function StaffHefzView({ schoolId, canEnroll }: { schoolId: number; canEnroll: b
               <select
                 value={logForm.sobokQuality}
                 onChange={(e) =>
-                  setLogForm({ ...logForm, sobokQuality: e.target.value as SobokQuality })
+                  setLogForm({
+                    ...logForm,
+                    sobokQuality: e.target.value as SobokQuality,
+                  })
                 }
                 className="h-9 w-full rounded-md border bg-background px-3 text-sm"
               >
@@ -697,7 +908,9 @@ function StaffHefzView({ schoolId, canEnroll }: { schoolId: number; canEnroll: b
               <Input
                 placeholder="Para 1–3"
                 value={logForm.manzil}
-                onChange={(e) => setLogForm({ ...logForm, manzil: e.target.value })}
+                onChange={(e) =>
+                  setLogForm({ ...logForm, manzil: e.target.value })
+                }
               />
             </div>
             <div className="space-y-1">
@@ -719,11 +932,196 @@ function StaffHefzView({ schoolId, canEnroll }: { schoolId: number; canEnroll: b
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={() => setLogOpen(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setLogOpen(false)}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={upsertLogMut.isPending}>
               Save Daily Log
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        open={!!editEnroll}
+        onClose={() => setEditEnroll(null)}
+        title="Edit Hefz Enrollment"
+      >
+        <form onSubmit={handleUpdateEnroll} className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label>Wing</Label>
+              <select
+                value={editEnrollForm.wing}
+                onChange={(e) =>
+                  setEditEnrollForm({
+                    ...editEnrollForm,
+                    wing: e.target.value as HefzWing,
+                  })
+                }
+                className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+              >
+                <option value="NOORANI">NOORANI</option>
+                <option value="QAIDA">QAIDA</option>
+                <option value="AMPARA">AMPARA</option>
+                <option value="NAJERA">NAJERA</option>
+                <option value="HEFZ">HEFZ</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <Label>Status</Label>
+              <select
+                value={editEnrollForm.status}
+                onChange={(e) =>
+                  setEditEnrollForm({
+                    ...editEnrollForm,
+                    status: e.target.value,
+                  })
+                }
+                className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+              >
+                <option value="ACTIVE">ACTIVE</option>
+                <option value="COMPLETED">COMPLETED</option>
+                <option value="PAUSED">PAUSED</option>
+                <option value="INACTIVE">INACTIVE</option>
+              </select>
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label>Current Para (1–30)</Label>
+              <Input
+                type="number"
+                min={1}
+                max={30}
+                value={editEnrollForm.currentPara}
+                onChange={(e) =>
+                  setEditEnrollForm({
+                    ...editEnrollForm,
+                    currentPara: e.target.value,
+                  })
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Current Surah</Label>
+              <Input
+                placeholder="Al-Baqarah"
+                value={editEnrollForm.currentSurah}
+                onChange={(e) =>
+                  setEditEnrollForm({
+                    ...editEnrollForm,
+                    currentSurah: e.target.value,
+                  })
+                }
+              />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Label>Ustad (Teacher)</Label>
+            <select
+              value={editEnrollForm.ustadId}
+              onChange={(e) =>
+                setEditEnrollForm({
+                  ...editEnrollForm,
+                  ustadId: e.target.value,
+                })
+              }
+              className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+            >
+              <option value="">Unassigned</option>
+              {teachers.length > 0
+                ? teachers.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.firstName} {t.lastName ?? ""} ({t.employeeId})
+                    </option>
+                  ))
+                : editEnroll?.ustad && (
+                    <option value={editEnroll.ustadId}>
+                      {editEnroll.ustad.firstName}{" "}
+                      {editEnroll.ustad.lastName ?? ""} (
+                      {editEnroll.ustad.employeeId})
+                    </option>
+                  )}
+            </select>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setEditEnroll(null)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={updateEnrollMut.isPending}>
+              {updateEnrollMut.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        open={!!editLog}
+        onClose={() => setEditLog(null)}
+        title="Edit Daily Log"
+      >
+        <form onSubmit={handleUpdateLog} className="space-y-4">
+          <div className="space-y-1">
+            <Label>Sabak (New Lesson)</Label>
+            <Input
+              placeholder="Surah Yaseen 1–15"
+              value={editLogForm.sabak}
+              onChange={(e) =>
+                setEditLogForm({ ...editLogForm, sabak: e.target.value })
+              }
+            />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label>Satsabak (Recent Revision)</Label>
+              <Input
+                placeholder="Last 7 days"
+                value={editLogForm.satsabak}
+                onChange={(e) =>
+                  setEditLogForm({ ...editLogForm, satsabak: e.target.value })
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Amukhta (Manzil / Old Revision)</Label>
+              <Input
+                placeholder="Para 1–3"
+                value={editLogForm.amukhta}
+                onChange={(e) =>
+                  setEditLogForm({ ...editLogForm, amukhta: e.target.value })
+                }
+              />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Label>Remarks</Label>
+            <Input
+              placeholder="Ustad remarks..."
+              value={editLogForm.remarks}
+              onChange={(e) =>
+                setEditLogForm({ ...editLogForm, remarks: e.target.value })
+              }
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setEditLog(null)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={updateLogMut.isPending}>
+              {updateLogMut.isPending ? "Saving..." : "Save Changes"}
             </Button>
           </div>
         </form>

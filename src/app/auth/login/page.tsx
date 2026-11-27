@@ -17,43 +17,28 @@ import { Suspense, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
-import {
-  loginSchema,
-  type LoginFormValues,
-} from "@/features/auth/schema";
+import { type LoginFormValues, loginSchema } from "@/features/auth/schema";
 import { useAuth } from "@/providers/auth-provider";
 
 function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const {
-    user,
-    isAuthenticated,
-    isLoading,
-    login,
-  } = useAuth();
+  const { user, isAuthenticated, isLoading, login } = useAuth();
 
   const [showPassword, setShowPassword] = useState(false);
 
   const emailFromUrl = searchParams.get("email") ?? "";
 
   const nextFromUrl =
-    searchParams.get("next") ??
-    searchParams.get("redirect") ??
-    "";
+    searchParams.get("next") ?? searchParams.get("redirect") ?? "";
 
-  const safeNext = nextFromUrl.startsWith("/dashboard/")
-    ? nextFromUrl
-    : null;
+  const safeNext = nextFromUrl.startsWith("/dashboard/") ? nextFromUrl : null;
 
   const {
     register,
     handleSubmit,
-    formState: {
-      errors,
-      isSubmitting,
-    },
+    formState: { errors, isSubmitting },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -75,18 +60,10 @@ function LoginPageContent() {
       return;
     }
 
-    const rolePath = user.role
-      .toLowerCase()
-      .replace("_", "-");
+    const rolePath = user.role.toLowerCase().replace("_", "-");
 
     router.replace(`/dashboard/${rolePath}`);
-  }, [
-    isLoading,
-    isAuthenticated,
-    user,
-    safeNext,
-    router,
-  ]);
+  }, [isLoading, isAuthenticated, user, safeNext, router]);
 
   const onSubmit = async (values: LoginFormValues) => {
     try {
@@ -102,9 +79,7 @@ function LoginPageContent() {
        */
     } catch (error) {
       const message =
-        error instanceof Error
-          ? error.message
-          : "Invalid email or password";
+        error instanceof Error ? error.message : "Invalid email or password";
 
       toast.error("Login failed", {
         description: message,
@@ -152,9 +127,7 @@ function LoginPageContent() {
               <div>
                 <p className="text-lg font-black tracking-tight">
                   School
-                  <span className="text-[#00d2c4]">
-                    Hub
-                  </span>
+                  <span className="text-[#00d2c4]">Hub</span>
                 </p>
 
                 <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-white/40">
@@ -172,9 +145,7 @@ function LoginPageContent() {
 
               <h1 className="text-4xl font-black leading-tight tracking-tight xl:text-5xl">
                 Manage Your School
-                <span className="block text-[#00d2c4]">
-                  From One Place
-                </span>
+                <span className="block text-[#00d2c4]">From One Place</span>
               </h1>
 
               <p className="mt-6 max-w-lg text-base leading-7 text-white/60">
@@ -263,9 +234,7 @@ function LoginPageContent() {
                       autoComplete="username"
                       placeholder="Phone (01XXXXXXXXX) or Email"
                       {...register("email")}
-                      className={`${inputClass(
-                        !!errors.email,
-                      )} pl-10`}
+                      className={`${inputClass(!!errors.email)} pl-10`}
                     />
 
                     <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -308,31 +277,21 @@ function LoginPageContent() {
                   <div className="relative">
                     <input
                       id="password"
-                      type={
-                        showPassword ? "text" : "password"
-                      }
+                      type={showPassword ? "text" : "password"}
                       autoComplete="current-password"
                       placeholder="Enter your password"
                       {...register("password")}
-                      className={`${inputClass(
-                        !!errors.password,
-                      )} pl-10 pr-11`}
+                      className={`${inputClass(!!errors.password)} pl-10 pr-11`}
                     />
 
                     <LockKeyhole className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
 
                     <button
                       type="button"
-                      onClick={() =>
-                        setShowPassword(
-                          (current) => !current,
-                        )
-                      }
+                      onClick={() => setShowPassword((current) => !current)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-[#061842]"
                       aria-label={
-                        showPassword
-                          ? "Hide password"
-                          : "Show password"
+                        showPassword ? "Hide password" : "Show password"
                       }
                     >
                       {showPassword ? (

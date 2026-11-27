@@ -8,8 +8,11 @@ import type {
   GetAdmissionsParams,
   GetAdmissionsResponse,
   RejectAdmissionInput,
+  RejectOnlinePaymentInput,
+  SubmitOnlinePaymentTrxInput,
   TrackAdmissionInput,
   TrackAdmissionResponse,
+  VerifyOnlinePaymentInput,
 } from "./types";
 
 const API_URL = env.apiUrl;
@@ -292,6 +295,72 @@ export async function verifyStudentEmail(
 
   if (!response.ok) {
     throw new Error(result?.message ?? "Failed to verify email");
+  }
+
+  return result.data;
+}
+
+export async function submitOnlinePaymentTrx(
+  input: SubmitOnlinePaymentTrxInput,
+) {
+  const response = await fetch(`${API_URL}/admissions/track/payment`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result?.message ?? "Failed to submit transaction ID");
+  }
+
+  return result.data;
+}
+
+export async function verifyOnlineAdmissionPayment(
+  schoolId: number,
+  admissionId: number,
+  input: VerifyOnlinePaymentInput = {},
+) {
+  const response = await fetch(
+    `${API_URL}/schools/${schoolId}/admissions/${admissionId}/payment/verify-online`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(input),
+    },
+  );
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result?.message ?? "Failed to verify online payment");
+  }
+
+  return result.data;
+}
+
+export async function rejectOnlineAdmissionPayment(
+  schoolId: number,
+  admissionId: number,
+  input: RejectOnlinePaymentInput,
+) {
+  const response = await fetch(
+    `${API_URL}/schools/${schoolId}/admissions/${admissionId}/payment/reject-online`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(input),
+    },
+  );
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result?.message ?? "Failed to reject online payment");
   }
 
   return result.data;

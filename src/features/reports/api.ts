@@ -1,4 +1,3 @@
-
 import { api } from "@/lib/api";
 import type { ReportOverview } from "./types";
 
@@ -9,9 +8,7 @@ interface ApiResponse<T> {
 }
 
 export const getReportOverview = async (): Promise<ReportOverview> => {
-  const response = await api.get<ApiResponse<ReportOverview>>(
-    "/reports",
-  );
+  const response = await api.get<ApiResponse<ReportOverview>>("/reports");
 
   return response.data.data;
 };

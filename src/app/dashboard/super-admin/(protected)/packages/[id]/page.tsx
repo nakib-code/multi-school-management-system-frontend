@@ -1,10 +1,10 @@
 "use client";
 
+import Link from "next/link";
+import { useParams, useSearchParams } from "next/navigation";
 import { PackageDetails } from "@/components/super-admin/package/package-details";
 import { PackageForm } from "@/components/super-admin/package/package-form";
 import { usePackage } from "@/features/super-admin/packages/use-packages";
-import Link from "next/link";
-import { useParams, useSearchParams } from "next/navigation";
 
 export default function PackageDetailsPage() {
   const params = useParams();
@@ -13,12 +13,7 @@ export default function PackageDetailsPage() {
   const id = Number(params.id);
   const isEdit = searchParams.get("edit") === "true";
 
-  const {
-    data: packageData,
-    isLoading,
-    isError,
-    refetch,
-  } = usePackage(id);
+  const { data: packageData, isLoading, isError, refetch } = usePackage(id);
 
   if (isLoading) {
     return (
@@ -34,9 +29,7 @@ export default function PackageDetailsPage() {
     return (
       <main className="p-6">
         <div className="flex min-h-[300px] flex-col items-center justify-center rounded-2xl border border-dashed text-center">
-          <h2 className="font-semibold">
-            Package not found
-          </h2>
+          <h2 className="font-semibold">Package not found</h2>
 
           <p className="mt-1 text-sm text-muted-foreground">
             We could not load this package.
@@ -75,9 +68,7 @@ export default function PackageDetailsPage() {
 
         <div className="mt-4">
           <h1 className="text-2xl font-bold tracking-tight">
-            {isEdit
-              ? `Edit ${packageData.name}`
-              : packageData.name}
+            {isEdit ? `Edit ${packageData.name}` : packageData.name}
           </h1>
 
           <p className="mt-1 text-sm text-muted-foreground">

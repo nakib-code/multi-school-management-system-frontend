@@ -2,18 +2,15 @@
 
 import { Loader2, RefreshCw } from "lucide-react";
 import { useState } from "react";
-
+import { ClassManagement } from "@/components/admin/classes/class-management";
+import { SectionManagement } from "@/components/admin/section/section-management";
+import type { SchoolClass } from "@/features/admin/classes/types";
 import { useCurrentUser } from "@/features/auth/hooks";
 import { useDashboard } from "@/features/dashboard/hooks";
 import type { SchoolDashboard } from "@/features/dashboard/types";
 
-import type { SchoolClass } from "@/features/admin/classes/types";
-import { SectionManagement } from "@/components/admin/section/section-management";
-import { ClassManagement } from "@/components/admin/classes/class-management";
-
 export default function ClassesPage() {
-  const { data: user, isLoading: isUserLoading } =
-    useCurrentUser();
+  const { data: user, isLoading: isUserLoading } = useCurrentUser();
 
   const {
     data: dashboardData,
@@ -22,8 +19,7 @@ export default function ClassesPage() {
     refetch,
   } = useDashboard();
 
-  const [selectedClass, setSelectedClass] =
-    useState<SchoolClass | null>(null);
+  const [selectedClass, setSelectedClass] = useState<SchoolClass | null>(null);
 
   if (isUserLoading || isDashboardLoading) {
     return (
@@ -49,8 +45,7 @@ export default function ClassesPage() {
           </h1>
 
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            Something went wrong while loading your school
-            information.
+            Something went wrong while loading your school information.
           </p>
 
           <button
@@ -92,9 +87,7 @@ export default function ClassesPage() {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <div className="text-center">
-          <h1 className="text-xl font-semibold">
-            School not found
-          </h1>
+          <h1 className="text-xl font-semibold">School not found</h1>
 
           <p className="mt-2 text-sm text-muted-foreground">
             Your account is not connected to a school.
@@ -117,9 +110,7 @@ export default function ClassesPage() {
   return (
     <ClassManagement
       schoolId={schoolId}
-      onManageSections={(schoolClass) =>
-        setSelectedClass(schoolClass)
-      }
+      onManageSections={(schoolClass) => setSelectedClass(schoolClass)}
     />
   );
 }

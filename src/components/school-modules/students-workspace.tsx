@@ -1,8 +1,10 @@
 "use client";
 
 import {
+  Copy,
   Eye,
   GraduationCap,
+  LockKeyhole,
   Search,
   UserCheck,
   UserPlus,
@@ -29,9 +31,11 @@ import type {
   ResidentialType,
 } from "@/features/admissions/types";
 import {
+  type ResetStudentPasswordResponse,
   useActivateStudent,
   useCreateStudent,
   useDeactivateStudent,
+  useResetStudentPassword,
   useStudents,
 } from "@/features/students/hooks";
 import { useTeachers } from "@/features/teachers/hooks";
@@ -50,9 +54,11 @@ export function StudentsWorkspace() {
   const isAdmin = user?.role === "ADMIN";
   const canAdmit = user?.role === "ADMIN" || user?.role === "MANAGER";
   const profileBasePath =
-    user?.role === "MANAGER"
-      ? "/dashboard/manager/students"
-      : "/dashboard/admin/students";
+    user?.role === "TEACHER"
+      ? "/dashboard/teacher/students"
+      : user?.role === "MANAGER"
+        ? "/dashboard/manager/students"
+        : "/dashboard/admin/students";
 
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
@@ -61,6 +67,14 @@ export function StudentsWorkspace() {
   const [quickAdmitOpen, setQuickAdmitOpen] = useState(false);
   const [guardianCredentials, setGuardianCredentials] =
     useState<GuardianCredentialsData | null>(null);
+  const [resetTarget, setResetTarget] = useState<{
+    id: number;
+    name: string;
+    studentId: string;
+  } | null>(null);
+  const [resetPasswordVal, setResetPasswordVal] = useState("");
+  const [resetResult, setResetResult] =
+    useState<ResetStudentPasswordResponse | null>(null);
   const [admitForm, setAdmitForm] = useState({
     academicYear: String(new Date().getFullYear()),
     classId: "",
@@ -93,6 +107,7 @@ export function StudentsWorkspace() {
   const createMutation = useCreateStudent(schoolId);
   const deactivateMutation = useDeactivateStudent(schoolId);
   const activateMutation = useActivateStudent(schoolId);
+  const resetPasswordMutation = useResetStudentPassword(schoolId);
 
   const selectedClass = classes.find((c) => c.id === Number(admitForm.classId));
   const filteredSections = sections.filter(
@@ -108,7 +123,9 @@ export function StudentsWorkspace() {
     const res = await createMutation.mutateAsync({
       academicYear: admitForm.academicYear.trim(),
       classId: Number(admitForm.classId),
-      ...(admitForm.sectionId ? { sectionId: Number(admitForm.sectionId) } : {}),
+      ...(admitForm.sectionId
+        ? { sectionId: Number(admitForm.sectionId) }
+        : {}),
       shift: admitForm.shift,
       residentialType: admitForm.residentialType,
       studentName: admitForm.studentName.trim(),
@@ -162,6 +179,29 @@ export function StudentsWorkspace() {
       ustadId: "",
       rollNumber: "",
     }));
+  };
+
+  const handleResetStudentPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetTarget) return;
+    const res = await resetPasswordMutation.mutateAsync({
+      studentId: resetTarget.id,
+      ...(resetPasswordVal.trim()
+        ? { newPassword: resetPasswordVal.trim() }
+        : {}),
+    });
+    setResetTarget(null);
+    setResetPasswordVal("");
+    setResetResult(res);
+  };
+
+  const copyText = async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success(`${label} copied`);
+    } catch {
+      toast.error("Could not copy to clipboard");
+    }
   };
 
   if (isLoading) return <LoadingState message="Loading students..." />;
@@ -278,8 +318,11 @@ export function StudentsWorkspace() {
                     </div>
                   </div>
 
-                  <div className="flex gap-2 border-t pt-2.5">
-                    <Link href={`${profileBasePath}/${s.id}`} className="flex-1">
+                  <div className="flex flex-wrap gap-2 border-t pt-2.5">
+                    <Link
+                      href={`${profileBasePath}/${s.id}`}
+                      className="flex-1"
+                    >
                       <Button
                         size="sm"
                         variant="outline"
@@ -289,6 +332,24 @@ export function StudentsWorkspace() {
                         Open Profile
                       </Button>
                     </Link>
+                    {isAdmin && s.user && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          setResetTarget({
+                            id: s.id,
+                            name: `${s.firstName} ${s.lastName ?? ""}`.trim(),
+                            studentId: s.studentId,
+                          })
+                        }
+                        className="min-h-[40px] gap-1 rounded-[11px]"
+                        title="Reset Password"
+                      >
+                        <LockKeyhole className="h-3.5 w-3.5" />
+                        Reset Password
+                      </Button>
+                    )}
                     {isAdmin &&
                       (s.isActive ? (
                         <Button
@@ -320,117 +381,138 @@ export function StudentsWorkspace() {
           {/* Desktop Students Table */}
           <div className="surface-panel hidden overflow-x-auto md:block">
             <table className="w-full text-left text-sm">
-            <thead className="border-b bg-muted/40 text-xs uppercase text-muted-foreground">
-              <tr>
-                <th className="px-4 py-3">Student ID</th>
-                <th className="px-4 py-3">Student</th>
-                <th className="px-4 py-3">Class &amp; Type</th>
-                <th className="px-4 py-3">Guardian</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {students.map((s) => {
-                const activeEnroll = s.enrollments?.[0];
-                const primaryGuardian =
-                  s.guardians?.find((g) => g.isPrimary)?.guardian ??
-                  s.guardians?.[0]?.guardian;
+              <thead className="border-b bg-muted/40 text-xs uppercase text-muted-foreground">
+                <tr>
+                  <th className="px-4 py-3">Student ID</th>
+                  <th className="px-4 py-3">Student</th>
+                  <th className="px-4 py-3">Class &amp; Type</th>
+                  <th className="px-4 py-3">Guardian</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {students.map((s) => {
+                  const activeEnroll = s.enrollments?.[0];
+                  const primaryGuardian =
+                    s.guardians?.find((g) => g.isPrimary)?.guardian ??
+                    s.guardians?.[0]?.guardian;
 
-                return (
-                  <tr key={s.id} className="hover:bg-muted/20">
-                    <td className="px-4 py-3 font-mono text-xs font-semibold">
-                      {s.studentId}
-                    </td>
-                    <td className="px-4 py-3">
-                      <Link
-                        href={`${profileBasePath}/${s.id}`}
-                        className="font-medium text-primary hover:underline"
-                      >
-                        {s.firstName} {s.lastName ?? ""}
-                      </Link>
-                      {s.nameBangla && (
-                        <p className="text-xs text-muted-foreground">
-                          {s.nameBangla}
-                        </p>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-xs">
-                      <p className="font-medium">
-                        {activeEnroll?.class?.name ?? "Unassigned"}
-                        {activeEnroll?.section
-                          ? ` • ${activeEnroll.section.name}`
-                          : ""}
-                      </p>
-                      <p className="text-muted-foreground">
-                        {(s.residentialType ?? "NON_RESIDENTIAL").replace(
-                          "_",
-                          " ",
-                        )}
-                        {s.quranWing ? ` • ${s.quranWing}` : ""}
-                        {s.academicGroup ? ` • ${s.academicGroup}` : ""}
-                      </p>
-                    </td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">
-                      <p className="font-medium text-foreground">
-                        {primaryGuardian?.user.name ?? "—"}
-                      </p>
-                      <p>
-                        {primaryGuardian?.user.phone ??
-                          s.phone ??
-                          s.user?.phone ??
-                          "—"}
-                      </p>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${
-                          s.isActive
-                            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                            : "border-slate-200 bg-slate-100 text-slate-600"
-                        }`}
-                      >
-                        {s.isActive ? "ACTIVE" : "INACTIVE"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="inline-flex items-center gap-1.5">
-                        <Link href={`${profileBasePath}/${s.id}`}>
-                          <Button size="sm" variant="outline" className="gap-1">
-                            <Eye className="h-3.5 w-3.5" />
-                            Profile
-                          </Button>
+                  return (
+                    <tr key={s.id} className="hover:bg-muted/20">
+                      <td className="px-4 py-3 font-mono text-xs font-semibold">
+                        {s.studentId}
+                      </td>
+                      <td className="px-4 py-3">
+                        <Link
+                          href={`${profileBasePath}/${s.id}`}
+                          className="font-medium text-primary hover:underline"
+                        >
+                          {s.firstName} {s.lastName ?? ""}
                         </Link>
-                        {isAdmin &&
-                          (s.isActive ? (
+                        {s.nameBangla && (
+                          <p className="text-xs text-muted-foreground">
+                            {s.nameBangla}
+                          </p>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-xs">
+                        <p className="font-medium">
+                          {activeEnroll?.class?.name ?? "Unassigned"}
+                          {activeEnroll?.section
+                            ? ` • ${activeEnroll.section.name}`
+                            : ""}
+                        </p>
+                        <p className="text-muted-foreground">
+                          {(s.residentialType ?? "NON_RESIDENTIAL").replace(
+                            "_",
+                            " ",
+                          )}
+                          {s.quranWing ? ` • ${s.quranWing}` : ""}
+                          {s.academicGroup ? ` • ${s.academicGroup}` : ""}
+                        </p>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">
+                        <p className="font-medium text-foreground">
+                          {primaryGuardian?.user.name ?? "—"}
+                        </p>
+                        <p>
+                          {primaryGuardian?.user.phone ??
+                            s.phone ??
+                            s.user?.phone ??
+                            "—"}
+                        </p>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${
+                            s.isActive
+                              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                              : "border-slate-200 bg-slate-100 text-slate-600"
+                          }`}
+                        >
+                          {s.isActive ? "ACTIVE" : "INACTIVE"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="inline-flex items-center gap-1.5">
+                          <Link href={`${profileBasePath}/${s.id}`}>
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => deactivateMutation.mutate(s.id)}
-                              disabled={deactivateMutation.isPending}
-                              className="gap-1 text-destructive hover:text-destructive"
-                            >
-                              <UserX className="h-3.5 w-3.5" />
-                              Deactivate
-                            </Button>
-                          ) : (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => activateMutation.mutate(s.id)}
-                              disabled={activateMutation.isPending}
                               className="gap-1"
                             >
-                              <UserCheck className="h-3.5 w-3.5" />
-                              Activate
+                              <Eye className="h-3.5 w-3.5" />
+                              Profile
                             </Button>
-                          ))}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
+                          </Link>
+                          {isAdmin && s.user && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                setResetTarget({
+                                  id: s.id,
+                                  name: `${s.firstName} ${s.lastName ?? ""}`.trim(),
+                                  studentId: s.studentId,
+                                })
+                              }
+                              className="gap-1"
+                            >
+                              <LockKeyhole className="h-3.5 w-3.5" />
+                              Reset Password
+                            </Button>
+                          )}
+                          {isAdmin &&
+                            (s.isActive ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => deactivateMutation.mutate(s.id)}
+                                disabled={deactivateMutation.isPending}
+                                className="gap-1 text-destructive hover:text-destructive"
+                              >
+                                <UserX className="h-3.5 w-3.5" />
+                                Deactivate
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => activateMutation.mutate(s.id)}
+                                disabled={activateMutation.isPending}
+                                className="gap-1"
+                              >
+                                <UserCheck className="h-3.5 w-3.5" />
+                                Activate
+                              </Button>
+                            ))}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
             </table>
           </div>
         </>
@@ -740,7 +822,9 @@ export function StudentsWorkspace() {
               Cancel
             </Button>
             <Button type="submit" disabled={createMutation.isPending}>
-              {createMutation.isPending ? "Admitting..." : "Complete Quick Admission"}
+              {createMutation.isPending
+                ? "Admitting..."
+                : "Complete Quick Admission"}
             </Button>
           </div>
         </form>
@@ -750,6 +834,118 @@ export function StudentsWorkspace() {
         credentials={guardianCredentials}
         onClose={() => setGuardianCredentials(null)}
       />
+
+      {/* Reset Student Password Modal */}
+      <Modal
+        open={!!resetTarget}
+        onClose={() => {
+          setResetTarget(null);
+          setResetPasswordVal("");
+        }}
+        title={
+          resetTarget
+            ? `Reset Password — ${resetTarget.name}`
+            : "Reset Student Password"
+        }
+        maxWidthClass="max-w-sm"
+      >
+        <form onSubmit={handleResetStudentPassword} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label>
+              New Password (Optional — leave blank to auto-generate)
+            </Label>
+            <Input
+              type="password"
+              minLength={6}
+              value={resetPasswordVal}
+              onChange={(e) => setResetPasswordVal(e.target.value)}
+              placeholder="Leave blank to auto-generate"
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setResetTarget(null);
+                setResetPasswordVal("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={resetPasswordMutation.isPending}>
+              {resetPasswordMutation.isPending
+                ? "Resetting..."
+                : "Reset Password"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Student Temporary Password Confirmation Modal */}
+      <Modal
+        open={!!resetResult}
+        onClose={() => setResetResult(null)}
+        title="Student Password Reset — Save Temporary Password"
+        maxWidthClass="max-w-md"
+      >
+        {resetResult && (
+          <div className="space-y-4 text-sm">
+            <p className="text-xs text-muted-foreground">
+              Share these credentials securely with{" "}
+              <strong className="text-foreground">{resetResult.name}</strong>.
+              This temporary password is shown only once.
+            </p>
+
+            <div className="space-y-2.5 rounded-[11px] border bg-muted/30 p-3.5 text-xs">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-muted-foreground">Student ID</span>
+                <span className="font-mono font-semibold">
+                  {resetResult.studentCode}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-muted-foreground">Email</span>
+                <span className="font-medium">{resetResult.email}</span>
+              </div>
+              {resetResult.phone && (
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-muted-foreground">Phone</span>
+                  <span className="font-medium">{resetResult.phone}</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between gap-2 border-t pt-2">
+                <span className="text-muted-foreground">Temp Password</span>
+                <div className="flex items-center gap-1.5">
+                  <code className="rounded bg-background px-2 py-0.5 font-mono text-sm font-bold text-primary">
+                    {resetResult.temporaryPassword}
+                  </code>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      copyText(
+                        resetResult.temporaryPassword,
+                        "Temporary password",
+                      )
+                    }
+                    className="h-7 px-2"
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end">
+              <Button type="button" onClick={() => setResetResult(null)}>
+                Done
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

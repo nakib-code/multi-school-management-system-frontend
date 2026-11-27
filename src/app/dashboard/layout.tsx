@@ -32,9 +32,7 @@ export default function DashboardLayout({
 
     // User is not authenticated
     if (!isAuthenticated || !user) {
-      router.replace(
-        `/auth/login?redirect=${encodeURIComponent(pathname)}`,
-      );
+      router.replace(`/auth/login?redirect=${encodeURIComponent(pathname)}`);
       return;
     }
 
@@ -61,13 +59,7 @@ export default function DashboardLayout({
     if (!isAuthorizedPath) {
       router.replace(expectedPath);
     }
-  }, [
-    isAuthenticated,
-    isLoading,
-    pathname,
-    router,
-    user,
-  ]);
+  }, [isAuthenticated, isLoading, pathname, router, user]);
 
   // Authentication loading
   if (isLoading) {
@@ -108,9 +100,7 @@ export default function DashboardLayout({
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
 
-          <p className="text-sm text-muted-foreground">
-            Redirecting...
-          </p>
+          <p className="text-sm text-muted-foreground">Redirecting...</p>
         </div>
       </main>
     );
@@ -128,14 +118,11 @@ export default function DashboardLayout({
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
 
-          <p className="text-sm text-muted-foreground">
-            Redirecting...
-          </p>
+          <p className="text-sm text-muted-foreground">Redirecting...</p>
         </div>
       </main>
     );
   }
-
 
   return <>{children}</>;
 }

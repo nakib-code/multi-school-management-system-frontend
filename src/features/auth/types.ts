@@ -13,7 +13,6 @@ export type MobileAccountType = "PERSONAL" | "MERCHANT" | "AGENT";
 export interface UserSchoolSetting {
   hasGeneralSection: boolean;
   hasHefzSection: boolean;
-  hasPublicWebsite: boolean;
   hasOnlineAdmission: boolean;
   hasTeacherPayroll: boolean;
   smsEnabled: boolean;
@@ -31,6 +30,7 @@ export interface User {
   name: string;
   email: string;
   phone: string | null;
+  avatarUrl?: string | null;
   role: UserRole;
   status: UserStatus;
   schoolId: number | null;

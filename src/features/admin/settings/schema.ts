@@ -7,6 +7,4 @@ export const admissionFeeSchema = z.object({
     .max(1000000, "Admission fee is too large"),
 });
 
-export type AdmissionFeeFormValues = z.infer<
-  typeof admissionFeeSchema
->;
+export type AdmissionFeeFormValues = z.infer<typeof admissionFeeSchema>;

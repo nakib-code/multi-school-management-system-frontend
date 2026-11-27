@@ -1,13 +1,9 @@
 "use client";
 
-import {
-  AlertCircle,
-  ArrowLeft,
-  Loader2,
-} from "lucide-react";
+import { AlertCircle, ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
 import AdmissionForm from "@/components/admissions/admission-form";
 import { useSchool } from "@/features/schools/hooks";
@@ -18,9 +14,7 @@ function AdmissionsContent() {
   const schoolId = Number(schoolIdParam);
 
   const isValidSchoolId =
-    schoolIdParam !== null &&
-    Number.isInteger(schoolId) &&
-    schoolId > 0;
+    schoolIdParam !== null && Number.isInteger(schoolId) && schoolId > 0;
 
   const {
     data: school,
@@ -138,17 +132,15 @@ function AdmissionsContent() {
 
         {/* Page Header */}
         <div className="mx-auto mb-10 max-w-2xl text-center">
-          <span className="school-badge-teal">
-            Admission 2026–2027
-          </span>
+          <span className="school-badge-teal">Admission 2026–2027</span>
 
           <h2 className="mt-4 text-3xl font-bold tracking-tight text-[#061842] sm:text-4xl">
             Apply for Admission
           </h2>
 
           <p className="mt-3 text-sm leading-6 text-slate-500 sm:text-base">
-            Complete the application form with your student and
-            guardian information.
+            Complete the application form with your student and guardian
+            information.
           </p>
         </div>
 

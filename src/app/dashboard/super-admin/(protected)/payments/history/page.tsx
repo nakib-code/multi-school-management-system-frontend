@@ -18,11 +18,16 @@ export default function SubscriptionPaymentHistoryPage() {
   const [method, setMethod] = useState<MobilePaymentMethod | "">("");
   const [search, setSearch] = useState("");
 
-  const { data: payments = [], isLoading, isError, error, refetch } =
-    useSubscriptionPaymentHistory({
-      ...(status ? { status } : {}),
-      ...(method ? { paymentMethod: method } : {}),
-    });
+  const {
+    data: payments = [],
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useSubscriptionPaymentHistory({
+    ...(status ? { status } : {}),
+    ...(method ? { paymentMethod: method } : {}),
+  });
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -67,7 +72,9 @@ export default function SubscriptionPaymentHistoryPage() {
 
         <select
           value={method}
-          onChange={(e) => setMethod(e.target.value as MobilePaymentMethod | "")}
+          onChange={(e) =>
+            setMethod(e.target.value as MobilePaymentMethod | "")
+          }
           className="h-9 rounded-md border bg-background px-3 text-sm"
         >
           <option value="">All Methods</option>
@@ -121,9 +128,13 @@ export default function SubscriptionPaymentHistoryPage() {
                   </td>
                   <td className="px-4 py-3">
                     <span className="font-medium">{p.paymentMethod}</span>
-                    <p className="font-mono text-xs text-muted-foreground">{p.trxId}</p>
+                    <p className="font-mono text-xs text-muted-foreground">
+                      {p.trxId}
+                    </p>
                   </td>
-                  <td className="px-4 py-3 font-mono text-xs">{p.senderNumber}</td>
+                  <td className="px-4 py-3 font-mono text-xs">
+                    {p.senderNumber}
+                  </td>
                   <td className="px-4 py-3 font-medium">
                     ৳{Number(p.paidAmount).toLocaleString()}
                   </td>

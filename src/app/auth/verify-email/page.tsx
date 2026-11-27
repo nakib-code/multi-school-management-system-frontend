@@ -3,15 +3,15 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft, Loader2, MailCheck } from "lucide-react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
 import { useVerifyAdminEmail } from "@/features/schools/hooks";
 import {
+  type VerifyEmailAdminFormValues,
   verifyAdminEmailSchema,
-  VerifyEmailAdminFormValues,
 } from "@/features/schools/schema";
 
 function VerifyEmailForm() {
@@ -48,39 +48,33 @@ function VerifyEmailForm() {
     }
   }, [emailFromUrl, setValue]);
 
-const onSubmit = async (
-  values: VerifyEmailAdminFormValues,
-) => {
-  try {
-    const result = await verifyEmail(values);
+  const onSubmit = async (values: VerifyEmailAdminFormValues) => {
+    try {
+      const result = await verifyEmail(values);
 
-    const adminEmail =
-      result?.adminEmail ?? values.email;
+      const adminEmail = result?.adminEmail ?? values.email;
 
-    sessionStorage.setItem(
-      "schoolRegistrationEmail",
-      adminEmail,
-    );
+      sessionStorage.setItem("schoolRegistrationEmail", adminEmail);
 
-    toast.success("Email verified successfully", {
-      description:
-        "Your email has been verified. Please login to continue with payment.",
-    });
+      toast.success("Email verified successfully", {
+        description:
+          "Your email has been verified. Please login to continue with payment.",
+      });
 
-    router.push(
-      `/auth/login?email=${encodeURIComponent(adminEmail)}&next=/dashboard/admin/subscription/payment`,
-    );
-  } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : "Invalid or expired verification code";
+      router.push(
+        `/auth/login?email=${encodeURIComponent(adminEmail)}&next=/dashboard/admin/subscription/payment`,
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Invalid or expired verification code";
 
-    toast.error("Verification failed", {
-      description: message,
-    });
-  }
-};
+      toast.error("Verification failed", {
+        description: message,
+      });
+    }
+  };
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-muted/30 px-4 py-10">

@@ -8,7 +8,12 @@ import type {
 
 export const getTeacherSalaries = async (
   schoolId: number,
-  params?: { teacherId?: number; month?: number; year?: number; status?: string },
+  params?: {
+    teacherId?: number;
+    month?: number;
+    year?: number;
+    status?: string;
+  },
 ): Promise<TeacherSalaryRecord[]> => {
   const res = await api.get<ApiResponse<TeacherSalaryRecord[]>>(
     `/schools/${schoolId}/teacher-salaries`,

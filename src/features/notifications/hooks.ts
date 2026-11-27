@@ -35,12 +35,19 @@ export const useNotifications = (params?: {
       const res = await api.get<{
         success: boolean;
         data: { notifications: NotificationItem[]; unreadCount: number };
-        meta?: { page: number; limit: number; total: number; totalPages: number };
+        meta?: {
+          page: number;
+          limit: number;
+          total: number;
+          totalPages: number;
+        };
       }>("/notifications", {
         params: {
           page: params?.page ?? 1,
           limit: params?.limit ?? 15,
-          ...(params?.isRead !== undefined ? { isRead: String(params.isRead) } : {}),
+          ...(params?.isRead !== undefined
+            ? { isRead: String(params.isRead) }
+            : {}),
         },
       });
       return {
@@ -74,7 +81,8 @@ export const useMarkNotificationRead = () => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: notificationKeys.all });
     },
-    onError: (err) => toast.error(getApiErrorMessage(err, "Failed to update notification")),
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to update notification")),
   });
 };
 
@@ -88,7 +96,8 @@ export const useMarkAllNotificationsRead = () => {
       toast.success("All notifications marked as read");
       qc.invalidateQueries({ queryKey: notificationKeys.all });
     },
-    onError: (err) => toast.error(getApiErrorMessage(err, "Failed to mark all as read")),
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to mark all as read")),
   });
 };
 
@@ -113,9 +122,7 @@ export const useBroadcastNotification = () => {
       return res.data.data;
     },
     onSuccess: (data) => {
-      toast.success(
-        `Notice delivered to ${data.sentCount} recipient(s)`,
-      );
+      toast.success(`Notice delivered to ${data.sentCount} recipient(s)`);
       qc.invalidateQueries({ queryKey: notificationKeys.all });
     },
     onError: (err) =>
@@ -133,6 +140,7 @@ export const useDeleteNotification = () => {
       toast.success("Notification deleted");
       qc.invalidateQueries({ queryKey: notificationKeys.all });
     },
-    onError: (err) => toast.error(getApiErrorMessage(err, "Failed to delete notification")),
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to delete notification")),
   });
 };

@@ -1,24 +1,22 @@
 import { api } from "@/lib/api";
-import { Subscription, SubscriptionListResponse, SubscriptionResponse, SubscriptionStatus } from "./type";
-
+import type {
+  Subscription,
+  SubscriptionListResponse,
+  SubscriptionResponse,
+  SubscriptionStatus,
+} from "./type";
 
 export const subscriptionApi = {
   getAll: async (): Promise<Subscription[]> => {
-    const response =
-      await api.get<SubscriptionListResponse>(
-        "/subscriptions",
-      );
+    const response = await api.get<SubscriptionListResponse>("/subscriptions");
 
     return response.data.data;
   },
 
-  getById: async (
-    id: number,
-  ): Promise<Subscription> => {
-    const response =
-      await api.get<SubscriptionResponse>(
-        `/subscriptions/${id}`,
-      );
+  getById: async (id: number): Promise<Subscription> => {
+    const response = await api.get<SubscriptionResponse>(
+      `/subscriptions/${id}`,
+    );
 
     return response.data.data;
   },
@@ -32,11 +30,10 @@ export const subscriptionApi = {
     status?: "ACTIVE" | "PENDING";
     notes?: string;
   }): Promise<Subscription> => {
-    const response =
-      await api.post<SubscriptionResponse>(
-        "/subscriptions",
-        payload,
-      );
+    const response = await api.post<SubscriptionResponse>(
+      "/subscriptions",
+      payload,
+    );
 
     return response.data.data;
   },
@@ -45,11 +42,10 @@ export const subscriptionApi = {
     id: number,
     status: SubscriptionStatus,
   ): Promise<Subscription> => {
-    const response =
-      await api.patch<SubscriptionResponse>(
-        `/subscriptions/${id}/status`,
-        { status },
-      );
+    const response = await api.patch<SubscriptionResponse>(
+      `/subscriptions/${id}/status`,
+      { status },
+    );
 
     return response.data.data;
   },

@@ -271,6 +271,23 @@ export interface ConfirmCashPaymentInput {
   remarks?: string;
 }
 
+export interface SubmitOnlinePaymentTrxInput {
+  applicationNo: string;
+  guardianPhone?: string;
+  studentEmail?: string;
+  paymentMethod: "BKASH" | "NAGAD" | "ROCKET";
+  transactionId: string;
+  senderPhone?: string;
+}
+
+export interface VerifyOnlinePaymentInput {
+  remarks?: string;
+}
+
+export interface RejectOnlinePaymentInput {
+  remarks: string;
+}
+
 export interface ApproveAdmissionResponse {
   admissionId: number;
   applicationNo: string;
