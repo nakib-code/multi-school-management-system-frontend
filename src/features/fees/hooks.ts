@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { getApiErrorMessage } from "@/lib/api";
 import {
+  bulkCreateStudentFees,
   createStudentFee,
   deleteStudentFee,
   getStudentFees,
@@ -12,7 +13,12 @@ import {
   submitStudentPayment,
   verifyStudentPayment,
 } from "./api";
-import type { CreateStudentFeeInput, SubmitStudentPaymentInput } from "./types";
+import type {
+  BulkCreateStudentFeeInput,
+  CreateStudentFeeInput,
+  FeeStatus,
+  SubmitStudentPaymentInput,
+} from "./types";
 
 export const feeKeys = {
   all: ["student-fees"] as const,
@@ -24,7 +30,16 @@ export const feeKeys = {
 
 export const useStudentFees = (
   schoolId: number,
-  params?: { studentId?: number; status?: string; feeType?: string },
+  params?: {
+    studentId?: number;
+    classId?: number;
+    sectionId?: number;
+    academicYear?: string;
+    billingMonth?: string;
+    examId?: number;
+    status?: string;
+    feeType?: string;
+  },
 ) =>
   useQuery({
     queryKey: feeKeys.fees(schoolId, params),
@@ -43,6 +58,22 @@ export const useCreateStudentFee = (schoolId: number) => {
     },
     onError: (err) =>
       toast.error(getApiErrorMessage(err, "Failed to create fee")),
+  });
+};
+
+export const useBulkCreateStudentFees = (schoolId: number) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: BulkCreateStudentFeeInput) =>
+      bulkCreateStudentFees(schoolId, payload),
+    onSuccess: (data) => {
+      toast.success(
+        `Generated ${data.createdCount} invoice(s) for ${data.className}${data.skippedCount > 0 ? ` (${data.skippedCount} skipped)` : ""}`,
+      );
+      qc.invalidateQueries({ queryKey: feeKeys.all });
+    },
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to generate class fees")),
   });
 };
 
@@ -74,8 +105,12 @@ export const useSubmitStudentPayment = (schoolId: number) => {
   return useMutation({
     mutationFn: (payload: SubmitStudentPaymentInput) =>
       submitStudentPayment(schoolId, payload),
-    onSuccess: () => {
-      toast.success("Payment submitted and pending school verification");
+    onSuccess: (_data, variables) => {
+      toast.success(
+        variables.paymentMethod === "CASH"
+          ? "Cash counter payment recorded & verified"
+          : "Payment submitted and pending school verification",
+      );
       qc.invalidateQueries({ queryKey: feeKeys.all });
     },
     onError: (err) =>
@@ -126,9 +161,9 @@ export const useUpdateStudentFee = (schoolId: number) => {
       payload: {
         title?: string;
         amount?: number;
-        discount?: number;
         dueDate?: string;
-        remarks?: string;
+        status?: FeeStatus;
+        description?: string | null;
       };
     }) => {
       const { api } = await import("@/lib/api");

@@ -7,9 +7,11 @@ import {
   Pencil,
   Plus,
   Trash2,
+  Wallet,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { ClassFeeStructureModal } from "@/components/admin/classes/class-fee-structure-modal";
 import {
   useClasses,
   useCreateClass,
@@ -22,6 +24,7 @@ import type {
   SchoolClass,
   UpdateClassPayload,
 } from "@/features/admin/classes/types";
+import { useAuth } from "@/providers/auth-provider";
 
 interface ClassManagementProps {
   schoolId: number;
@@ -32,6 +35,9 @@ export function ClassManagement({
   schoolId,
   onManageSections,
 }: ClassManagementProps) {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN";
+  const [feeClass, setFeeClass] = useState<SchoolClass | null>(null);
   const {
     data: classes = [],
     isLoading,
@@ -414,6 +420,15 @@ export function ClassManagement({
 
                         <button
                           type="button"
+                          onClick={() => setFeeClass(schoolClass)}
+                          title="Fee Structure"
+                          className="rounded-md p-2 text-primary hover:bg-muted"
+                        >
+                          <Wallet className="h-4 w-4" />
+                        </button>
+
+                        <button
+                          type="button"
                           onClick={() => openEditForm(schoolClass)}
                           title="Edit"
                           className="rounded-md p-2 hover:bg-muted"
@@ -439,6 +454,13 @@ export function ClassManagement({
           </div>
         </div>
       )}
+
+      <ClassFeeStructureModal
+        schoolId={schoolId}
+        schoolClass={feeClass}
+        isAdmin={isAdmin}
+        onClose={() => setFeeClass(null)}
+      />
     </div>
   );
 }

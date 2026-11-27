@@ -53,14 +53,23 @@ export async function createAdmission(
 
 export interface InitiateAdmissionPaymentResponse {
   admissionId: number;
+  applicationNo: string;
   schoolId: number;
   amount: number;
+  paymentMethod?: string;
+  paymentStatus?: string;
   supportedMethods: ("BKASH" | "NAGAD" | "ROCKET")[];
   receiverNumbers: {
     BKASH: string | null;
     NAGAD: string | null;
     ROCKET: string | null;
   };
+  receiverAccountTypes?: {
+    BKASH: string;
+    NAGAD: string;
+    ROCKET: string;
+  };
+  instruction?: string | null;
   message: string;
 }
 
@@ -132,6 +141,14 @@ export async function getAdmissions(
 
   if (params.search?.trim()) {
     query.set("search", params.search.trim());
+  }
+
+  if (params.classId !== undefined) {
+    query.set("classId", String(params.classId));
+  }
+
+  if (params.academicYear?.trim()) {
+    query.set("academicYear", params.academicYear.trim());
   }
 
   if (params.status) {

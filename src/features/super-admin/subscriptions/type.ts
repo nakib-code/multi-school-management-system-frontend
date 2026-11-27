@@ -19,6 +19,22 @@ export interface SubscriptionSchool {
   status: string;
 }
 
+export interface SubscriptionLinkedPayment {
+  id: number;
+  paymentMethod: "BKASH" | "NAGAD" | "ROCKET";
+  senderNumber: string;
+  receiverNumber: string | null;
+  trxId: string;
+  paidAmount: number;
+  status: "PENDING" | "VERIFIED" | "REJECTED";
+  paidAt: string;
+  verifiedAt: string | null;
+  rejectionReason: string | null;
+  remarks: string | null;
+  createdAt: string;
+  verifiedBy?: { id: number; name: string; role: string } | null;
+}
+
 export interface Subscription {
   id: number;
 
@@ -36,6 +52,7 @@ export interface Subscription {
 
   school: SubscriptionSchool;
   package: SubscriptionPackage;
+  payments?: SubscriptionLinkedPayment[];
 
   createdAt: string;
   updatedAt: string;

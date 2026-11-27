@@ -3,12 +3,14 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 import { z } from "zod";
 import type { Package } from "@/features/super-admin/packages/type";
 import {
   useCreatePackage,
   useUpdatePackage,
 } from "@/features/super-admin/packages/use-packages";
+import { getApiErrorMessage } from "@/lib/api";
 
 const packageFormSchema = z.object({
   name: z.string().min(2, "Package name is required"),
@@ -71,14 +73,21 @@ export function PackageForm({ packageData }: PackageFormProps) {
           id: packageData.id,
           payload: values,
         });
+        toast.success("Package updated successfully");
       } else {
         await createPackage.mutateAsync(values);
+        toast.success("Package created successfully");
       }
 
       router.push("/dashboard/super-admin/packages");
       router.refresh();
-    } catch {
-      // Global API error handling can be added here.
+    } catch (err) {
+      toast.error(
+        getApiErrorMessage(
+          err,
+          packageData ? "Failed to update package" : "Failed to create package",
+        ),
+      );
     }
   };
 

@@ -1,6 +1,10 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { dashboardKeys } from "@/features/dashboard/hooks";
+import { enrollmentKeys } from "@/features/enrollments/hooks";
+import { guardianKeys } from "@/features/guardians/hooks";
+import { studentKeys } from "@/features/students/hooks";
 
 import {
   approveAdmission,
@@ -67,6 +71,22 @@ export function useApproveAdmission(schoolId: number) {
 
       queryClient.invalidateQueries({
         queryKey: admissionKeys.details(schoolId, admissionId),
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: studentKeys.all,
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: enrollmentKeys.all,
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: guardianKeys.all,
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: dashboardKeys.all,
       });
     },
   });

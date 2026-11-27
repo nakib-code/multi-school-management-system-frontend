@@ -6,10 +6,12 @@ import {
   ChevronRight,
   ExternalLink,
   Eye,
+  FileDown,
   Loader2,
   RefreshCw,
   Search,
 } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Modal } from "@/components/modals/modal";
@@ -17,6 +19,7 @@ import {
   type GuardianCredentialsData,
   GuardianCredentialsModal,
 } from "@/components/school-modules/guardian-credentials-modal";
+import { useClasses } from "@/features/admin/classes/hooks";
 import {
   useAdmissionDetails,
   useAdmissions,
@@ -40,6 +43,8 @@ export default function AdminAdmissionsPage() {
 
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
+  const [classIdFilter, setClassIdFilter] = useState("");
+  const [academicYearFilter, setAcademicYearFilter] = useState("");
   const [status, setStatus] = useState<AdmissionStatus | "">("");
   const [paymentStatus, setPaymentStatus] = useState<
     AdmissionPaymentStatus | ""
@@ -48,8 +53,20 @@ export default function AdminAdmissionsPage() {
   const [rejectId, setRejectId] = useState<number | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [detailId, setDetailId] = useState<number | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{
+    type: "approve" | "cash" | "verifyOnline";
+    admissionId: number;
+    trxId?: string | null;
+  } | null>(null);
+  const [rejectPaymentTarget, setRejectPaymentTarget] = useState<{
+    admissionId: number;
+    trxId?: string | null;
+  } | null>(null);
+  const [rejectPaymentReason, setRejectPaymentReason] = useState("");
   const [guardianCredentials, setGuardianCredentials] =
     useState<GuardianCredentialsData | null>(null);
+
+  const { data: classes = [] } = useClasses(schoolId);
 
   const { data, isLoading, isError, isFetching, refetch } = useAdmissions(
     schoolId,
@@ -57,6 +74,8 @@ export default function AdminAdmissionsPage() {
       page,
       limit: PAGE_SIZE,
       search: search || undefined,
+      classId: classIdFilter ? Number(classIdFilter) : undefined,
+      academicYear: academicYearFilter.trim() || undefined,
       status: status || undefined,
       paymentStatus: paymentStatus || undefined,
     },
@@ -78,90 +97,87 @@ export default function AdminAdmissionsPage() {
     setPage(1);
   }
 
-  async function handleApprove(admissionId: number) {
-    if (
-      !window.confirm(
-        "Approve this admission? This will create the Student, Class Enrollment, and link/create the Guardian.",
-      )
-    ) {
-      return;
-    }
+  function handleApprove(admissionId: number) {
+    setConfirmAction({ type: "approve", admissionId });
+  }
+
+  function handleCashPayment(admissionId: number) {
+    setConfirmAction({ type: "cash", admissionId });
+  }
+
+  function handleVerifyOnlinePayment(
+    admissionId: number,
+    trxId?: string | null,
+  ) {
+    setConfirmAction({ type: "verifyOnline", admissionId, trxId });
+  }
+
+  function handleRejectOnlinePayment(
+    admissionId: number,
+    trxId?: string | null,
+  ) {
+    setRejectPaymentReason("");
+    setRejectPaymentTarget({ admissionId, trxId });
+  }
+
+  async function executeConfirmAction() {
+    if (!confirmAction) return;
+    const { type, admissionId } = confirmAction;
 
     try {
-      const approved = await approveMutation.mutateAsync(admissionId);
-      toast.success(
-        "Admission approved — Student, Enrollment & Guardian created",
-      );
-      setDetailId(null);
-      if (approved.guardian?.temporaryPassword) {
-        setGuardianCredentials({
-          name: approved.guardian.name,
-          phone: approved.guardian.phone,
-          temporaryPassword: approved.guardian.temporaryPassword,
-          studentName: approved.studentName,
+      if (type === "approve") {
+        const approved = await approveMutation.mutateAsync(admissionId);
+        toast.success(
+          "Admission approved — Student, Enrollment & Guardian created",
+        );
+        setDetailId(null);
+        if (approved.guardian?.temporaryPassword) {
+          setGuardianCredentials({
+            name: approved.guardian.name,
+            phone: approved.guardian.phone,
+            temporaryPassword: approved.guardian.temporaryPassword,
+            studentName: approved.studentName,
+          });
+        }
+      } else if (type === "cash") {
+        await cashPaymentMutation.mutateAsync({
+          admissionId,
+          input: { remarks: "Cash payment confirmed by staff" },
         });
+        toast.success("Cash payment confirmed");
+      } else if (type === "verifyOnline") {
+        await verifyOnlineMutation.mutateAsync({
+          admissionId,
+          input: { remarks: "Online TrxID verified by staff" },
+        });
+        toast.success("Online payment verified");
       }
+      setConfirmAction(null);
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to approve admission",
+        error instanceof Error ? error.message : "Action failed. Please retry.",
       );
     }
   }
 
-  async function handleCashPayment(admissionId: number) {
-    if (
-      !window.confirm("Confirm that the admission fee was received in cash?")
-    ) {
+  async function executeRejectOnlinePayment() {
+    if (!rejectPaymentTarget) return;
+    const reason = rejectPaymentReason.trim();
+    if (reason.length < 3) {
+      toast.error(
+        "Please enter at least 3 characters for the rejection reason",
+      );
       return;
     }
-
-    try {
-      await cashPaymentMutation.mutateAsync({
-        admissionId,
-        input: { remarks: "Cash payment confirmed by staff" },
-      });
-      toast.success("Cash payment confirmed");
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to confirm payment",
-      );
-    }
-  }
-
-  async function handleVerifyOnlinePayment(admissionId: number) {
-    if (
-      !window.confirm(
-        "Verify this mobile banking transaction ID and mark the admission fee as PAID?",
-      )
-    ) {
-      return;
-    }
-
-    try {
-      await verifyOnlineMutation.mutateAsync({
-        admissionId,
-        input: { remarks: "Online TrxID verified by staff" },
-      });
-      toast.success("Online payment verified");
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to verify payment",
-      );
-    }
-  }
-
-  async function handleRejectOnlinePayment(admissionId: number) {
-    const reason = window.prompt(
-      "Enter reason for rejecting this transaction ID:",
-    );
-    if (!reason || reason.trim().length < 3) return;
 
     try {
       await rejectOnlineMutation.mutateAsync({
-        admissionId,
-        input: { remarks: reason.trim() },
+        admissionId: rejectPaymentTarget.admissionId,
+        input: { remarks: reason },
       });
       toast.success("Online payment rejected — applicant can resubmit TrxID");
+      setRejectPaymentTarget(null);
+      setRejectPaymentReason("");
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Failed to reject payment",
@@ -205,14 +221,28 @@ export default function AdminAdmissionsPage() {
 
   const detail = detailQuery.data;
 
+  const reportsBasePath =
+    user?.role === "MANAGER"
+      ? "/dashboard/manager/reports"
+      : "/dashboard/admin/reports";
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Admissions</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Inspect applications, verify payments, and approve into Student +
-          Enrollment + Guardian records.
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Admissions</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Inspect applications, verify payments, and approve into Student +
+            Enrollment + Guardian records.
+          </p>
+        </div>
+        <Link
+          href={`${reportsBasePath}?tab=admissions`}
+          className="inline-flex h-9 items-center gap-1.5 rounded-lg border bg-background px-3.5 text-sm font-medium hover:bg-muted"
+        >
+          <FileDown className="h-4 w-4 text-primary" />
+          Class Chart / Export PDF
+        </Link>
       </div>
 
       {/* Search and filters */}
@@ -240,6 +270,34 @@ export default function AdminAdmissionsPage() {
         >
           Search
         </button>
+
+        <select
+          value={classIdFilter}
+          onChange={(event) => {
+            setClassIdFilter(event.target.value);
+            setPage(1);
+          }}
+          className="h-10 rounded-lg border bg-background px-3 text-sm"
+          aria-label="Filter by class"
+        >
+          <option value="">All classes</option>
+          {classes.map((cls) => (
+            <option key={cls.id} value={String(cls.id)}>
+              {cls.name}
+            </option>
+          ))}
+        </select>
+
+        <input
+          value={academicYearFilter}
+          onChange={(event) => {
+            setAcademicYearFilter(event.target.value);
+            setPage(1);
+          }}
+          placeholder="Year (e.g. 2026)"
+          aria-label="Filter by academic year"
+          className="h-10 w-32 rounded-lg border bg-background px-3 text-sm outline-none focus:border-primary"
+        />
 
         <select
           value={status}
@@ -389,6 +447,23 @@ export default function AdminAdmissionsPage() {
                       </div>
                     </div>
 
+                    {admission.payment && admission.payment.amount > 0 && (
+                      <div className="rounded-lg border bg-muted/30 p-2.5 text-xs">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-medium">
+                            {admission.payment.paymentMethod} · ৳
+                            {Number(admission.payment.amount).toLocaleString()}
+                          </span>
+                          <PaymentBadge status={admission.payment.status} />
+                        </div>
+                        {admission.payment.transactionId && (
+                          <p className="mt-1 font-mono text-[11px] text-foreground">
+                            TrxID: {admission.payment.transactionId}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
                     <div className="flex flex-wrap gap-2 border-t pt-2.5">
                       <button
                         type="button"
@@ -410,6 +485,42 @@ export default function AdminAdmissionsPage() {
                           >
                             Confirm Cash
                           </button>
+                        )}
+
+                      {isPending &&
+                        !isCash &&
+                        admission.payment &&
+                        admission.payment.amount > 0 &&
+                        admission.payment.status !== "PAID" &&
+                        admission.payment.transactionId && (
+                          <>
+                            <button
+                              type="button"
+                              disabled={verifyOnlineMutation.isPending}
+                              onClick={() =>
+                                handleVerifyOnlinePayment(
+                                  admission.id,
+                                  admission.payment?.transactionId,
+                                )
+                              }
+                              className="min-h-[40px] flex-1 rounded-[11px] bg-emerald-600 px-3 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+                            >
+                              Verify TrxID
+                            </button>
+                            <button
+                              type="button"
+                              disabled={rejectOnlineMutation.isPending}
+                              onClick={() =>
+                                handleRejectOnlinePayment(
+                                  admission.id,
+                                  admission.payment?.transactionId,
+                                )
+                              }
+                              className="min-h-[40px] rounded-[11px] border border-amber-300 bg-amber-50 px-3 text-xs font-medium text-amber-800 hover:bg-amber-100 disabled:opacity-50"
+                            >
+                              Reject TrxID
+                            </button>
+                          </>
                         )}
 
                       {isPending && hasPaidOrNoFee && (
@@ -578,7 +689,10 @@ export default function AdminAdmissionsPage() {
                                     type="button"
                                     disabled={verifyOnlineMutation.isPending}
                                     onClick={() =>
-                                      handleVerifyOnlinePayment(admission.id)
+                                      handleVerifyOnlinePayment(
+                                        admission.id,
+                                        admission.payment?.transactionId,
+                                      )
                                     }
                                     className="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
                                   >
@@ -588,7 +702,10 @@ export default function AdminAdmissionsPage() {
                                     type="button"
                                     disabled={rejectOnlineMutation.isPending}
                                     onClick={() =>
-                                      handleRejectOnlinePayment(admission.id)
+                                      handleRejectOnlinePayment(
+                                        admission.id,
+                                        admission.payment?.transactionId,
+                                      )
                                     }
                                     className="rounded-md border border-amber-300 px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-50 disabled:opacity-50"
                                   >
@@ -785,12 +902,87 @@ export default function AdminAdmissionsPage() {
               </div>
             </div>
 
+            {/* Payment Information */}
+            {detail.payment && detail.payment.amount > 0 && (
+              <div className="space-y-3 rounded-xl border bg-muted/20 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="font-semibold">Admission Fee Payment</h3>
+                  <PaymentBadge status={detail.payment.status} />
+                </div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <DetailItem
+                    label="Amount"
+                    value={`৳${Number(detail.payment.amount).toLocaleString()}`}
+                  />
+                  <DetailItem
+                    label="Payment Method"
+                    value={detail.payment.paymentMethod}
+                  />
+                  <DetailItem
+                    label="Transaction ID (TrxID)"
+                    value={detail.payment.transactionId ?? "Not submitted yet"}
+                  />
+                </div>
+                {detail.payment.remarks && (
+                  <p className="text-xs text-muted-foreground">
+                    Note: {detail.payment.remarks}
+                  </p>
+                )}
+                {detail.status === "PENDING" &&
+                  detail.payment.status !== "PAID" && (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {detail.payment.paymentMethod === "CASH" ? (
+                        <button
+                          type="button"
+                          disabled={cashPaymentMutation.isPending}
+                          onClick={() => handleCashPayment(detail.id)}
+                          className="rounded-lg border px-3 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-50"
+                        >
+                          Confirm Cash Payment
+                        </button>
+                      ) : detail.payment.transactionId ? (
+                        <>
+                          <button
+                            type="button"
+                            disabled={verifyOnlineMutation.isPending}
+                            onClick={() =>
+                              handleVerifyOnlinePayment(
+                                detail.id,
+                                detail.payment?.transactionId,
+                              )
+                            }
+                            className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+                          >
+                            Verify TrxID
+                          </button>
+                          <button
+                            type="button"
+                            disabled={rejectOnlineMutation.isPending}
+                            onClick={() =>
+                              handleRejectOnlinePayment(
+                                detail.id,
+                                detail.payment?.transactionId,
+                              )
+                            }
+                            className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-100 disabled:opacity-50"
+                          >
+                            Reject TrxID
+                          </button>
+                        </>
+                      ) : null}
+                    </div>
+                  )}
+              </div>
+            )}
+
             {detail.status === "PENDING" && (
               <div className="flex justify-end gap-2 border-t pt-4">
                 <button
                   type="button"
                   onClick={() => {
-                    setRejectId(detail.id);
+                    const id = detail.id;
+                    setDetailId(null);
+                    setRejectId(id);
                     setRejectionReason("");
                   }}
                   className="rounded-lg border border-destructive/40 px-4 py-2 text-xs font-medium text-destructive hover:bg-destructive/5"
@@ -815,11 +1007,120 @@ export default function AdminAdmissionsPage() {
         ) : null}
       </Modal>
 
+      {/* Confirm Action Modal (Approve / Cash / Verify Online TrxID) */}
+      <Modal
+        open={Boolean(confirmAction)}
+        onClose={() => setConfirmAction(null)}
+        title={
+          confirmAction?.type === "approve"
+            ? "Approve Admission"
+            : confirmAction?.type === "cash"
+              ? "Confirm Cash Payment"
+              : "Verify Online TrxID"
+        }
+        description={
+          confirmAction?.type === "approve"
+            ? "This will create the Student profile, Class Enrollment, and link/create the Guardian account."
+            : confirmAction?.type === "cash"
+              ? "Confirm that the admission fee was received in cash at the school office."
+              : `Verify mobile banking transaction${confirmAction?.trxId ? ` (${confirmAction.trxId})` : ""} and mark the admission fee as PAID?`
+        }
+      >
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => setConfirmAction(null)}
+            className="rounded-lg border px-4 py-2 text-xs font-medium hover:bg-muted"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={
+              approveMutation.isPending ||
+              cashPaymentMutation.isPending ||
+              verifyOnlineMutation.isPending
+            }
+            onClick={() => void executeConfirmAction()}
+            className="rounded-lg bg-primary px-4 py-2 text-xs font-medium text-primary-foreground disabled:opacity-50"
+          >
+            Confirm
+          </button>
+        </div>
+      </Modal>
+
+      {/* Reject Online TrxID Modal */}
+      <Modal
+        open={Boolean(rejectPaymentTarget)}
+        onClose={() => {
+          setRejectPaymentTarget(null);
+          setRejectPaymentReason("");
+        }}
+        title="Reject Admission TrxID"
+        description={`Enter the reason for rejecting TrxID${rejectPaymentTarget?.trxId ? ` (${rejectPaymentTarget.trxId})` : ""}. The applicant will be able to resubmit a corrected TrxID.`}
+      >
+        <div className="space-y-4">
+          <textarea
+            rows={3}
+            value={rejectPaymentReason}
+            onChange={(e) => setRejectPaymentReason(e.target.value)}
+            placeholder="e.g. TrxID not found in bKash statement (min 3 characters)"
+            className="w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+          />
+          {rejectPaymentReason.trim().length > 0 &&
+            rejectPaymentReason.trim().length < 3 && (
+              <p className="text-xs text-destructive">
+                Please enter at least 3 characters.
+              </p>
+            )}
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setRejectPaymentTarget(null);
+                setRejectPaymentReason("");
+              }}
+              className="rounded-lg border px-4 py-2 text-xs font-medium hover:bg-muted"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={
+                rejectPaymentReason.trim().length < 3 ||
+                rejectOnlineMutation.isPending
+              }
+              onClick={() => void executeRejectOnlinePayment()}
+              className="rounded-lg bg-destructive px-4 py-2 text-xs font-medium text-destructive-foreground disabled:opacity-50"
+            >
+              {rejectOnlineMutation.isPending ? "Rejecting..." : "Reject TrxID"}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
       <GuardianCredentialsModal
         credentials={guardianCredentials}
         onClose={() => setGuardianCredentials(null)}
       />
     </div>
+  );
+}
+
+function PaymentBadge({ status }: { status: string }) {
+  const styles =
+    status === "PAID"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+      : status === "FAILED" || status === "CANCELLED"
+        ? "border-red-200 bg-red-50 text-red-700"
+        : "border-amber-200 bg-amber-50 text-amber-800";
+
+  return (
+    <span
+      className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold ${styles}`}
+    >
+      {status}
+    </span>
   );
 }
 

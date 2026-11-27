@@ -1,17 +1,29 @@
 import { useQuery } from "@tanstack/react-query";
+import type { FeeType } from "@/features/fees/types";
 import { api } from "@/lib/api";
 
 import { getReportOverview } from "./api";
+
+export interface FeeTypeSummaryBucket {
+  feeType: FeeType;
+  count: number;
+  billed: number;
+  collected: number;
+  due: number;
+  waived: number;
+}
 
 export interface SchoolReportOverview {
   fees: {
     totalBilled: number;
     totalCollected: number;
     totalDue: number;
+    totalWaived?: number;
     paidCount: number;
     partialCount: number;
     unpaidCount: number;
     pendingVerifications: number;
+    byFeeType?: FeeTypeSummaryBucket[];
   };
   payroll: {
     totalRecords: number;
@@ -36,6 +48,124 @@ export interface SchoolReportOverview {
     pending: number;
     approved: number;
     rejected: number;
+    totalExpected?: number;
+    collectedVerified?: number;
+    pendingPayment?: number;
+    unlinkedCollected?: number;
+  };
+}
+
+export interface ChartSchoolHeader {
+  id: number;
+  name: string;
+  code: string;
+  logo: string | null;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+}
+
+export interface AdmissionChartReport {
+  school: ChartSchoolHeader | null;
+  filters: Record<string, unknown>;
+  rows: Array<{
+    serial: number;
+    id: number;
+    applicationNo: string;
+    studentName: string;
+    nameBangla: string | null;
+    guardianName: string | null;
+    guardianPhone: string | null;
+    classId: number;
+    className: string;
+    sectionName: string | null;
+    academicYear: string;
+    admissionFee: number;
+    paymentMethod: string | null;
+    trxId: string | null;
+    senderNumber: string | null;
+    paymentStatus: string;
+    admissionStatus: string;
+    createdAt: string;
+  }>;
+  summary: {
+    totalApplicants: number;
+    approvedCount: number;
+    pendingCount: number;
+    rejectedCount: number;
+    totalExpected: number;
+    totalCollected: number;
+    totalPending: number;
+    paidCount: number;
+    unpaidCount: number;
+  };
+}
+
+export interface FeeChartReport {
+  school: ChartSchoolHeader | null;
+  filters: Record<string, unknown>;
+  rows: Array<{
+    serial: number;
+    id: number;
+    studentId: number;
+    studentCode: string;
+    rollNumber: number | null;
+    studentName: string;
+    className: string;
+    sectionName: string | null;
+    academicYear: string;
+    feeType: FeeType;
+    title: string;
+    billingMonth: string | null;
+    examName: string | null;
+    billed: number;
+    paid: number;
+    due: number;
+    status: string;
+    dueDate: string;
+  }>;
+  summary: {
+    totalInvoices: number;
+    totalBilled: number;
+    totalCollected: number;
+    totalDue: number;
+    totalWaived: number;
+    paidCount: number;
+    partialCount: number;
+    pendingCount: number;
+    waivedCount: number;
+    byFeeType: FeeTypeSummaryBucket[];
+  };
+}
+
+export interface RosterChartReport {
+  school: ChartSchoolHeader | null;
+  filters: Record<string, unknown>;
+  rows: Array<{
+    serial: number;
+    enrollmentId: number;
+    studentRecordId: number;
+    studentId: string;
+    rollNumber: number | null;
+    studentName: string;
+    nameBangla: string | null;
+    gender: string | null;
+    residentialType: string;
+    className: string;
+    sectionName: string | null;
+    academicYear: string;
+    guardianName: string | null;
+    guardianPhone: string | null;
+    status: string;
+  }>;
+  summary: {
+    totalStudents: number;
+    activeCount: number;
+    completedCount: number;
+    droppedCount: number;
+    residentialCount: number;
+    nonResidentialCount: number;
+    dayCareCount: number;
   };
 }
 
@@ -44,6 +174,26 @@ export const reportKeys = {
   overview: () => [...reportKeys.all, "overview"] as const,
   schoolOverview: (schoolId: number) =>
     [...reportKeys.all, "school", schoolId, "overview"] as const,
+  admissionChart: (schoolId: number, params?: Record<string, unknown>) =>
+    [
+      ...reportKeys.all,
+      "school",
+      schoolId,
+      "charts",
+      "admissions",
+      params,
+    ] as const,
+  feeChart: (schoolId: number, params?: Record<string, unknown>) =>
+    [...reportKeys.all, "school", schoolId, "charts", "fees", params] as const,
+  rosterChart: (schoolId: number, params?: Record<string, unknown>) =>
+    [
+      ...reportKeys.all,
+      "school",
+      schoolId,
+      "charts",
+      "roster",
+      params,
+    ] as const,
 };
 
 export const useReportOverview = () => {
@@ -60,6 +210,79 @@ export const useSchoolReportOverview = (schoolId: number) => {
     queryFn: async () => {
       const res = await api.get<{ data: SchoolReportOverview }>(
         `/schools/${schoolId}/reports/overview`,
+      );
+      return res.data.data;
+    },
+  });
+};
+
+export const useAdmissionChartReport = (
+  schoolId: number,
+  params?: {
+    classId?: number;
+    sectionId?: number;
+    academicYear?: string;
+    status?: string;
+    paymentStatus?: string;
+  },
+  enabled = true,
+) => {
+  return useQuery({
+    queryKey: reportKeys.admissionChart(schoolId, params),
+    enabled: schoolId > 0 && enabled,
+    queryFn: async () => {
+      const res = await api.get<{ data: AdmissionChartReport }>(
+        `/schools/${schoolId}/reports/charts/admissions`,
+        { params },
+      );
+      return res.data.data;
+    },
+  });
+};
+
+export const useFeeChartReport = (
+  schoolId: number,
+  params?: {
+    feeType?: "ALL" | FeeType;
+    classId?: number;
+    sectionId?: number;
+    academicYear?: string;
+    billingMonth?: string;
+    examId?: number;
+    status?: string;
+  },
+  enabled = true,
+) => {
+  return useQuery({
+    queryKey: reportKeys.feeChart(schoolId, params),
+    enabled: schoolId > 0 && enabled,
+    queryFn: async () => {
+      const res = await api.get<{ data: FeeChartReport }>(
+        `/schools/${schoolId}/reports/charts/fees`,
+        { params },
+      );
+      return res.data.data;
+    },
+  });
+};
+
+export const useStudentRosterChartReport = (
+  schoolId: number,
+  params?: {
+    classId?: number;
+    sectionId?: number;
+    academicYear?: string;
+    status?: string;
+  },
+  enabled = true,
+) => {
+  return useQuery({
+    queryKey: reportKeys.rosterChart(schoolId, params),
+    enabled: schoolId > 0 && enabled,
+    queryFn: async () => {
+      const res = await api.get<{ data: RosterChartReport }>(
+        `/schools/${schoolId}/reports/charts/roster`,
+        { params },
       );
       return res.data.data;
     },

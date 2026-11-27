@@ -1,11 +1,14 @@
 import { api } from "@/lib/api";
 import type {
+  ClassFeeStructuresResponse,
+  ClassWithFeeStructure,
   CreateClassPayload,
   CreateSectionPayload,
   SchoolClass,
   SchoolSection,
   UpdateClassPayload,
   UpdateSectionPayload,
+  UpsertClassFeeStructuresPayload,
 } from "./types";
 
 // ==================================================
@@ -71,6 +74,31 @@ export const toggleClassStatus = async (
 export const deleteClass = async (schoolId: number, classId: number) => {
   const response = await api.delete(`/schools/${schoolId}/classes/${classId}`);
 
+  return response.data.data;
+};
+
+export const getClassFeeStructures = async (
+  schoolId: number,
+  params?: { classId?: number; academicYear?: string; feeType?: string },
+): Promise<ClassFeeStructuresResponse> => {
+  const response = await api.get(
+    `/schools/${schoolId}/classes/fee-structures`,
+    {
+      params,
+    },
+  );
+  return response.data.data;
+};
+
+export const upsertClassFeeStructures = async (
+  schoolId: number,
+  classId: number,
+  payload: UpsertClassFeeStructuresPayload,
+): Promise<ClassWithFeeStructure | null> => {
+  const response = await api.put(
+    `/schools/${schoolId}/classes/${classId}/fee-structures`,
+    payload,
+  );
   return response.data.data;
 };
 

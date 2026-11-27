@@ -144,6 +144,8 @@ export interface GetAdmissionsParams {
   page?: number;
   limit?: number;
   search?: string;
+  classId?: number;
+  academicYear?: string;
   status?: AdmissionStatus;
   paymentStatus?: AdmissionPaymentStatus;
 }

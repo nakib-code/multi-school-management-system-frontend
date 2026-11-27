@@ -1,8 +1,12 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import {
   Check,
+  CheckCircle2,
+  Circle,
   Copy,
+  ExternalLink,
   Globe,
   KeyRound,
   RefreshCw,
@@ -11,15 +15,20 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Modal } from "@/components/modals/modal";
 import { LoadingState } from "@/components/shared/loading";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useActiveClasses } from "@/features/admin/classes/hooks";
 import {
   useRotateWebsiteKey,
+  useSchoolPaymentMethods,
+  useSchoolProfile,
   useUpdateWebsiteConnection,
   useWebsiteConnection,
 } from "@/features/school-settings/hooks";
+import { api } from "@/lib/api";
 
 export function ExternalWebsiteSettings({
   schoolId,
@@ -29,6 +38,21 @@ export function ExternalWebsiteSettings({
   isAdmin: boolean;
 }) {
   const { data, isLoading } = useWebsiteConnection(schoolId);
+  const { data: schoolProfile } = useSchoolProfile(schoolId);
+  const { data: paymentMethods } = useSchoolPaymentMethods(
+    schoolId > 0 ? schoolId : undefined,
+  );
+  const { data: activeClasses = [] } = useActiveClasses(schoolId);
+  const { data: admissionFeeData } = useQuery({
+    queryKey: ["schools", schoolId, "admission-fee"],
+    enabled: schoolId > 0,
+    queryFn: async () => {
+      const res = await api.get<{ data: { admissionFee: number } }>(
+        `/schools/${schoolId}/settings/admission-fee`,
+      );
+      return res.data.data;
+    },
+  });
   const updateMut = useUpdateWebsiteConnection(schoolId);
   const rotateMut = useRotateWebsiteKey(schoolId);
 
@@ -37,6 +61,7 @@ export function ExternalWebsiteSettings({
   const [adminPassword, setAdminPassword] = useState("");
   const [generatedKey, setGeneratedKey] = useState<string | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [confirmRotateOpen, setConfirmRotateOpen] = useState(false);
 
   useEffect(() => {
     if (data) {
@@ -58,42 +83,161 @@ export function ExternalWebsiteSettings({
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    await updateMut.mutateAsync({
-      externalWebsiteUrl: websiteUrl.trim() || null,
-      landingAdminEmail: adminEmail.trim() || null,
-      ...(adminPassword.trim()
-        ? { landingAdminPassword: adminPassword.trim() }
-        : {}),
-    });
-    setAdminPassword("");
+    let normalizedUrl = websiteUrl.trim();
+    if (
+      normalizedUrl &&
+      !normalizedUrl.startsWith("http://") &&
+      !normalizedUrl.startsWith("https://")
+    ) {
+      normalizedUrl = `https://${normalizedUrl}`;
+      setWebsiteUrl(normalizedUrl);
+    }
+    try {
+      await updateMut.mutateAsync({
+        externalWebsiteUrl: normalizedUrl || null,
+        landingAdminEmail: adminEmail.trim() || null,
+        ...(adminPassword.trim()
+          ? { landingAdminPassword: adminPassword.trim() }
+          : {}),
+      });
+      setAdminPassword("");
+    } catch {
+      // Handled via mutation toast
+    }
   };
 
-  const handleRotateKey = async () => {
-    if (
-      data?.hasConnectionKey &&
-      !window.confirm(
-        "Rotate the website connection key? The previous key will stop working until you paste the new key into your landing website's /admin dashboard.",
-      )
-    ) {
+  const handleRotateKey = () => {
+    if (data?.hasConnectionKey) {
+      setConfirmRotateOpen(true);
       return;
     }
-    const res = await rotateMut.mutateAsync();
-    setGeneratedKey(res.connectionKey);
+    void executeRotateKey();
+  };
+
+  const executeRotateKey = async () => {
+    try {
+      const res = await rotateMut.mutateAsync();
+      setGeneratedKey(res.connectionKey);
+      setConfirmRotateOpen(false);
+    } catch {
+      // Handled via mutation toast
+    }
   };
 
   const handleToggleOnlineAdmission = async () => {
     if (!isAdmin || !data) return;
-    await updateMut.mutateAsync({
-      hasOnlineAdmission: !data.hasOnlineAdmission,
-    });
+    try {
+      await updateMut.mutateAsync({
+        hasOnlineAdmission: !data.hasOnlineAdmission,
+      });
+    } catch {
+      // Handled via mutation toast
+    }
   };
 
   if (isLoading) {
     return <LoadingState message="Loading website connection settings..." />;
   }
 
+  const checklistItems = [
+    {
+      label: "School Name & Logo",
+      done: Boolean(schoolProfile?.name && schoolProfile?.logo),
+      hint: schoolProfile?.logo
+        ? "Branding synced"
+        : "Upload school logo in General & Branding",
+    },
+    {
+      label: "Admission Fee Configured",
+      done:
+        admissionFeeData !== undefined &&
+        admissionFeeData.admissionFee !== null,
+      hint:
+        admissionFeeData !== undefined
+          ? `৳${Number(admissionFeeData.admissionFee).toLocaleString()}`
+          : "Configure in General & Branding",
+    },
+    {
+      label: "MFS Payment Numbers",
+      done: Boolean(
+        paymentMethods?.bkashNumber ||
+          paymentMethods?.nagadNumber ||
+          paymentMethods?.rocketNumber,
+      ),
+      hint: "Used for both Student Fees & Online Admissions",
+    },
+    {
+      label: "Active Classes Ready",
+      done: activeClasses.length > 0,
+      hint: `${activeClasses.length} active class(es)`,
+    },
+    {
+      label: "External Website Connected",
+      done: Boolean(
+        data?.externalWebsiteUrl &&
+          data?.hasConnectionKey &&
+          data?.landingAdminEmail &&
+          data?.hasLandingAdminPassword,
+      ),
+      hint: data?.externalWebsiteUrl
+        ? data.externalWebsiteUrl
+        : "Set URL, key & landing admin login below",
+    },
+  ];
+  const completedCount = checklistItems.filter((item) => item.done).length;
+
   return (
     <div className="space-y-6">
+      {/* 5-Step Website Setup Checklist */}
+      <div className="space-y-4 rounded-xl border bg-card p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">
+              Website &amp; Online Admission Readiness ({completedCount}/
+              {checklistItems.length})
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              Complete these 5 checks so parents can browse your site and submit
+              admissions smoothly.
+            </p>
+          </div>
+          {data?.externalWebsiteUrl && (
+            <a
+              href={data.externalWebsiteUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border px-3.5 text-xs font-semibold hover:bg-muted"
+            >
+              Open Connected Website
+              <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+          )}
+        </div>
+        <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
+          {checklistItems.map((item) => (
+            <div
+              key={item.label}
+              className={`rounded-lg border p-3 ${
+                item.done
+                  ? "border-emerald-200 bg-emerald-50/50"
+                  : "border-border bg-muted/20"
+              }`}
+            >
+              <div className="flex items-center gap-1.5">
+                {item.done ? (
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                ) : (
+                  <Circle className="h-4 w-4 shrink-0 text-muted-foreground" />
+                )}
+                <span className="text-xs font-semibold">{item.label}</span>
+              </div>
+              <p className="mt-1 truncate text-[11px] text-muted-foreground">
+                {item.hint}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
       {/* Copyable Connection Details */}
       <div className="space-y-4 rounded-xl border bg-card p-6">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3">
@@ -358,6 +502,31 @@ export function ExternalWebsiteSettings({
           </li>
         </ol>
       </div>
+
+      <Modal
+        open={confirmRotateOpen}
+        onClose={() => setConfirmRotateOpen(false)}
+        title="Rotate Website Connection Key"
+        description="The previous connection key will stop working immediately until you paste the new key into your landing website's /admin portal."
+      >
+        <div className="flex justify-end gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setConfirmRotateOpen(false)}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            disabled={rotateMut.isPending}
+            onClick={() => void executeRotateKey()}
+          >
+            {rotateMut.isPending ? "Rotating..." : "Confirm Rotate Key"}
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }

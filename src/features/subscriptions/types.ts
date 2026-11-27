@@ -9,6 +9,29 @@ export interface SubscriptionPackage {
 
 export type SubscriptionStatus = "PENDING" | "ACTIVE" | "CANCELLED" | "EXPIRED";
 
+export interface MySubscriptionPayment {
+  id: number;
+  subscriptionId: number;
+  paymentMethod: "BKASH" | "NAGAD" | "ROCKET";
+  senderNumber: string;
+  receiverNumber?: string | null;
+  trxId: string;
+  paidAmount: number;
+  currency: string;
+  status: "PENDING" | "VERIFIED" | "REJECTED";
+  paidAt: string;
+  verifiedAt?: string | null;
+  rejectionReason?: string | null;
+  remarks?: string | null;
+  createdAt: string;
+  package?: {
+    id: number;
+    name: string;
+    price: number;
+    billingCycle: "MONTHLY" | "YEARLY";
+  };
+}
+
 export interface MySubscription {
   id: number;
   schoolId: number;
@@ -21,6 +44,18 @@ export interface MySubscription {
   createdAt: string;
   updatedAt: string;
   package: SubscriptionPackage;
+  activeStudentsCount?: number;
+  pendingUpgrade?: Omit<
+    MySubscription,
+    "activeStudentsCount" | "pendingUpgrade" | "payments"
+  > | null;
+  payments?: MySubscriptionPayment[];
+}
+
+export interface MySubscriptionPaymentsResponse {
+  success: boolean;
+  message: string;
+  data: MySubscriptionPayment[];
 }
 
 export interface MySubscriptionResponse {

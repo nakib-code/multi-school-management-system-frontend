@@ -7,9 +7,11 @@ import {
   Settings,
   Smartphone,
   User as UserIcon,
+  Wallet,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { FeeStructureMatrix } from "@/components/admin/classes/fee-structure-matrix";
 import { ExternalWebsiteSettings } from "@/components/school-modules/external-website-settings";
 import { FileUpload } from "@/components/shared/file-upload";
 import { LoadingState } from "@/components/shared/loading";
@@ -40,7 +42,7 @@ export function SchoolSettingsView() {
   const isAdmin = user?.role === "ADMIN";
 
   const [activeTab, setActiveTab] = useState<
-    "general" | "payments" | "website" | "profile"
+    "general" | "payments" | "fee-structure" | "website" | "profile"
   >("payments");
 
   const { data: setting, isLoading } = useAdmissionFee(schoolId);
@@ -141,7 +143,9 @@ export function SchoolSettingsView() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div
+      className={`mx-auto space-y-6 ${activeTab === "fee-structure" ? "max-w-6xl" : "max-w-3xl"}`}
+    >
       <div>
         <h1 className="text-2xl font-bold tracking-tight">
           Institution Settings
@@ -165,6 +169,19 @@ export function SchoolSettingsView() {
         >
           <Smartphone className="h-4 w-4" />
           Payment Methods
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("fee-structure")}
+          className={`inline-flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition ${
+            activeTab === "fee-structure"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Wallet className="h-4 w-4" />
+          Fee Structure Matrix
         </button>
 
         <button
@@ -207,7 +224,9 @@ export function SchoolSettingsView() {
         </button>
       </div>
 
-      {activeTab === "website" ? (
+      {activeTab === "fee-structure" ? (
+        <FeeStructureMatrix schoolId={schoolId} isAdmin={isAdmin} />
+      ) : activeTab === "website" ? (
         <ExternalWebsiteSettings schoolId={schoolId} isAdmin={isAdmin} />
       ) : activeTab === "profile" ? (
         <SelfProfileForm />

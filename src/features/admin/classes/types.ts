@@ -1,3 +1,39 @@
+import type { FeeType } from "@/features/fees/types";
+
+export interface ClassFeeStructureItem {
+  id: number;
+  classId?: number;
+  feeType: FeeType;
+  title: string | null;
+  amount: number;
+  academicYear: string | null;
+  isActive?: boolean;
+}
+
+export interface ClassWithFeeStructure {
+  id: number;
+  name: string;
+  code: string;
+  isActive: boolean;
+  resolvedAdmissionFee: number;
+  feeStructures: ClassFeeStructureItem[];
+}
+
+export interface ClassFeeStructuresResponse {
+  schoolDefaultAdmissionFee: number;
+  classes: ClassWithFeeStructure[];
+}
+
+export interface UpsertClassFeeStructuresPayload {
+  academicYear?: string | null;
+  items: Array<{
+    feeType: FeeType;
+    amount: number | null;
+    title?: string | null;
+    isActive?: boolean;
+  }>;
+}
+
 export interface SchoolClass {
   id: number;
   schoolId: number;

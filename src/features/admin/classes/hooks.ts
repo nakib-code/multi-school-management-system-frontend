@@ -9,12 +9,14 @@ import {
   getActiveSections,
   getClassById,
   getClasses,
+  getClassFeeStructures,
   getSectionById,
   getSections,
   toggleClassStatus,
   toggleSectionStatus,
   updateClass,
   updateSection,
+  upsertClassFeeStructures,
 } from "./api";
 
 import type {
@@ -22,6 +24,7 @@ import type {
   CreateSectionPayload,
   UpdateClassPayload,
   UpdateSectionPayload,
+  UpsertClassFeeStructuresPayload,
 } from "./types";
 
 // ==================================================
@@ -36,6 +39,9 @@ export const classKeys = {
 
   detail: (schoolId: number, classId: number) =>
     ["admin", "classes", schoolId, classId] as const,
+
+  feeStructures: (schoolId: number, params?: Record<string, unknown>) =>
+    ["admin", "classes", schoolId, "fee-structures", params ?? "all"] as const,
 };
 
 export const sectionKeys = {
@@ -74,6 +80,39 @@ export const useClass = (schoolId: number, classId: number) => {
     queryKey: classKeys.detail(schoolId, classId),
     queryFn: () => getClassById(schoolId, classId),
     enabled: !!schoolId && !!classId,
+  });
+};
+
+export const useClassFeeStructures = (
+  schoolId: number,
+  params?: { classId?: number; academicYear?: string; feeType?: string },
+) => {
+  return useQuery({
+    queryKey: classKeys.feeStructures(schoolId, params),
+    queryFn: () => getClassFeeStructures(schoolId, params),
+    enabled: schoolId > 0,
+  });
+};
+
+export const useUpsertClassFeeStructures = (schoolId: number) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      classId,
+      payload,
+    }: {
+      classId: number;
+      payload: UpsertClassFeeStructuresPayload;
+    }) => upsertClassFeeStructures(schoolId, classId, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["admin", "classes", schoolId, "fee-structures"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: classKeys.active(schoolId),
+      });
+    },
   });
 };
 

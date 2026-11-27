@@ -3,6 +3,7 @@
 import {
   Copy,
   Eye,
+  FileDown,
   GraduationCap,
   LockKeyhole,
   Search,
@@ -243,13 +244,22 @@ export function StudentsWorkspace() {
           </div>
 
           {canAdmit && (
-            <Button
-              onClick={() => setQuickAdmitOpen(true)}
-              className="min-h-[44px] w-full gap-1.5 rounded-[11px] sm:min-h-0 sm:w-auto"
-            >
-              <UserPlus className="h-4 w-4" />
-              Quick Admit Student
-            </Button>
+            <>
+              <Link
+                href={`${user?.role === "MANAGER" ? "/dashboard/manager/reports" : "/dashboard/admin/reports"}?tab=roster`}
+                className="inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-[11px] border bg-background px-3.5 text-sm font-medium hover:bg-muted sm:min-h-0 sm:h-9"
+              >
+                <FileDown className="h-4 w-4 text-primary" />
+                Roster / PDF
+              </Link>
+              <Button
+                onClick={() => setQuickAdmitOpen(true)}
+                className="min-h-[44px] w-full gap-1.5 rounded-[11px] sm:min-h-0 sm:w-auto"
+              >
+                <UserPlus className="h-4 w-4" />
+                Quick Admit Student
+              </Button>
+            </>
           )}
         </div>
       </div>

@@ -9,13 +9,19 @@ import {
   GraduationCap,
   Loader2,
   Package,
+  Receipt,
   XCircle,
 } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
+import { toast } from "sonner";
+import { Modal } from "@/components/modals/modal";
+import { Button } from "@/components/ui/button";
 import {
   useSubscription,
   useUpdateSubscriptionStatus,
 } from "@/features/super-admin/subscriptions/use-subscriptions";
+import { getApiErrorMessage } from "@/lib/api";
 
 interface SubscriptionDetailsProps {
   id: number;
@@ -31,16 +37,29 @@ const formatDate = (date: string) => {
 
 export default function SubscriptionDetails({ id }: SubscriptionDetailsProps) {
   const { data, isLoading, isError } = useSubscription(id);
-
   const updateStatus = useUpdateSubscriptionStatus();
+  const [confirmAction, setConfirmAction] = useState<
+    "ACTIVE" | "CANCELLED" | null
+  >(null);
 
-  const handleStatusChange = (
-    status: "ACTIVE" | "EXPIRED" | "CANCELLED" | "PENDING",
-  ) => {
-    updateStatus.mutate({
-      id,
-      status,
-    });
+  const handleConfirmStatusChange = async () => {
+    if (!confirmAction) return;
+    try {
+      await updateStatus.mutateAsync({
+        id,
+        status: confirmAction,
+      });
+      toast.success(
+        confirmAction === "ACTIVE"
+          ? "Subscription activated"
+          : "Subscription cancelled",
+      );
+      setConfirmAction(null);
+    } catch (err) {
+      toast.error(
+        getApiErrorMessage(err, "Failed to update subscription status"),
+      );
+    }
   };
 
   if (isLoading) {
@@ -99,7 +118,7 @@ export default function SubscriptionDetails({ id }: SubscriptionDetailsProps) {
             <button
               type="button"
               disabled={updateStatus.isPending}
-              onClick={() => handleStatusChange("ACTIVE")}
+              onClick={() => setConfirmAction("ACTIVE")}
               className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
             >
               {updateStatus.isPending ? (
@@ -115,7 +134,7 @@ export default function SubscriptionDetails({ id }: SubscriptionDetailsProps) {
             <button
               type="button"
               disabled={updateStatus.isPending}
-              onClick={() => handleStatusChange("CANCELLED")}
+              onClick={() => setConfirmAction("CANCELLED")}
               className="inline-flex items-center gap-2 rounded-lg border border-destructive/30 px-4 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 disabled:opacity-50"
             >
               {updateStatus.isPending ? (
@@ -220,10 +239,111 @@ export default function SubscriptionDetails({ id }: SubscriptionDetailsProps) {
         </div>
       </div>
 
+      {/* Linked Payments */}
+      <div className="rounded-xl border bg-card p-6">
+        <div className="mb-4 flex items-center gap-3">
+          <Receipt className="size-5 text-primary" />
+          <h2 className="font-semibold">Linked Payments</h2>
+        </div>
+        {!data.payments || data.payments.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No payment records linked to this subscription yet.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="border-b bg-muted/40 text-left text-xs uppercase text-muted-foreground">
+                <tr>
+                  <th className="px-3 py-2">Date</th>
+                  <th className="px-3 py-2">Method</th>
+                  <th className="px-3 py-2">TrxID</th>
+                  <th className="px-3 py-2">Amount</th>
+                  <th className="px-3 py-2">Status</th>
+                  <th className="px-3 py-2">Notes</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {data.payments.map((p) => (
+                  <tr key={p.id}>
+                    <td className="px-3 py-2.5 text-xs text-muted-foreground">
+                      {formatDate(p.createdAt)}
+                    </td>
+                    <td className="px-3 py-2.5 font-medium">
+                      {p.paymentMethod}
+                    </td>
+                    <td className="px-3 py-2.5 font-mono text-xs">{p.trxId}</td>
+                    <td className="px-3 py-2.5 font-semibold">
+                      ৳{Number(p.paidAmount).toLocaleString()}
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <span
+                        className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${
+                          p.status === "VERIFIED"
+                            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                            : p.status === "PENDING"
+                              ? "border-amber-200 bg-amber-50 text-amber-800"
+                              : "border-red-200 bg-red-50 text-red-700"
+                        }`}
+                      >
+                        {p.status}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2.5 text-xs text-muted-foreground">
+                      {p.rejectionReason
+                        ? `Rejected: ${p.rejectionReason}`
+                        : p.verifiedBy
+                          ? `Verified by ${p.verifiedBy.name}`
+                          : (p.remarks ?? "—")}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <CreditCard className="size-4" />
         Last updated: {formatDate(data.updatedAt)}
       </div>
+
+      <Modal
+        open={Boolean(confirmAction)}
+        onClose={() => setConfirmAction(null)}
+        title={
+          confirmAction === "ACTIVE"
+            ? "Activate Subscription"
+            : "Cancel Subscription"
+        }
+        description={
+          confirmAction === "ACTIVE"
+            ? `Are you sure you want to manually activate subscription #${data.id} for ${data.school.name}?`
+            : `Are you sure you want to cancel subscription #${data.id} for ${data.school.name}?`
+        }
+      >
+        <div className="flex justify-end gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setConfirmAction(null)}
+          >
+            Back
+          </Button>
+          <Button
+            type="button"
+            variant={confirmAction === "CANCELLED" ? "destructive" : "default"}
+            disabled={updateStatus.isPending}
+            onClick={() => void handleConfirmStatusChange()}
+          >
+            {updateStatus.isPending
+              ? "Updating..."
+              : confirmAction === "ACTIVE"
+                ? "Confirm Activate"
+                : "Confirm Cancel"}
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }

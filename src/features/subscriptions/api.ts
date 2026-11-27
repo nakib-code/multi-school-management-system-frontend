@@ -1,10 +1,24 @@
 import { api } from "@/lib/api";
-import type { MySubscriptionResponse, SelectPackageResponse } from "./types";
+import type {
+  MySubscriptionPaymentsResponse,
+  MySubscriptionResponse,
+  SelectPackageResponse,
+} from "./types";
 
 export const getMySubscription = async (): Promise<
   MySubscriptionResponse["data"]
 > => {
   const response = await api.get<MySubscriptionResponse>("/subscriptions/me");
+
+  return response.data.data;
+};
+
+export const getMySubscriptionPayments = async (): Promise<
+  MySubscriptionPaymentsResponse["data"]
+> => {
+  const response = await api.get<MySubscriptionPaymentsResponse>(
+    "/subscriptions/me/payments",
+  );
 
   return response.data.data;
 };

@@ -159,11 +159,15 @@ export default function AdmissionForm({ schoolId }: AdmissionFormProps) {
         result.payment.amount > 0
       ) {
         toast.success(
-          "Application submitted! Proceed to mobile banking payment.",
+          `Application ${result.applicationNo} submitted! Proceed to mobile banking payment.`,
         );
-        router.push(
-          `/admissions/payment?schoolId=${schoolId}&admissionId=${result.id}`,
-        );
+        const params = new URLSearchParams({
+          schoolId: String(schoolId),
+          admissionId: String(result.id),
+          applicationNo: result.applicationNo,
+          guardianPhone: result.guardianPhone ?? data.guardianPhone ?? "",
+        });
+        router.push(`/admissions/payment?${params.toString()}`);
         return;
       }
 

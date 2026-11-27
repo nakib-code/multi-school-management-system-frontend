@@ -786,20 +786,37 @@
 }
 
 /* =========================================================
-   Print Stylesheet (Monthly Attendance Reports -> PDF)
+   Print Stylesheet (Accounting Charts, Roster & Receipts -> PDF)
 ========================================================= */
 
+.print-only {
+  display: none;
+}
+
+@page {
+  size: A4;
+  margin: 12mm;
+}
+
 @media print {
+  html,
   body {
     background: #ffffff !important;
     color: #000000 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 
   aside,
   header,
   nav,
+  footer,
   .no-print {
     display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
   }
 
   main {
@@ -808,9 +825,61 @@
     max-width: 100% !important;
   }
 
-  .print-report-sheet {
+  body.printing-sheet * {
+    visibility: hidden;
+  }
+
+  body.printing-sheet [role="dialog"] {
+    display: none !important;
+  }
+
+  body.printing-sheet #printable-sheet,
+  body.printing-sheet #printable-sheet * {
+    visibility: visible;
+  }
+
+  body.printing-sheet #printable-sheet {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
     border: none !important;
     box-shadow: none !important;
     padding: 0 !important;
+    margin: 0 !important;
+    background: #ffffff !important;
+  }
+
+  .print-report-sheet,
+  #printable-sheet {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+  }
+
+  #printable-sheet table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 11px !important;
+  }
+
+  #printable-sheet thead {
+    display: table-header-group;
+  }
+
+  #printable-sheet tfoot {
+    display: table-footer-group;
+  }
+
+  #printable-sheet tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  #printable-sheet th,
+  #printable-sheet td {
+    border: 1px solid #cbd5e1 !important;
+    padding: 5px 7px !important;
   }
 }

@@ -1,6 +1,8 @@
 import { api } from "@/lib/api";
 import type { ApiResponse } from "@/types/api";
 import type {
+  BulkCreateStudentFeeInput,
+  BulkCreateStudentFeeResult,
   CreateStudentFeeInput,
   StudentFeeRecord,
   StudentPaymentRecord,
@@ -9,7 +11,16 @@ import type {
 
 export const getStudentFees = async (
   schoolId: number,
-  params?: { studentId?: number; status?: string; feeType?: string },
+  params?: {
+    studentId?: number;
+    classId?: number;
+    sectionId?: number;
+    academicYear?: string;
+    billingMonth?: string;
+    examId?: number;
+    status?: string;
+    feeType?: string;
+  },
 ): Promise<StudentFeeRecord[]> => {
   const res = await api.get<ApiResponse<StudentFeeRecord[]>>(
     `/schools/${schoolId}/student-fees`,
@@ -24,6 +35,17 @@ export const createStudentFee = async (
 ): Promise<StudentFeeRecord> => {
   const res = await api.post<ApiResponse<StudentFeeRecord>>(
     `/schools/${schoolId}/student-fees`,
+    payload,
+  );
+  return res.data.data;
+};
+
+export const bulkCreateStudentFees = async (
+  schoolId: number,
+  payload: BulkCreateStudentFeeInput,
+): Promise<BulkCreateStudentFeeResult> => {
+  const res = await api.post<ApiResponse<BulkCreateStudentFeeResult>>(
+    `/schools/${schoolId}/student-fees/bulk`,
     payload,
   );
   return res.data.data;
