@@ -155,6 +155,10 @@ export function useUpdateSchoolProfile(schoolId: number) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["schools", schoolId, "profile"] });
+      qc.invalidateQueries({
+        queryKey: ["schools", schoolId, "website-connection"],
+      });
+      qc.invalidateQueries({ queryKey: ["auth", "me"] });
       toast.success("Institution profile updated");
     },
     onError: (err) => {
@@ -200,6 +204,7 @@ export function useUpdateWebsiteConnection(schoolId: number) {
       externalWebsiteUrl?: string | null;
       landingAdminEmail?: string | null;
       landingAdminPassword?: string;
+      hasOnlineAdmission?: boolean;
     }) => {
       const res = await api.patch<{ data: WebsiteConnectionSettings }>(
         `/schools/${schoolId}/settings/website-connection`,
@@ -211,6 +216,10 @@ export function useUpdateWebsiteConnection(schoolId: number) {
       qc.invalidateQueries({
         queryKey: ["schools", schoolId, "website-connection"],
       });
+      qc.invalidateQueries({
+        queryKey: schoolSettingKeys.features(schoolId),
+      });
+      qc.invalidateQueries({ queryKey: ["auth", "me"] });
       toast.success("External website settings saved");
     },
     onError: (err) => {

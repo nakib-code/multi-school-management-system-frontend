@@ -81,6 +81,13 @@ export function ExternalWebsiteSettings({
     setGeneratedKey(res.connectionKey);
   };
 
+  const handleToggleOnlineAdmission = async () => {
+    if (!isAdmin || !data) return;
+    await updateMut.mutateAsync({
+      hasOnlineAdmission: !data.hasOnlineAdmission,
+    });
+  };
+
   if (isLoading) {
     return <LoadingState message="Loading website connection settings..." />;
   }
@@ -89,7 +96,7 @@ export function ExternalWebsiteSettings({
     <div className="space-y-6">
       {/* Copyable Connection Details */}
       <div className="space-y-4 rounded-xl border bg-card p-6">
-        <div className="flex items-center justify-between gap-3 border-b pb-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3">
           <div className="flex items-center gap-2">
             <Globe className="h-5 w-5 text-primary" />
             <div>
@@ -102,17 +109,40 @@ export function ExternalWebsiteSettings({
               </p>
             </div>
           </div>
-          <span
-            className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-              data?.hasOnlineAdmission
-                ? "bg-emerald-50 text-emerald-700"
-                : "bg-amber-50 text-amber-700"
-            }`}
-          >
-            {data?.hasOnlineAdmission
-              ? "Online Admission Active"
-              : "Online Admission Disabled"}
-          </span>
+          <div className="flex items-center gap-3">
+            <span
+              className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                data?.hasOnlineAdmission
+                  ? "bg-emerald-50 text-emerald-700"
+                  : "bg-amber-50 text-amber-700"
+              }`}
+            >
+              {data?.hasOnlineAdmission
+                ? "Online Admission Active"
+                : "Online Admission Paused"}
+            </span>
+            {isAdmin && (
+              <button
+                type="button"
+                role="switch"
+                aria-checked={Boolean(data?.hasOnlineAdmission)}
+                aria-label="Toggle Online Admission"
+                disabled={updateMut.isPending}
+                onClick={handleToggleOnlineAdmission}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors disabled:opacity-50 ${
+                  data?.hasOnlineAdmission
+                    ? "bg-primary"
+                    : "bg-muted-foreground/30"
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                    data?.hasOnlineAdmission ? "translate-x-6" : "translate-x-1"
+                  }`}
+                />
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">

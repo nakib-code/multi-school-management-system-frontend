@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Building2,
   Globe,
   Save,
   Settings,
@@ -51,6 +52,10 @@ export function SchoolSettingsView() {
   const updateProfileMutation = useUpdateSchoolProfile(schoolId);
 
   const [admissionFee, setAdmissionFee] = useState("");
+  const [schoolName, setSchoolName] = useState("");
+  const [schoolPhone, setSchoolPhone] = useState("");
+  const [schoolEmail, setSchoolEmail] = useState("");
+  const [schoolAddress, setSchoolAddress] = useState("");
   const [bkashNumber, setBkashNumber] = useState("");
   const [bkashType, setBkashType] = useState<MobileAccountType>("PERSONAL");
   const [nagadNumber, setNagadNumber] = useState("");
@@ -66,6 +71,15 @@ export function SchoolSettingsView() {
   }, [setting]);
 
   useEffect(() => {
+    if (schoolProfile) {
+      setSchoolName(schoolProfile.name ?? "");
+      setSchoolPhone(schoolProfile.phone ?? "");
+      setSchoolEmail(schoolProfile.email ?? "");
+      setSchoolAddress(schoolProfile.address ?? "");
+    }
+  }, [schoolProfile]);
+
+  useEffect(() => {
     if (paymentMethods) {
       setBkashNumber(paymentMethods.bkashNumber ?? "");
       setBkashType(paymentMethods.bkashType ?? "PERSONAL");
@@ -76,6 +90,21 @@ export function SchoolSettingsView() {
       setFeePaymentInstruction(paymentMethods.feePaymentInstruction ?? "");
     }
   }, [paymentMethods]);
+
+  const handleSaveSchoolProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmedName = schoolName.trim();
+    if (trimmedName.length < 2) {
+      toast.error("Institution name must be at least 2 characters");
+      return;
+    }
+    await updateProfileMutation.mutateAsync({
+      name: trimmedName,
+      phone: schoolPhone.trim() || null,
+      email: schoolEmail.trim() || null,
+      address: schoolAddress.trim() || null,
+    });
+  };
 
   const handleSaveGeneral = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -321,6 +350,88 @@ export function SchoolSettingsView() {
         </form>
       ) : (
         <div className="space-y-6">
+          <form
+            onSubmit={handleSaveSchoolProfile}
+            className="space-y-5 rounded-xl border bg-card p-6"
+          >
+            <div className="flex items-center gap-2 border-b pb-3">
+              <Building2 className="h-5 w-5 text-primary" />
+              <div>
+                <h2 className="font-semibold">
+                  Institution Profile &amp; Contact Info
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  {isAdmin
+                    ? "Your institution name, logo, and contact details automatically sync to your connected landing website."
+                    : "View-only for Managers. Only the School Admin can update institution profile details."}
+                </p>
+              </div>
+            </div>
+
+            <fieldset
+              disabled={!isAdmin}
+              className="space-y-4 disabled:opacity-75"
+            >
+              <div className="space-y-1.5">
+                <Label htmlFor="schoolName">Institution Name</Label>
+                <Input
+                  id="schoolName"
+                  required
+                  value={schoolName}
+                  onChange={(e) => setSchoolName(e.target.value)}
+                  placeholder="e.g. Darul Uloom Madrasa"
+                />
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="schoolPhone">Contact Phone</Label>
+                  <Input
+                    id="schoolPhone"
+                    value={schoolPhone}
+                    onChange={(e) => setSchoolPhone(e.target.value)}
+                    placeholder="e.g. 01XXXXXXXXX"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="schoolEmail">Contact Email</Label>
+                  <Input
+                    id="schoolEmail"
+                    type="email"
+                    value={schoolEmail}
+                    onChange={(e) => setSchoolEmail(e.target.value)}
+                    placeholder="e.g. info@madrasa.edu.bd"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="schoolAddress">Institution Address</Label>
+                <Textarea
+                  id="schoolAddress"
+                  rows={2}
+                  value={schoolAddress}
+                  onChange={(e) => setSchoolAddress(e.target.value)}
+                  placeholder="Full campus address"
+                />
+              </div>
+            </fieldset>
+
+            {isAdmin && (
+              <Button
+                type="submit"
+                disabled={updateProfileMutation.isPending}
+                className="min-h-[44px] gap-2 rounded-[11px] sm:min-h-0"
+              >
+                <Save className="h-4 w-4" />
+                {updateProfileMutation.isPending
+                  ? "Saving..."
+                  : "Save Institution Profile"}
+              </Button>
+            )}
+          </form>
+
           <form
             onSubmit={handleSaveGeneral}
             className="space-y-6 rounded-xl border bg-card p-6"

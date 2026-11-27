@@ -18,6 +18,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { type LoginFormValues, loginSchema } from "@/features/auth/schema";
+import { getApiErrorMessage } from "@/lib/api";
 import { useAuth } from "@/providers/auth-provider";
 
 function LoginPageContent() {
@@ -78,8 +79,10 @@ function LoginPageContent() {
        * The useEffect above handles the redirect.
        */
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Invalid email or password";
+      const message = getApiErrorMessage(
+        error,
+        "Invalid email/phone or password",
+      );
 
       toast.error("Login failed", {
         description: message,
