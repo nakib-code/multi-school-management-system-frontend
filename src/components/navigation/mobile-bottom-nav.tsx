@@ -27,29 +27,31 @@ export function MobileBottomNav() {
     !user ||
     (user.role !== "TEACHER" &&
       user.role !== "GUARDIAN" &&
-      user.role !== "STUDENT")
+      user.role !== "STUDENT" &&
+      user.role !== "MANAGER" &&
+      user.role !== "ADMIN")
   ) {
     return null;
   }
 
   const items: BottomNavItem[] =
-    user.role === "TEACHER"
+    user.role === "ADMIN"
       ? [
           {
             label: "Home",
-            href: "/dashboard/teacher",
+            href: "/dashboard/admin",
             icon: LayoutDashboard,
             exact: true,
           },
           {
             label: "Attendance",
-            href: "/dashboard/teacher/attendance",
+            href: "/dashboard/admin/attendance",
             icon: CalendarCheck,
           },
           {
-            label: "Diary",
-            href: "/dashboard/teacher/diary",
-            icon: BookOpen,
+            label: "Students",
+            href: "/dashboard/admin/students",
+            icon: Users,
           },
           {
             label: "Alerts",
@@ -57,23 +59,23 @@ export function MobileBottomNav() {
             icon: Bell,
           },
         ]
-      : user.role === "GUARDIAN"
+      : user.role === "MANAGER"
         ? [
             {
               label: "Home",
-              href: "/dashboard/guardian",
-              icon: Users,
+              href: "/dashboard/manager",
+              icon: LayoutDashboard,
               exact: true,
             },
             {
               label: "Attendance",
-              href: "/dashboard/guardian/attendance",
+              href: "/dashboard/manager/attendance",
               icon: CalendarCheck,
             },
             {
-              label: "Diary",
-              href: "/dashboard/guardian/diary",
-              icon: BookOpen,
+              label: "Students",
+              href: "/dashboard/manager/students",
+              icon: Users,
             },
             {
               label: "Alerts",
@@ -81,29 +83,77 @@ export function MobileBottomNav() {
               icon: Bell,
             },
           ]
-        : [
-            {
-              label: "Home",
-              href: "/dashboard/student",
-              icon: LayoutDashboard,
-              exact: true,
-            },
-            {
-              label: "Attendance",
-              href: "/dashboard/student/attendance",
-              icon: CalendarCheck,
-            },
-            {
-              label: "Diary",
-              href: "/dashboard/student/diary",
-              icon: BookOpen,
-            },
-            {
-              label: "Fees",
-              href: "/dashboard/student/fees",
-              icon: CreditCard,
-            },
-          ];
+        : user.role === "TEACHER"
+          ? [
+              {
+                label: "Home",
+                href: "/dashboard/teacher",
+                icon: LayoutDashboard,
+                exact: true,
+              },
+              {
+                label: "Attendance",
+                href: "/dashboard/teacher/attendance",
+                icon: CalendarCheck,
+              },
+              {
+                label: "Diary",
+                href: "/dashboard/teacher/diary",
+                icon: BookOpen,
+              },
+              {
+                label: "Alerts",
+                href: "/dashboard/notifications",
+                icon: Bell,
+              },
+            ]
+          : user.role === "GUARDIAN"
+            ? [
+                {
+                  label: "Home",
+                  href: "/dashboard/guardian",
+                  icon: Users,
+                  exact: true,
+                },
+                {
+                  label: "Attendance",
+                  href: "/dashboard/guardian/attendance",
+                  icon: CalendarCheck,
+                },
+                {
+                  label: "Diary",
+                  href: "/dashboard/guardian/diary",
+                  icon: BookOpen,
+                },
+                {
+                  label: "Alerts",
+                  href: "/dashboard/notifications",
+                  icon: Bell,
+                },
+              ]
+            : [
+                {
+                  label: "Home",
+                  href: "/dashboard/student",
+                  icon: LayoutDashboard,
+                  exact: true,
+                },
+                {
+                  label: "Attendance",
+                  href: "/dashboard/student/attendance",
+                  icon: CalendarCheck,
+                },
+                {
+                  label: "Diary",
+                  href: "/dashboard/student/diary",
+                  icon: BookOpen,
+                },
+                {
+                  label: "Fees",
+                  href: "/dashboard/student/fees",
+                  icon: CreditCard,
+                },
+              ];
 
   return (
     <nav

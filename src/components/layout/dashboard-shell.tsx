@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { Header } from "@/components/header/header";
+import { ChangePasswordModal } from "@/components/modals/change-password-modal";
 import { MobileBottomNav } from "@/components/navigation/mobile-bottom-nav";
 import { Sidebar } from "@/components/sidebar/sidebar";
 import { useAuth } from "@/providers/auth-provider";
@@ -75,6 +76,11 @@ export function DashboardShell({ children }: DashboardShellProps) {
       </div>
 
       <MobileBottomNav />
+
+      <ChangePasswordModal
+        open={Boolean(user?.mustChangePassword)}
+        forced={true}
+      />
     </div>
   );
 }

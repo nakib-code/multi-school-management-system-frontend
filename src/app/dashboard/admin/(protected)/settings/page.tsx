@@ -26,6 +26,7 @@ const ACCOUNT_TYPES: MobileAccountType[] = ["PERSONAL", "MERCHANT", "AGENT"];
 export function SchoolSettingsView() {
   const { user } = useAuth();
   const schoolId = user?.schoolId ?? 0;
+  const isAdmin = user?.role === "ADMIN";
 
   const [activeTab, setActiveTab] = useState<"general" | "payments">(
     "payments",
@@ -151,13 +152,17 @@ export function SchoolSettingsView() {
                 School Mobile Banking Accounts (Guardian Fee Payments)
               </h2>
               <p className="text-xs text-muted-foreground">
-                These numbers are shown to guardians when they pay student fees
-                online.
+                {isAdmin
+                  ? "These numbers are shown to guardians when they pay student fees online."
+                  : "View-only for Managers. Only the School Admin can update payout numbers."}
               </p>
             </div>
           </div>
 
-          <div className="space-y-4">
+          <fieldset
+            disabled={!isAdmin}
+            className="space-y-4 disabled:opacity-75"
+          >
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="bkashNumber">bKash Number</Label>
@@ -257,18 +262,20 @@ export function SchoolSettingsView() {
                 onChange={(e) => setFeePaymentInstruction(e.target.value)}
               />
             </div>
-          </div>
+          </fieldset>
 
-          <Button
-            type="submit"
-            disabled={updatePaymentsMutation.isPending}
-            className="gap-2"
-          >
-            <Save className="h-4 w-4" />
-            {updatePaymentsMutation.isPending
-              ? "Saving..."
-              : "Save Payment Methods"}
-          </Button>
+          {isAdmin && (
+            <Button
+              type="submit"
+              disabled={updatePaymentsMutation.isPending}
+              className="min-h-[44px] gap-2 rounded-[11px] sm:min-h-0"
+            >
+              <Save className="h-4 w-4" />
+              {updatePaymentsMutation.isPending
+                ? "Saving..."
+                : "Save Payment Methods"}
+            </Button>
+          )}
         </form>
       ) : (
         <div className="space-y-6">
@@ -278,7 +285,15 @@ export function SchoolSettingsView() {
           >
             <div className="flex items-center gap-2 border-b pb-3">
               <Settings className="h-5 w-5 text-primary" />
-              <h2 className="font-semibold">Admission Fee Configuration</h2>
+              <div>
+                <h2 className="font-semibold">Admission Fee Configuration</h2>
+                {!isAdmin && (
+                  <p className="text-xs text-muted-foreground">
+                    View-only for Managers. Only the School Admin can update
+                    admission fees.
+                  </p>
+                )}
+              </div>
             </div>
 
             <div className="space-y-1.5">
@@ -289,22 +304,25 @@ export function SchoolSettingsView() {
                 min={0}
                 step="0.01"
                 required
+                disabled={!isAdmin}
                 value={admissionFee}
                 onChange={(e) => setAdmissionFee(e.target.value)}
                 placeholder="e.g. 1500"
               />
             </div>
 
-            <Button
-              type="submit"
-              disabled={updateFeeMutation.isPending}
-              className="gap-2"
-            >
-              <Save className="h-4 w-4" />
-              {updateFeeMutation.isPending
-                ? "Saving..."
-                : "Save General Settings"}
-            </Button>
+            {isAdmin && (
+              <Button
+                type="submit"
+                disabled={updateFeeMutation.isPending}
+                className="min-h-[44px] gap-2 rounded-[11px] sm:min-h-0"
+              >
+                <Save className="h-4 w-4" />
+                {updateFeeMutation.isPending
+                  ? "Saving..."
+                  : "Save General Settings"}
+              </Button>
+            )}
           </form>
 
           <div className="rounded-xl border bg-card p-6">

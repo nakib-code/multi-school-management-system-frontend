@@ -1,12 +1,10 @@
 "use client";
 
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
+  type ChangePasswordPayload,
+  changePassword,
   getMe,
   login,
   logout,
@@ -34,10 +32,7 @@ export const useLogin = () => {
     mutationFn: (payload: LoginPayload) => login(payload),
 
     onSuccess: (user) => {
-      queryClient.setQueryData(
-        authKeys.me(),
-        user,
-      );
+      queryClient.setQueryData(authKeys.me(), user);
     },
   });
 };
@@ -52,6 +47,17 @@ export const useLogout = () => {
       queryClient.removeQueries({
         queryKey: authKeys.all,
       });
+    },
+  });
+};
+
+export const useChangePassword = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: ChangePasswordPayload) => changePassword(payload),
+    onSuccess: (updatedUser) => {
+      queryClient.setQueryData(authKeys.me(), updatedUser);
     },
   });
 };

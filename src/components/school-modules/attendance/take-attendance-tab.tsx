@@ -229,7 +229,7 @@ export function TakeAttendanceTab({
   };
 
   return (
-    <div className="space-y-4 pb-24 md:pb-4">
+    <div className={`space-y-4 md:pb-4 ${isTeacher ? "pb-40" : "pb-36"}`}>
       {/* Filter Bar */}
       <div className="mobile-filter-bar">
         <div className="space-y-1">
@@ -594,9 +594,16 @@ export function TakeAttendanceTab({
             </table>
           </div>
 
-          {/* Sticky Mobile Bottom Save Bar */}
+          {/* Sticky Mobile Bottom Save Bar — sits cleanly above MobileBottomNav (h-16) */}
           {!isBlockedDay && (
-            <div className="safe-bottom fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 px-3.5 py-2.5 backdrop-blur-sm md:hidden">
+            <div
+              className={`fixed inset-x-0 z-40 border-t bg-background/95 px-3.5 py-2.5 shadow-lg backdrop-blur-sm md:hidden ${
+                isTeacher ? "bottom-16" : "bottom-16"
+              }`}
+              style={{
+                bottom: "calc(4rem + env(safe-area-inset-bottom, 0px))",
+              }}
+            >
               <div className="flex items-center justify-between gap-2">
                 <div className="text-[11px] font-medium leading-tight">
                   <span className="text-emerald-700 dark:text-emerald-400">

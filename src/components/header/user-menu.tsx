@@ -1,15 +1,10 @@
 "use client";
 
-import {
-  ChevronDown,
-  LogOut,
-  Settings,
-  UserRound,
-} from "lucide-react";
+import { ChevronDown, KeyRound, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
-
+import { ChangePasswordModal } from "@/components/modals/change-password-modal";
 import { useAuth } from "@/providers/auth-provider";
 
 export function UserMenu() {
@@ -17,6 +12,7 @@ export function UserMenu() {
   const { user, logout } = useAuth();
 
   const [open, setOpen] = useState(false);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   if (!user) {
@@ -58,9 +54,7 @@ export function UserMenu() {
         </div>
 
         <div className="hidden min-w-0 text-left md:block">
-          <p className="max-w-32 truncate text-sm font-medium">
-            {user.name}
-          </p>
+          <p className="max-w-32 truncate text-sm font-medium">{user.name}</p>
 
           <p className="max-w-32 truncate text-xs text-muted-foreground">
             {roleName}
@@ -94,12 +88,12 @@ export function UserMenu() {
                 </div>
 
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold">
-                    {user.name}
-                  </p>
+                  <p className="truncate text-sm font-semibold">{user.name}</p>
 
                   <p className="truncate text-xs text-muted-foreground">
-                    {user.email}
+                    {user.email.endsWith("@madrasaos.local")
+                      ? (user.phone ?? "Phone Login Account")
+                      : user.email}
                   </p>
                 </div>
               </div>
@@ -115,25 +109,12 @@ export function UserMenu() {
                 role="menuitem"
                 onClick={() => {
                   setOpen(false);
-                  toast.info("Profile page coming soon");
+                  setChangePasswordOpen(true);
                 }}
-                className="flex h-10 w-full items-center gap-3 rounded-lg px-3 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                className="flex min-h-[44px] w-full items-center gap-3 rounded-[11px] px-3 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
-                <UserRound className="h-4 w-4" />
-                Profile
-              </button>
-
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setOpen(false);
-                  toast.info("Settings page coming soon");
-                }}
-                className="flex h-10 w-full items-center gap-3 rounded-lg px-3 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              >
-                <Settings className="h-4 w-4" />
-                Settings
+                <KeyRound className="h-4 w-4" />
+                Change Password
               </button>
             </div>
 
@@ -153,6 +134,11 @@ export function UserMenu() {
           </div>
         </>
       )}
+
+      <ChangePasswordModal
+        open={changePasswordOpen}
+        onClose={() => setChangePasswordOpen(false)}
+      />
     </div>
   );
 }

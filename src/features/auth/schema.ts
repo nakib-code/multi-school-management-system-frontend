@@ -16,7 +16,9 @@ export const loginSchema = z.object({
       "Enter a valid phone number (e.g. 01XXXXXXXXX) or email address",
     )
     .transform((value) =>
-      value.includes("@") ? value.toLowerCase() : value.replace(/[\s\-()]/g, ""),
+      value.includes("@")
+        ? value.toLowerCase()
+        : value.replace(/[\s\-()]/g, ""),
     ),
 
   password: z.string().min(1, "Password is required"),
