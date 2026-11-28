@@ -16,6 +16,7 @@ import {
   LayoutDashboard,
   LogOut,
   Package,
+  Receipt,
   ScrollText,
   Settings,
   ShieldCheck,
@@ -161,6 +162,11 @@ const navigationByRole: Record<string, NavItem[]> = {
       icon: Wallet,
     },
     {
+      label: "কাস্টম বিল / খরচ",
+      href: "/dashboard/admin/custom-expenses",
+      icon: Receipt,
+    },
+    {
       label: "Hefz & Najera",
       href: "/dashboard/admin/hefz",
       icon: BookOpenCheck,
@@ -246,6 +252,11 @@ const navigationByRole: Record<string, NavItem[]> = {
       label: "Teacher Salaries",
       href: "/dashboard/manager/salaries",
       icon: Wallet,
+    },
+    {
+      label: "কাস্টম বিল / খরচ",
+      href: "/dashboard/manager/custom-expenses",
+      icon: Receipt,
     },
     {
       label: "Hefz & Najera",
