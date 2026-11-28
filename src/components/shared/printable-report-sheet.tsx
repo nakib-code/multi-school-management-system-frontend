@@ -1,7 +1,7 @@
 "use client";
 
 import { Download, FileDown, Printer } from "lucide-react";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 
 export interface PrintableSchoolHeader {
@@ -19,6 +19,8 @@ export interface CsvExportConfig {
   rows: Array<Array<string | number | null | undefined>>;
 }
 
+export type PrintOrientation = "portrait" | "landscape";
+
 interface PrintableReportSheetProps {
   school?: PrintableSchoolHeader | null;
   title: string;
@@ -29,10 +31,16 @@ interface PrintableReportSheetProps {
   footerTotals?: ReactNode;
   toolbarExtra?: ReactNode;
   csvExport?: CsvExportConfig;
+  defaultOrientation?: PrintOrientation;
+  leftSignatureLabel?: string;
+  rightSignatureLabel?: string;
 }
 
 const escapeCsvCell = (value: string | number | null | undefined): string => {
   if (value === null || value === undefined) return "";
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value);
+  }
   let str = String(value);
   // Neutralize Excel/Sheets CSV formula injection (DDE / hyperlink / macro payloads)
   if (/^[=+\-@\t\r]/.test(str)) {
@@ -66,11 +74,32 @@ export const downloadCsvReport = (config: CsvExportConfig) => {
   URL.revokeObjectURL(url);
 };
 
-export const triggerSheetPdfPrint = () => {
+const PRINT_PAGE_STYLE_ID = "dynamic-print-orientation-style";
+
+export const triggerSheetPdfPrint = (
+  orientationOrEvent?: PrintOrientation | unknown,
+) => {
   if (typeof window === "undefined") return;
+
+  const orientation: PrintOrientation =
+    orientationOrEvent === "landscape" ? "landscape" : "portrait";
+
+  const existingStyle = document.getElementById(PRINT_PAGE_STYLE_ID);
+  if (existingStyle) existingStyle.remove();
+
+  const styleEl = document.createElement("style");
+  styleEl.id = PRINT_PAGE_STYLE_ID;
+  styleEl.media = "print";
+  styleEl.textContent =
+    orientation === "landscape"
+      ? "@page { size: A4 landscape; margin: 10mm; }"
+      : "@page { size: A4 portrait; margin: 12mm; }";
+  document.head.appendChild(styleEl);
+
   document.body.classList.add("printing-sheet");
   const cleanup = () => {
     document.body.classList.remove("printing-sheet");
+    document.getElementById(PRINT_PAGE_STYLE_ID)?.remove();
     window.removeEventListener("afterprint", cleanup);
   };
   window.addEventListener("afterprint", cleanup);
@@ -88,8 +117,19 @@ export function PrintableReportSheet({
   footerTotals,
   toolbarExtra,
   csvExport,
+  defaultOrientation = "portrait",
+  leftSignatureLabel = "হিসাবরক্ষক / দায়িত্বশীল (Accountant)",
+  rightSignatureLabel = "মুহতামিম / অধ্যক্ষ / পরিচালক (Principal)",
 }: PrintableReportSheetProps) {
+  const [orientation, setOrientation] =
+    useState<PrintOrientation>(defaultOrientation);
+
+  useEffect(() => {
+    setOrientation(defaultOrientation);
+  }, [defaultOrientation]);
+
   const generatedAt = new Date().toLocaleString("en-BD", {
+    timeZone: "Asia/Dhaka",
     year: "numeric",
     month: "short",
     day: "2-digit",
@@ -102,6 +142,33 @@ export function PrintableReportSheet({
       <div className="no-print flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">{toolbarExtra}</div>
         <div className="flex flex-wrap items-center gap-2">
+          <fieldset
+            className="inline-flex h-9 items-center rounded-lg border bg-background p-0.5 text-xs"
+            aria-label="PDF print page orientation"
+          >
+            <button
+              type="button"
+              onClick={() => setOrientation("portrait")}
+              className={`rounded-md px-2.5 py-1 font-medium transition ${
+                orientation === "portrait"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Portrait
+            </button>
+            <button
+              type="button"
+              onClick={() => setOrientation("landscape")}
+              className={`rounded-md px-2.5 py-1 font-medium transition ${
+                orientation === "landscape"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Landscape
+            </button>
+          </fieldset>
           {csvExport && (
             <Button
               type="button"
@@ -115,11 +182,11 @@ export function PrintableReportSheet({
           )}
           <Button
             type="button"
-            onClick={triggerSheetPdfPrint}
+            onClick={() => triggerSheetPdfPrint(orientation)}
             className="gap-1.5"
           >
             <FileDown className="h-4 w-4" />
-            Export PDF / Print
+            Export PDF ({orientation === "landscape" ? "A4 Wide" : "A4"})
           </Button>
         </div>
       </div>
@@ -179,7 +246,7 @@ export function PrintableReportSheet({
           )}
 
           <p className="text-[11px] text-muted-foreground">
-            Generated: {generatedAt}
+            Generated: {generatedAt} (BDT)
             {generatedBy ? ` • By: ${generatedBy}` : ""}
           </p>
         </div>
@@ -197,13 +264,13 @@ export function PrintableReportSheet({
         {/* Signature Lines (Always shown on print, subtle on screen) */}
         <div className="grid grid-cols-2 gap-8 pt-10 text-center text-xs">
           <div>
-            <div className="mx-auto w-48 border-t border-slate-400 pt-1.5 font-medium">
-              Accountant / Manager
+            <div className="mx-auto w-56 border-t border-slate-400 pt-1.5 font-medium">
+              {leftSignatureLabel}
             </div>
           </div>
           <div>
-            <div className="mx-auto w-48 border-t border-slate-400 pt-1.5 font-medium">
-              Principal / Headmaster
+            <div className="mx-auto w-56 border-t border-slate-400 pt-1.5 font-medium">
+              {rightSignatureLabel}
             </div>
           </div>
         </div>
@@ -214,11 +281,17 @@ export function PrintableReportSheet({
 
 export function PrintReceiptButton({
   label = "Print / Save PDF",
+  orientation = "portrait",
 }: {
   label?: string;
+  orientation?: PrintOrientation;
 }) {
   return (
-    <Button type="button" onClick={triggerSheetPdfPrint} className="gap-1.5">
+    <Button
+      type="button"
+      onClick={() => triggerSheetPdfPrint(orientation)}
+      className="gap-1.5"
+    >
       <Printer className="h-4 w-4" />
       {label}
     </Button>

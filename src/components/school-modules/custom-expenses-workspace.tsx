@@ -2,6 +2,7 @@
 
 import {
   Archive,
+  ArchiveRestore,
   ArrowDown,
   ArrowUp,
   BarChart3,
@@ -9,15 +10,21 @@ import {
   ChevronLeft,
   ChevronRight,
   Columns3,
+  ExternalLink,
+  ImagePlus,
+  Paperclip,
   Pencil,
   Plus,
   Receipt,
   Scale,
+  Search,
   Settings2,
   Trash2,
+  X,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Modal } from "@/components/modals/modal";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -35,6 +42,7 @@ import {
   useCustomExpenseSheets,
   useDeleteCustomExpenseEntry,
   useDeleteCustomExpenseSheet,
+  useRestoreCustomExpenseSheet,
   useUpdateCustomExpenseEntry,
   useUpdateCustomExpenseSheetFields,
 } from "@/features/custom-expenses/hooks";
@@ -43,56 +51,92 @@ import type {
   CustomExpenseFieldType,
   CustomExpenseSheet,
 } from "@/features/custom-expenses/types";
+import type { StudentPaymentMethod } from "@/features/fees/types";
+import { useUploadFile } from "@/features/uploads/hooks";
+import { useDebounce } from "@/hooks/use-debounce";
 import { getApiErrorMessage } from "@/lib/api";
+import {
+  formatBDT,
+  formatMonthLong,
+  getCurrentDhakaMonth,
+  getTodayDhakaDate,
+  sanitizeFilenamePreservingUnicode,
+  shiftBillingMonth,
+} from "@/lib/dhaka-date";
 import { useAuth } from "@/providers/auth-provider";
-
-const formatBDT = (amount: number) =>
-  `৳${Number(amount || 0).toLocaleString("en-BD", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  })}`;
-
-const getTodayLocalDate = (): string => {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, "0");
-  const d = String(now.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-};
-
-const getCurrentMonth = (): string => getTodayLocalDate().slice(0, 7);
-
-const shiftBillingMonth = (billingMonth: string, delta: number): string => {
-  const [yStr, mStr] = billingMonth.split("-");
-  const date = new Date(Number(yStr), Number(mStr) - 1 + delta, 1);
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  return `${y}-${m}`;
-};
-
-const formatMonthLabel = (billingMonth: string): string => {
-  const [yStr, mStr] = billingMonth.split("-");
-  const date = new Date(Number(yStr), Number(mStr) - 1, 1);
-  if (Number.isNaN(date.getTime())) return billingMonth;
-  return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-};
-
-const sanitizeFilenameSlug = (name: string, fallback: string): string => {
-  const cleaned = name
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9_-]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  return cleaned || fallback;
-};
-
-const SHEET_NAME_SUGGESTIONS = ["বাজার বিল", "মিল বিল", "কারেন্ট বিল", "খরচ"];
 
 const FIELD_TYPE_LABELS: Record<CustomExpenseFieldType, string> = {
   TEXT: "Text (লেখা)",
   NUMBER: "Number (সংখ্যা)",
   DATE: "Date (তারিখ)",
 };
+
+const PAYMENT_METHODS: StudentPaymentMethod[] = [
+  "CASH",
+  "BKASH",
+  "NAGAD",
+  "ROCKET",
+  "BANK_TRANSFER",
+  "CHEQUE",
+];
+
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  CASH: "Cash (নগদ)",
+  BKASH: "bKash",
+  NAGAD: "Nagad",
+  ROCKET: "Rocket",
+  BANK_TRANSFER: "Bank Transfer",
+  CHEQUE: "Cheque",
+};
+
+interface StarterTemplate {
+  name: string;
+  description: string;
+  fields: Array<{
+    label: string;
+    fieldType: CustomExpenseFieldType;
+    isRequired: boolean;
+  }>;
+}
+
+const STARTER_TEMPLATES: StarterTemplate[] = [
+  {
+    name: "বাজার বিল",
+    description: "দৈনিক বাজার ও রান্নার সদাই খরচ",
+    fields: [
+      { label: "বাজার/দোকান", fieldType: "TEXT", isRequired: false },
+      { label: "আইটেম", fieldType: "TEXT", isRequired: true },
+      { label: "পরিমাণ", fieldType: "NUMBER", isRequired: false },
+      { label: "ভাউচার/নোট", fieldType: "TEXT", isRequired: false },
+    ],
+  },
+  {
+    name: "মিল বিল",
+    description: "বোর্ডিং / ছাত্রাবাস দৈনিক খাবার ও মিল হিসাব",
+    fields: [
+      { label: "খাবার/মিল বিবরণ", fieldType: "TEXT", isRequired: true },
+      { label: "মিল সংখ্যা", fieldType: "NUMBER", isRequired: false },
+      { label: "রেট/নোট", fieldType: "TEXT", isRequired: false },
+    ],
+  },
+  {
+    name: "কারেন্ট বিল",
+    description: "বিদ্যুৎ, গ্যাস ও ইউটিলিটি বিল হিসাব",
+    fields: [
+      { label: "মিটার নং", fieldType: "TEXT", isRequired: false },
+      { label: "বিল মাস", fieldType: "TEXT", isRequired: false },
+      { label: "ইউনিট/নোট", fieldType: "TEXT", isRequired: false },
+    ],
+  },
+  {
+    name: "সাধারণ খরচ",
+    description: "প্রতিষ্ঠানের দৈনন্দিন ও বিবিধ খরচ",
+    fields: [
+      { label: "খাতের বিবরণ", fieldType: "TEXT", isRequired: true },
+      { label: "ভাউচার/নোট", fieldType: "TEXT", isRequired: false },
+    ],
+  },
+];
 
 interface BuilderFieldDraft {
   clientId: string;
@@ -109,12 +153,46 @@ const nextClientId = () => {
   return `field_${draftCounter}_${Date.now()}`;
 };
 
-export function CustomExpensesWorkspace() {
-  const { user } = useAuth();
-  const schoolId = user?.schoolId ?? 0;
+const formatDynamicCellValue = (
+  val: string | number | null | undefined,
+  fieldType: CustomExpenseFieldType,
+): string => {
+  if (val === null || val === undefined || val === "") return "—";
+  if (fieldType === "NUMBER") {
+    const num = typeof val === "number" ? val : Number(String(val).trim());
+    if (Number.isFinite(num)) {
+      return num.toLocaleString("en-BD", {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+      });
+    }
+    // Safe fallback for legacy non-numeric text values instead of rendering NaN
+    return String(val);
+  }
+  return String(val);
+};
 
-  const [selectedSheetId, setSelectedSheetId] = useState<number>(0);
-  const [billingMonth, setBillingMonth] = useState<string>(getCurrentMonth);
+function CustomExpensesWorkspaceInner() {
+  const { user } = useAuth();
+  const searchParams = useSearchParams();
+  const schoolId = user?.schoolId ?? 0;
+  const isAdmin = user?.role === "ADMIN";
+
+  const initialSheetId = Number(searchParams.get("sheetId")) || 0;
+  const initialMonth = searchParams.get("month");
+  const validInitialMonth =
+    initialMonth && /^\d{4}-(0[1-9]|1[0-2])$/.test(initialMonth)
+      ? initialMonth
+      : getCurrentDhakaMonth();
+
+  const [selectedSheetId, setSelectedSheetId] =
+    useState<number>(initialSheetId);
+  const [billingMonth, setBillingMonth] = useState<string>(validInitialMonth);
+  const [showArchived, setShowArchived] = useState<boolean>(false);
+  const [searchInput, setSearchInput] = useState<string>("");
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+  const debouncedSearch = useDebounce(searchInput.trim(), 300);
 
   // Sheet Create / Edit Columns Modal
   const [sheetModalMode, setSheetModalMode] = useState<
@@ -132,20 +210,35 @@ export function CustomExpensesWorkspace() {
   const [entryModalOpen, setEntryModalOpen] = useState(false);
   const [editingEntry, setEditingEntry] =
     useState<CustomExpenseChartRow | null>(null);
-  const [entryDate, setEntryDate] = useState<string>(getTodayLocalDate);
+  const [entryDate, setEntryDate] = useState<string>(getTodayDhakaDate);
   const [entryAmount, setEntryAmount] = useState<string>("");
+  const [entryPaymentMethod, setEntryPaymentMethod] =
+    useState<StudentPaymentMethod>("CASH");
+  const [entryAttachmentUrl, setEntryAttachmentUrl] = useState<string>("");
   const [entryFieldValues, setEntryFieldValues] = useState<
     Record<string, string>
   >({});
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Attachment preview modal
+  const [previewAttachment, setPreviewAttachment] = useState<{
+    url: string;
+    voucherNo?: string | null;
+    entryDate: string;
+    amount: number;
+  } | null>(null);
 
   // Delete Entry Confirmation Modal
   const [deleteEntryTarget, setDeleteEntryTarget] =
     useState<CustomExpenseChartRow | null>(null);
 
-  const sheetsQuery = useCustomExpenseSheets(schoolId);
+  const sheetsQuery = useCustomExpenseSheets(schoolId, {
+    includeInactive: showArchived,
+    billingMonth,
+  });
   const sheets = sheetsQuery.data ?? [];
 
-  // Keep selectedSheetId pointing to a valid active sheet
+  // Keep selectedSheetId pointing to a valid sheet
   useEffect(() => {
     if (sheets.length === 0) {
       if (selectedSheetId !== 0) setSelectedSheetId(0);
@@ -162,18 +255,27 @@ export function CustomExpensesWorkspace() {
     [sheets, selectedSheetId],
   );
 
+  const hasSubFilters = Boolean(startDate || endDate || debouncedSearch);
+
   const chartQuery = useCustomExpenseMonthlyChart(
     schoolId,
     activeSheet?.id ?? 0,
     billingMonth,
+    {
+      ...(startDate ? { startDate } : {}),
+      ...(endDate ? { endDate } : {}),
+      ...(debouncedSearch ? { search: debouncedSearch } : {}),
+    },
   );
 
   const createSheetMut = useCreateCustomExpenseSheet(schoolId);
   const updateFieldsMut = useUpdateCustomExpenseSheetFields(schoolId);
   const deleteSheetMut = useDeleteCustomExpenseSheet(schoolId);
+  const restoreSheetMut = useRestoreCustomExpenseSheet(schoolId);
   const createEntryMut = useCreateCustomExpenseEntry(schoolId);
   const updateEntryMut = useUpdateCustomExpenseEntry(schoolId);
   const deleteEntryMut = useDeleteCustomExpenseEntry(schoolId);
+  const uploadFileMut = useUploadFile();
 
   // Sheet Builder Handlers
   const openCreateSheetModal = () => {
@@ -181,6 +283,19 @@ export function CustomExpensesWorkspace() {
     setSheetName("");
     setSheetDescription("");
     setFieldDrafts([]);
+  };
+
+  const applyStarterTemplate = (tpl: StarterTemplate) => {
+    setSheetName(tpl.name);
+    setSheetDescription(tpl.description);
+    setFieldDrafts(
+      tpl.fields.map((f) => ({
+        clientId: nextClientId(),
+        label: f.label,
+        fieldType: f.fieldType,
+        isRequired: f.isRequired,
+      })),
+    );
   };
 
   const openEditFieldsModal = (sheet: CustomExpenseSheet) => {
@@ -251,6 +366,14 @@ export function CustomExpensesWorkspace() {
     });
   };
 
+  const removedExistingColumns = useMemo(() => {
+    if (sheetModalMode !== "edit" || !activeSheet) return [];
+    const keptIds = new Set(
+      fieldDrafts.map((f) => f.id).filter((id): id is number => Boolean(id)),
+    );
+    return activeSheet.fields.filter((f) => !keptIds.has(f.id));
+  }, [sheetModalMode, activeSheet, fieldDrafts]);
+
   const handleSaveSheet = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmedName = sheetName.trim();
@@ -259,21 +382,29 @@ export function CustomExpensesWorkspace() {
       return;
     }
 
-    const cleanedFields = fieldDrafts
-      .map((f, idx) => ({
-        ...(f.id !== undefined ? { id: f.id } : {}),
-        ...(f.fieldKey ? { fieldKey: f.fieldKey } : {}),
-        label: f.label.trim(),
-        fieldType: f.fieldType,
-        isRequired: f.isRequired,
-        sortOrder: idx,
-      }))
-      .filter((f) => f.label.length > 0);
-
     if (fieldDrafts.some((f) => f.label.trim().length === 0)) {
       toast.error("ফাঁকা কলামের নাম পূরণ করুন অথবা মুছে ফেলুন");
       return;
     }
+
+    const seenLabels = new Set<string>();
+    for (const f of fieldDrafts) {
+      const key = f.label.trim().toLowerCase();
+      if (seenLabels.has(key)) {
+        toast.error(`একই নামে দুটি কলাম ("${f.label.trim()}") দেওয়া যাবে না`);
+        return;
+      }
+      seenLabels.add(key);
+    }
+
+    const cleanedFields = fieldDrafts.map((f, idx) => ({
+      ...(f.id !== undefined ? { id: f.id } : {}),
+      ...(f.fieldKey ? { fieldKey: f.fieldKey } : {}),
+      label: f.label.trim(),
+      fieldType: f.fieldType,
+      isRequired: f.isRequired,
+      sortOrder: idx,
+    }));
 
     try {
       if (sheetModalMode === "create") {
@@ -314,18 +445,23 @@ export function CustomExpensesWorkspace() {
   };
 
   // Entry Form Handlers
+  const buildBlankFieldValues = (sheet: CustomExpenseSheet) => {
+    const initValues: Record<string, string> = {};
+    for (const f of sheet.fields) {
+      initValues[f.fieldKey] = "";
+    }
+    return initValues;
+  };
+
   const openCreateEntryModal = () => {
     if (!activeSheet) return;
     setEditingEntry(null);
-    const today = getTodayLocalDate();
-    // Default entryDate to today if viewing current month, otherwise 1st of selected month
+    const today = getTodayDhakaDate();
     setEntryDate(today.startsWith(billingMonth) ? today : `${billingMonth}-01`);
     setEntryAmount("");
-    const initValues: Record<string, string> = {};
-    for (const f of activeSheet.fields) {
-      initValues[f.fieldKey] = "";
-    }
-    setEntryFieldValues(initValues);
+    setEntryPaymentMethod("CASH");
+    setEntryAttachmentUrl("");
+    setEntryFieldValues(buildBlankFieldValues(activeSheet));
     setEntryModalOpen(true);
   };
 
@@ -334,6 +470,12 @@ export function CustomExpensesWorkspace() {
     setEditingEntry(row);
     setEntryDate(row.entryDate);
     setEntryAmount(String(row.amount));
+    setEntryPaymentMethod(
+      row.paymentMethod && PAYMENT_METHODS.includes(row.paymentMethod)
+        ? row.paymentMethod
+        : "CASH",
+    );
+    setEntryAttachmentUrl(row.attachmentUrl ?? "");
     const initValues: Record<string, string> = {};
     for (const f of activeSheet.fields) {
       const val = row.fieldValues[f.fieldKey];
@@ -348,11 +490,39 @@ export function CustomExpensesWorkspace() {
     setEntryModalOpen(false);
     setEditingEntry(null);
     setEntryAmount("");
+    setEntryAttachmentUrl("");
     setEntryFieldValues({});
   };
 
-  const handleSaveEntry = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleBillFileSelect = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("ফাইলের সাইজ সর্বোচ্চ 5MB হতে পারবে");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const dataUrl = typeof reader.result === "string" ? reader.result : "";
+      if (!dataUrl) return;
+      try {
+        const uploaded = await uploadFileMut.mutateAsync({
+          dataUrl,
+          category: "DOCUMENT",
+          fileName: file.name,
+        });
+        setEntryAttachmentUrl(uploaded.url);
+      } catch {
+        // Error toast handled by upload hook
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  const submitEntry = async (keepOpenForNext: boolean) => {
     if (!activeSheet) return;
 
     const amountNum = Number(entryAmount);
@@ -383,37 +553,50 @@ export function CustomExpensesWorkspace() {
     }
 
     try {
-      const savedDate = entryDate.trim() || getTodayLocalDate();
+      const savedDate = entryDate.trim() || getTodayDhakaDate();
+      const payload = {
+        entryDate: savedDate,
+        amount: amountNum,
+        paymentMethod: entryPaymentMethod,
+        attachmentUrl: entryAttachmentUrl.trim() || null,
+        fieldValues: fieldValuesPayload,
+      };
+
       if (editingEntry) {
         const updated = await updateEntryMut.mutateAsync({
           sheetId: activeSheet.id,
           entryId: editingEntry.id,
-          payload: {
-            entryDate: savedDate,
-            amount: amountNum,
-            fieldValues: fieldValuesPayload,
-          },
+          payload,
         });
         if (updated.billingMonth !== billingMonth) {
           setBillingMonth(updated.billingMonth);
         }
+        closeEntryModal();
       } else {
         const created = await createEntryMut.mutateAsync({
           sheetId: activeSheet.id,
-          payload: {
-            entryDate: savedDate,
-            amount: amountNum,
-            fieldValues: fieldValuesPayload,
-          },
+          payload,
         });
         if (created.billingMonth !== billingMonth) {
           setBillingMonth(created.billingMonth);
         }
+        if (keepOpenForNext) {
+          // Keep selected date & payment method for rapid consecutive bazaar entries
+          setEntryAmount("");
+          setEntryAttachmentUrl("");
+          setEntryFieldValues(buildBlankFieldValues(activeSheet));
+        } else {
+          closeEntryModal();
+        }
       }
-      closeEntryModal();
     } catch {
       // Error toast handled by mutation hook
     }
+  };
+
+  const handleSaveEntry = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await submitEntry(false);
   };
 
   const handleConfirmDeleteEntry = async () => {
@@ -446,6 +629,18 @@ export function CustomExpensesWorkspace() {
     );
   }, [chart, maxDailySpend]);
 
+  const isMultiMonthRange = Boolean(
+    chart?.effectiveStartDate &&
+      chart?.effectiveEndDate &&
+      chart.effectiveStartDate.slice(0, 7) !==
+        chart.effectiveEndDate.slice(0, 7),
+  );
+
+  const periodRangeLabel =
+    startDate || endDate
+      ? `${chart?.effectiveStartDate ?? startDate} থেকে ${chart?.effectiveEndDate ?? endDate}`
+      : formatMonthLong(billingMonth);
+
   if (!schoolId) {
     return (
       <div className="rounded-xl border p-6 text-sm text-muted-foreground">
@@ -464,7 +659,7 @@ export function CustomExpensesWorkspace() {
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             নিজের মতো বিল/খরচের শিট (বাজার বিল, মিল বিল, কারেন্ট বিল, খরচ) ও কাস্টম
-            কলাম তৈরি করুন, মাসিক চার্ট দেখুন এবং এক ক্লিকে PDF/CSV এক্সপোর্ট করুন।
+            কলাম তৈরি করুন, ভাউচার নং ও বিলের ছবি যুক্ত করুন এবং PDF/CSV এক্সপোর্ট করুন।
           </p>
         </div>
 
@@ -505,7 +700,7 @@ export function CustomExpensesWorkspace() {
             title="এখনো কোনো কাস্টম বিল বা খরচের শিট তৈরি করা হয়নি"
             description="আপনার প্রতিষ্ঠানের প্রয়োজন অনুযায়ী বাজার বিল, মিল বিল, কারেন্ট বিল বা যেকোনো খরচের শিট ও কলাম তৈরি করে মাসিক হিসাব রাখুন।"
           />
-          <div className="mt-4 flex justify-center">
+          <div className="mt-4 flex flex-wrap justify-center gap-2">
             <Button
               type="button"
               onClick={openCreateSheetModal}
@@ -514,6 +709,17 @@ export function CustomExpensesWorkspace() {
               <Plus className="h-4 w-4" />
               প্রথম শিট তৈরি করুন
             </Button>
+            {!showArchived && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowArchived(true)}
+                className="gap-1.5"
+              >
+                <Archive className="h-4 w-4" />
+                আর্কাইভ শিট দেখুন
+              </Button>
+            )}
           </div>
         </div>
       ) : (
@@ -524,6 +730,8 @@ export function CustomExpensesWorkspace() {
               <div className="flex flex-wrap items-center gap-2">
                 {sheets.map((sheet) => {
                   const isActive = sheet.id === activeSheet?.id;
+                  const monthCount = sheet.monthEntryCount ?? 0;
+                  const monthTotal = sheet.monthTotalAmount ?? 0;
                   return (
                     <button
                       key={sheet.id}
@@ -532,114 +740,218 @@ export function CustomExpensesWorkspace() {
                       className={`inline-flex items-center gap-2 rounded-lg border px-3.5 py-2 text-sm font-medium transition ${
                         isActive
                           ? "border-primary bg-primary text-primary-foreground shadow-xs"
-                          : "bg-background text-foreground hover:bg-muted"
+                          : !sheet.isActive
+                            ? "border-dashed bg-muted/40 text-muted-foreground hover:bg-muted"
+                            : "bg-background text-foreground hover:bg-muted"
                       }`}
                     >
                       <Receipt className="h-3.5 w-3.5" />
                       <span>{sheet.name}</span>
+                      {!sheet.isActive && (
+                        <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800">
+                          Archived
+                        </span>
+                      )}
                       <span
                         className={`rounded-full px-1.5 py-0.5 text-[11px] font-semibold ${
                           isActive
                             ? "bg-primary-foreground/20 text-primary-foreground"
                             : "bg-muted text-muted-foreground"
                         }`}
+                        title={`এই মাসে ${monthCount}টি এন্ট্রি (${formatBDT(monthTotal)})`}
                       >
-                        {sheet._count?.entries ?? 0}
+                        {monthCount}
+                        {monthTotal > 0 ? ` • ${formatBDT(monthTotal)}` : ""}
                       </span>
                     </button>
                   );
                 })}
               </div>
 
-              {/* Month Picker */}
-              <div className="flex items-center gap-1.5">
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="outline"
-                  onClick={() =>
-                    setBillingMonth((prev) => shiftBillingMonth(prev, -1))
-                  }
-                  aria-label="Previous month"
-                  className="h-9 w-9"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <div className="relative">
-                  <Calendar className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="month"
-                    value={billingMonth}
-                    onChange={(e) => {
-                      if (e.target.value) setBillingMonth(e.target.value);
-                    }}
-                    aria-label="Select billing month"
-                    className="h-9 w-44 pl-8 text-sm font-medium"
+              {/* Month Picker + Archived Toggle */}
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-md border bg-background px-2.5 text-xs font-medium text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    checked={showArchived}
+                    onChange={(e) => setShowArchived(e.target.checked)}
+                    className="h-3.5 w-3.5 rounded border"
                   />
+                  <span>আর্কাইভ শিট</span>
+                </label>
+
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="outline"
+                    onClick={() => {
+                      setStartDate("");
+                      setEndDate("");
+                      setBillingMonth((prev) => shiftBillingMonth(prev, -1));
+                    }}
+                    aria-label="Previous month"
+                    className="h-9 w-9"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <div className="relative">
+                    <Calendar className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      type="month"
+                      value={billingMonth}
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          setStartDate("");
+                          setEndDate("");
+                          setBillingMonth(e.target.value);
+                        }
+                      }}
+                      aria-label="Select billing month"
+                      className="h-9 w-44 pl-8 text-sm font-medium"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="outline"
+                    onClick={() => {
+                      setStartDate("");
+                      setEndDate("");
+                      setBillingMonth((prev) => shiftBillingMonth(prev, 1));
+                    }}
+                    aria-label="Next month"
+                    className="h-9 w-9"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
                 </div>
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="outline"
-                  onClick={() =>
-                    setBillingMonth((prev) => shiftBillingMonth(prev, 1))
-                  }
-                  aria-label="Next month"
-                  className="h-9 w-9"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
               </div>
             </div>
 
             {activeSheet && (
-              <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold">
-                    {activeSheet.name}
-                    <span className="ml-2 text-xs font-normal text-muted-foreground">
-                      ({activeSheet.fields.length}টি কাস্টম কলাম)
-                    </span>
-                  </p>
-                  {activeSheet.description && (
-                    <p className="text-xs text-muted-foreground">
-                      {activeSheet.description}
+              <>
+                <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
+                  <div className="min-w-0">
+                    <p className="flex items-center gap-2 text-sm font-semibold">
+                      <span>{activeSheet.name}</span>
+                      <span className="text-xs font-normal text-muted-foreground">
+                        ({activeSheet.fields.length}টি কাস্টম কলাম)
+                      </span>
+                      {!activeSheet.isActive && (
+                        <span className="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+                          আর্কাইভ করা (Read-Only)
+                        </span>
+                      )}
                     </p>
-                  )}
+                    {activeSheet.description && (
+                      <p className="text-xs text-muted-foreground">
+                        {activeSheet.description}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    {activeSheet.isActive ? (
+                      <>
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={openCreateEntryModal}
+                          className="gap-1.5"
+                        >
+                          <Plus className="h-4 w-4" />
+                          এন্ট্রি যোগ করুন
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openEditFieldsModal(activeSheet)}
+                          className="gap-1.5"
+                        >
+                          <Settings2 className="h-3.5 w-3.5" />
+                          কলাম যোগ / এডিট
+                        </Button>
+                        {isAdmin && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setDeleteSheetTarget(activeSheet)}
+                            className="gap-1.5 text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            শিট আর্কাইভ / মুছুন
+                          </Button>
+                        )}
+                      </>
+                    ) : (
+                      isAdmin && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => restoreSheetMut.mutate(activeSheet.id)}
+                          disabled={restoreSheetMut.isPending}
+                          className="gap-1.5"
+                        >
+                          <ArchiveRestore className="h-4 w-4" />
+                          {restoreSheetMut.isPending
+                            ? "পুনরুদ্ধার হচ্ছে..."
+                            : "শিট পুনরুদ্ধার করুন"}
+                        </Button>
+                      )
+                    )}
+                  </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={openCreateEntryModal}
-                    className="gap-1.5"
-                  >
-                    <Plus className="h-4 w-4" />
-                    এন্ট্রি যোগ করুন
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => openEditFieldsModal(activeSheet)}
-                    className="gap-1.5"
-                  >
-                    <Settings2 className="h-3.5 w-3.5" />
-                    কলাম যোগ / এডিট
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setDeleteSheetTarget(activeSheet)}
-                    className="gap-1.5 text-destructive hover:text-destructive"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    শিট মুছুন
-                  </Button>
+                {/* Search & Date-Range Filter Row */}
+                <div className="grid gap-2.5 border-t pt-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="relative lg:col-span-2">
+                    <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      value={searchInput}
+                      onChange={(e) => setSearchInput(e.target.value)}
+                      placeholder="ভাউচার নং, বিবরণ, দোকান, টাকা বা যেকোনো কলাম খুঁজুন..."
+                      className="h-9 pl-8 text-sm"
+                    />
+                  </div>
+                  <Input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    aria-label="Filter start date"
+                    title="শুরুর তারিখ (ঐচ্ছিক)"
+                    className="h-9 text-xs"
+                  />
+                  <div className="flex items-center gap-1.5">
+                    <Input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      aria-label="Filter end date"
+                      title="শেষ তারিখ (ঐচ্ছিক)"
+                      className="h-9 text-xs"
+                    />
+                    {hasSubFilters && (
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="outline"
+                        onClick={() => {
+                          setStartDate("");
+                          setEndDate("");
+                          setSearchInput("");
+                        }}
+                        title="ফিল্টার রিসেট করুন"
+                        className="h-9 w-9 shrink-0"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
-              </div>
+              </>
             )}
           </div>
 
@@ -661,8 +973,12 @@ export function CustomExpensesWorkspace() {
                   school={chart.school}
                   title={`${chart.sheet.name} — মাসিক চার্ট ও হিসাব`}
                   subtitle={chart.sheet.description ?? undefined}
+                  defaultOrientation={
+                    chart.sheet.fields.length > 4 ? "landscape" : "portrait"
+                  }
                   filterSummary={[
-                    `মাস: ${formatMonthLabel(chart.billingMonth)} (${chart.billingMonth})`,
+                    `সময়কাল: ${periodRangeLabel}`,
+                    ...(debouncedSearch ? [`খোঁজ: ${debouncedSearch}`] : []),
                     `মোট এন্ট্রি: ${chart.entryCount}`,
                     `মোট পরিমাণ: ${formatBDT(chart.totalAmount)}`,
                   ]}
@@ -670,34 +986,57 @@ export function CustomExpensesWorkspace() {
                   toolbarExtra={
                     <span className="inline-flex items-center gap-1.5 rounded-lg border bg-muted/40 px-3 py-1.5 text-xs font-medium text-muted-foreground">
                       <BarChart3 className="h-3.5 w-3.5 text-primary" />
-                      {formatMonthLabel(chart.billingMonth)} •{" "}
+                      {periodRangeLabel} •{" "}
                       <strong className="text-foreground">
                         {formatBDT(chart.totalAmount)}
                       </strong>
+                      {chart.hasActiveFilters &&
+                        chart.unfilteredTotalAmount !== undefined && (
+                          <span className="text-[11px]">
+                            (সময়কাল মোট: {formatBDT(chart.unfilteredTotalAmount)}
+                            )
+                          </span>
+                        )}
                     </span>
                   }
                   csvExport={{
-                    filename: `custom-expense-${sanitizeFilenameSlug(chart.sheet.name, `sheet-${chart.sheet.id}`)}-${chart.billingMonth}`,
+                    filename: `খরচ-${sanitizeFilenamePreservingUnicode(chart.sheet.name, `sheet-${chart.sheet.id}`)}-${startDate || chart.billingMonth}`,
                     headers: [
                       "Serial",
                       "Date",
+                      "Voucher No",
+                      "Payment Method",
                       ...chart.sheet.fields.map((f) => f.label),
                       "Amount (BDT)",
+                      "Recorded By",
+                      "Bill Attachment URL",
                     ],
                     rows: [
                       ...chart.rows.map((r) => [
                         r.serial,
                         r.entryDate,
+                        r.voucherNo ?? "",
+                        r.paymentMethod ?? "CASH",
                         ...chart.sheet.fields.map(
                           (f) => r.fieldValues[f.fieldKey] ?? "",
                         ),
                         r.amount,
+                        r.recordedBy?.name ?? "",
+                        r.attachmentUrl ?? "",
                       ]),
                       [
                         "TOTAL",
                         `${chart.entryCount} entries`,
-                        ...chart.sheet.fields.map(() => ""),
+                        "",
+                        "",
+                        ...chart.sheet.fields.map((f) =>
+                          f.fieldType === "NUMBER"
+                            ? (chart.numericColumnTotals?.[f.fieldKey] ?? 0)
+                            : "",
+                        ),
                         chart.totalAmount,
+                        "",
+                        "",
                       ],
                     ],
                   }}
@@ -723,13 +1062,15 @@ export function CustomExpensesWorkspace() {
                         </span>
                         <p className="text-sm font-bold">
                           {peakDay
-                            ? `${formatBDT(peakDay.totalAmount)} (${peakDay.date.slice(8)} তারিখ)`
+                            ? `${formatBDT(peakDay.totalAmount)} (${peakDay.date})`
                             : "—"}
                         </p>
                       </div>
                       <div>
                         <span className="text-muted-foreground">
-                          মাসিক মোট (Monthly Total)
+                          {chart.hasActiveFilters
+                            ? "ফিল্টারকৃত মোট"
+                            : "মাসিক মোট (Monthly Total)"}
                         </span>
                         <p className="text-base font-bold text-primary">
                           {formatBDT(chart.totalAmount)}
@@ -744,10 +1085,11 @@ export function CustomExpensesWorkspace() {
                       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                         <div>
                           <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                            দৈনিক খরচ চার্ট — {formatMonthLabel(billingMonth)}
+                            দৈনিক খরচ চার্ট — {periodRangeLabel}
                           </h4>
                           <p className="text-[11px] text-muted-foreground">
-                            প্রতিদিনের মোট খরচ (BDT)
+                            প্রতিদিনের মোট খরচ (BDT) • সর্বোচ্চ:{" "}
+                            {formatBDT(maxDailySpend)}
                           </p>
                         </div>
                         <div className="text-right">
@@ -762,11 +1104,11 @@ export function CustomExpensesWorkspace() {
 
                       {maxDailySpend <= 0 ? (
                         <div className="flex h-28 items-center justify-center rounded-lg border border-dashed text-xs text-muted-foreground">
-                          এই মাসে ({billingMonth}) এখনো কোনো এন্ট্রি নেই।
+                          এই সময়কালে কোনো এন্ট্রি পাওয়া যায়নি।
                         </div>
                       ) : (
                         <div className="overflow-x-auto pb-1">
-                          <div className="flex h-36 min-w-[540px] items-end gap-1 border-b border-l px-2 pt-4">
+                          <div className="flex h-36 min-w-[540px] items-end gap-1 border-b border-l px-2 pt-5">
                             {chart.dailySeries.map((point) => {
                               const heightPct =
                                 point.totalAmount > 0
@@ -785,7 +1127,7 @@ export function CustomExpensesWorkspace() {
                                   title={`${point.date}: ${formatBDT(point.totalAmount)} (${point.count} এন্ট্রি)`}
                                 >
                                   {point.totalAmount > 0 && (
-                                    <span className="mb-1 hidden text-[9px] font-semibold text-primary group-hover:block">
+                                    <span className="print-show-value mb-1 hidden text-[8px] font-semibold text-primary group-hover:block">
                                       {Math.round(point.totalAmount)}
                                     </span>
                                   )}
@@ -802,8 +1144,10 @@ export function CustomExpensesWorkspace() {
                                           : "2px",
                                     }}
                                   />
-                                  <span className="mt-1 text-[9px] text-muted-foreground">
-                                    {point.day}
+                                  <span className="mt-1 text-[8px] text-muted-foreground">
+                                    {isMultiMonthRange
+                                      ? point.date.slice(5)
+                                      : point.day}
                                   </span>
                                 </div>
                               );
@@ -819,12 +1163,13 @@ export function CustomExpensesWorkspace() {
                         <thead className="border-b bg-muted/40 uppercase text-muted-foreground">
                           <tr>
                             <th className="px-3 py-2">#</th>
-                            <th className="px-3 py-2">তারিখ (Date)</th>
+                            <th className="px-3 py-2">তারিখ ও ভাউচার</th>
                             {chart.sheet.fields.map((field) => (
                               <th key={field.id} className="px-3 py-2">
                                 {field.label}
                               </th>
                             ))}
+                            <th className="px-3 py-2">মাধ্যম</th>
                             <th className="px-3 py-2 text-right">টাকা (BDT)</th>
                             <th className="no-print px-3 py-2 text-right">
                               অ্যাকশন
@@ -835,12 +1180,12 @@ export function CustomExpensesWorkspace() {
                           {chart.rows.length === 0 ? (
                             <tr>
                               <td
-                                colSpan={chart.sheet.fields.length + 4}
+                                colSpan={chart.sheet.fields.length + 5}
                                 className="px-3 py-8 text-center text-muted-foreground"
                               >
-                                {formatMonthLabel(billingMonth)} মাসে কোনো এন্ট্রি
-                                পাওয়া যায়নি। নতুন এন্ট্রি যোগ করতে উপরের &ldquo;এন্ট্রি
-                                যোগ করুন&rdquo; বাটনে ক্লিক করুন।
+                                এই সময়কালে কোনো এন্ট্রি পাওয়া যায়নি। নতুন এন্ট্রি যোগ
+                                করতে উপরের &ldquo;এন্ট্রি যোগ করুন&rdquo; বাটনে ক্লিক
+                                করুন।
                               </td>
                             </tr>
                           ) : (
@@ -850,47 +1195,76 @@ export function CustomExpensesWorkspace() {
                                   {row.serial}
                                 </td>
                                 <td className="whitespace-nowrap px-3 py-2 font-mono">
-                                  {row.entryDate}
+                                  <div>{row.entryDate}</div>
+                                  {row.voucherNo && (
+                                    <div className="text-[10px] font-semibold text-primary">
+                                      {row.voucherNo}
+                                    </div>
+                                  )}
                                 </td>
-                                {chart.sheet.fields.map((field) => {
-                                  const val = row.fieldValues[field.fieldKey];
-                                  return (
-                                    <td key={field.id} className="px-3 py-2">
-                                      {val !== null &&
-                                      val !== undefined &&
-                                      val !== ""
-                                        ? field.fieldType === "NUMBER"
-                                          ? Number(val).toLocaleString("en-BD")
-                                          : String(val)
-                                        : "—"}
-                                    </td>
-                                  );
-                                })}
+                                {chart.sheet.fields.map((field) => (
+                                  <td key={field.id} className="px-3 py-2">
+                                    {formatDynamicCellValue(
+                                      row.fieldValues[field.fieldKey],
+                                      field.fieldType,
+                                    )}
+                                  </td>
+                                ))}
+                                <td className="whitespace-nowrap px-3 py-2 text-[11px]">
+                                  {PAYMENT_METHOD_LABELS[
+                                    row.paymentMethod ?? "CASH"
+                                  ] ?? row.paymentMethod}
+                                </td>
                                 <td className="whitespace-nowrap px-3 py-2 text-right font-semibold">
                                   {formatBDT(row.amount)}
                                 </td>
                                 <td className="no-print whitespace-nowrap px-3 py-2 text-right">
                                   <div className="inline-flex items-center gap-1">
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      variant="ghost"
-                                      onClick={() => openEditEntryModal(row)}
-                                      className="h-7 w-7 p-0"
-                                      title="Edit entry"
-                                    >
-                                      <Pencil className="h-3.5 w-3.5" />
-                                    </Button>
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      variant="ghost"
-                                      onClick={() => setDeleteEntryTarget(row)}
-                                      className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                                      title="Delete entry"
-                                    >
-                                      <Trash2 className="h-3.5 w-3.5" />
-                                    </Button>
+                                    {row.attachmentUrl && (
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() =>
+                                          setPreviewAttachment({
+                                            url: row.attachmentUrl as string,
+                                            voucherNo: row.voucherNo,
+                                            entryDate: row.entryDate,
+                                            amount: row.amount,
+                                          })
+                                        }
+                                        className="h-7 w-7 p-0 text-blue-600"
+                                        title="বিল / মেমোর ছবি দেখুন"
+                                      >
+                                        <Paperclip className="h-3.5 w-3.5" />
+                                      </Button>
+                                    )}
+                                    {activeSheet.isActive && (
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => openEditEntryModal(row)}
+                                        className="h-7 w-7 p-0"
+                                        title="Edit entry"
+                                      >
+                                        <Pencil className="h-3.5 w-3.5" />
+                                      </Button>
+                                    )}
+                                    {isAdmin && activeSheet.isActive && (
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() =>
+                                          setDeleteEntryTarget(row)
+                                        }
+                                        className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                                        title="Delete entry (Admin only)"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </Button>
+                                    )}
                                   </div>
                                 </td>
                               </tr>
@@ -900,12 +1274,26 @@ export function CustomExpensesWorkspace() {
                         {chart.rows.length > 0 && (
                           <tfoot className="border-t-2 bg-muted/30 font-semibold">
                             <tr>
-                              <td
-                                colSpan={chart.sheet.fields.length + 2}
-                                className="px-3 py-2.5 text-right uppercase"
-                              >
-                                মোট ({chart.entryCount}টি এন্ট্রি)
+                              <td colSpan={2} className="px-3 py-2.5 uppercase">
+                                মোট ({chart.entryCount}টি)
                               </td>
+                              {chart.sheet.fields.map((field) => (
+                                <td
+                                  key={field.id}
+                                  className="px-3 py-2.5 font-mono text-xs text-primary"
+                                >
+                                  {field.fieldType === "NUMBER"
+                                    ? (
+                                        chart.numericColumnTotals?.[
+                                          field.fieldKey
+                                        ] ?? 0
+                                      ).toLocaleString("en-BD", {
+                                        maximumFractionDigits: 2,
+                                      })
+                                    : ""}
+                                </td>
+                              ))}
+                              <td className="px-3 py-2.5" />
                               <td className="whitespace-nowrap px-3 py-2.5 text-right text-sm font-bold text-primary">
                                 {formatBDT(chart.totalAmount)}
                               </td>
@@ -932,10 +1320,30 @@ export function CustomExpensesWorkspace() {
             ? "নতুন চার্ট / বিল তৈরি করুন"
             : `কলাম ও শিট সেটিংস — ${activeSheet?.name ?? ""}`
         }
-        description="শিটের নাম দিন এবং প্রয়োজন অনুযায়ী কাস্টম কলাম (Text / Number / Date) যুক্ত করুন। তারিখ (Date) ও টাকা (BDT) স্বয়ংক্রিয়ভাবে থাকবে।"
+        description="শিটের নাম দিন এবং প্রয়োজন অনুযায়ী স্টার্টার টেমপ্লেট বা কাস্টম কলাম (Text / Number / Date) যুক্ত করুন। তারিখ, ভাউচার নং ও টাকা স্বয়ংক্রিয়ভাবে থাকবে।"
         maxWidthClass="max-w-2xl"
       >
         <form onSubmit={handleSaveSheet} className="space-y-4">
+          {sheetModalMode === "create" && (
+            <div className="space-y-2 rounded-xl border bg-primary/5 p-3">
+              <p className="text-xs font-semibold text-primary">
+                এক-ক্লিকে রেডি টেমপ্লেট বাছাই (ঐচ্ছিক — পরে ইচ্ছেমতো এডিট করতে পারবেন):
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {STARTER_TEMPLATES.map((tpl) => (
+                  <button
+                    key={tpl.name}
+                    type="button"
+                    onClick={() => applyStarterTemplate(tpl)}
+                    className="rounded-lg border bg-background px-2.5 py-1 text-xs font-medium shadow-2xs transition hover:border-primary hover:bg-primary/5"
+                  >
+                    + {tpl.name} ({tpl.fields.length} কলাম)
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="space-y-1.5">
             <Label htmlFor="custom-sheet-name">শিটের নাম *</Label>
             <Input
@@ -943,25 +1351,8 @@ export function CustomExpensesWorkspace() {
               required
               value={sheetName}
               onChange={(e) => setSheetName(e.target.value)}
-              placeholder="যেমন: বাজার বিল, মিল বিল, কারেন্ট বিল, খরচ..."
+              placeholder="যেমন: বাজার বিল, মিল বিল, কারেন্ট বিল, সাধারণ খরচ..."
             />
-            {sheetModalMode === "create" && (
-              <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                <span className="text-[11px] text-muted-foreground">
-                  দ্রুত বাছাই:
-                </span>
-                {SHEET_NAME_SUGGESTIONS.map((suggestion) => (
-                  <button
-                    key={suggestion}
-                    type="button"
-                    onClick={() => setSheetName(suggestion)}
-                    className="rounded-full border bg-muted/40 px-2.5 py-0.5 text-[11px] font-medium hover:bg-muted"
-                  >
-                    {suggestion}
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
 
           <div className="space-y-1.5">
@@ -996,30 +1387,22 @@ export function CustomExpensesWorkspace() {
               </Button>
             </div>
 
-            <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
-              <span className="text-muted-foreground">নমুনা কলাম:</span>
-              {[
-                { label: "বিবরণ", type: "TEXT" as const },
-                { label: "পরিমাণ", type: "NUMBER" as const },
-                { label: "দোকান / বিক্রেতা", type: "TEXT" as const },
-                { label: "রশিদ / মিটার নং", type: "TEXT" as const },
-                { label: "বিলের তারিখ", type: "DATE" as const },
-              ].map((preset) => (
-                <button
-                  key={preset.label}
-                  type="button"
-                  onClick={() => addDraftField(preset.label, preset.type)}
-                  className="rounded-md border bg-background px-2 py-0.5 hover:bg-muted"
-                >
-                  + {preset.label}
-                </button>
-              ))}
-            </div>
+            {removedExistingColumns.length > 0 && (
+              <div className="rounded-lg border border-amber-300 bg-amber-50 p-2.5 text-xs text-amber-900">
+                সতর্কতা: আপনি{" "}
+                <strong>
+                  {removedExistingColumns.map((c) => c.label).join(", ")}
+                </strong>{" "}
+                কলামটি সরিয়েছেন। সংরক্ষণ করলে এই কলামের পূর্বের সংরক্ষিত তথ্য টেবিল ও
+                রিপোর্টে আর দেখা যাবে না।
+              </div>
+            )}
 
             {fieldDrafts.length === 0 ? (
               <p className="rounded-lg border border-dashed bg-background p-3 text-center text-xs text-muted-foreground">
                 কোনো অতিরিক্ত কলাম যোগ করা হয়নি — চাইলে শুধু তারিখ ও টাকা দিয়েও শিট তৈরি
-                করতে পারেন, অথবা উপরের &ldquo;কলাম যোগ করুন&rdquo; বাটনে ক্লিক করুন।
+                করতে পারেন, অথবা উপরের টেমপ্লেট / &ldquo;কলাম যোগ করুন&rdquo; বাটনে
+                ক্লিক করুন।
               </p>
             ) : (
               <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
@@ -1137,10 +1520,11 @@ export function CustomExpensesWorkspace() {
             ? `এন্ট্রি এডিট — ${activeSheet?.name ?? ""}`
             : `নতুন এন্ট্রি — ${activeSheet?.name ?? ""}`
         }
-        description="তারিখ, টাকার পরিমাণ এবং এই শিটের কাস্টম তথ্য পূরণ করুন।"
+        description="তারিখ, টাকার পরিমাণ, পেমেন্ট মাধ্যম, কাস্টম তথ্য এবং ঐচ্ছিক বিল/ভাউচারের ছবি যুক্ত করুন।"
+        maxWidthClass="max-w-xl"
       >
         <form onSubmit={handleSaveEntry} className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-3">
             <div className="space-y-1.5">
               <Label htmlFor="entry-date">তারিখ (Date) *</Label>
               <Input
@@ -1164,6 +1548,23 @@ export function CustomExpensesWorkspace() {
                 value={entryAmount}
                 onChange={(e) => setEntryAmount(e.target.value)}
               />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="entry-method">পেমেন্ট মাধ্যম *</Label>
+              <select
+                id="entry-method"
+                value={entryPaymentMethod}
+                onChange={(e) =>
+                  setEntryPaymentMethod(e.target.value as StudentPaymentMethod)
+                }
+                className="h-9 w-full rounded-md border bg-background px-2.5 text-sm"
+              >
+                {PAYMENT_METHODS.map((pm) => (
+                  <option key={pm} value={pm}>
+                    {PAYMENT_METHOD_LABELS[pm]}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -1213,10 +1614,69 @@ export function CustomExpensesWorkspace() {
             </div>
           )}
 
-          <div className="flex justify-end gap-2 border-t pt-3">
+          {/* Optional Bill / Voucher Photo Attachment */}
+          <div className="space-y-2 border-t pt-3">
+            <div className="flex items-center justify-between">
+              <Label>বিল / মেমো / ভাউচারের ছবি (ঐচ্ছিক)</Label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,application/pdf"
+                onChange={(e) => void handleBillFileSelect(e)}
+                className="hidden"
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={uploadFileMut.isPending}
+                onClick={() => fileInputRef.current?.click()}
+                className="h-8 gap-1.5 text-xs"
+              >
+                <ImagePlus className="h-3.5 w-3.5" />
+                {uploadFileMut.isPending ? "আপলোড হচ্ছে..." : "ছবি / ফাইল আপলোড"}
+              </Button>
+            </div>
+            {entryAttachmentUrl && (
+              <div className="flex items-center justify-between gap-2 rounded-lg border bg-muted/30 px-3 py-2 text-xs">
+                <a
+                  href={entryAttachmentUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 truncate text-primary hover:underline"
+                >
+                  <Paperclip className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">সংযুক্ত বিল/ভাউচার দেখুন</span>
+                  <ExternalLink className="h-3 w-3 shrink-0" />
+                </a>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => setEntryAttachmentUrl("")}
+                  className="h-6 w-6 text-destructive"
+                  title="Remove attachment"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-wrap justify-end gap-2 border-t pt-3">
             <Button type="button" variant="outline" onClick={closeEntryModal}>
               বাতিল
             </Button>
+            {!editingEntry && (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={createEntryMut.isPending}
+                onClick={() => void submitEntry(true)}
+              >
+                সংরক্ষণ ও আরেকটি যোগ করুন
+              </Button>
+            )}
             <Button
               type="submit"
               disabled={createEntryMut.isPending || updateEntryMut.isPending}
@@ -1231,12 +1691,56 @@ export function CustomExpensesWorkspace() {
         </form>
       </Modal>
 
-      {/* Delete / Archive Sheet Confirmation Modal */}
+      {/* Bill / Voucher Attachment Viewer Modal */}
+      <Modal
+        open={Boolean(previewAttachment)}
+        onClose={() => setPreviewAttachment(null)}
+        title={`বিল / ভাউচার প্রিভিউ — ${previewAttachment?.voucherNo ?? previewAttachment?.entryDate ?? ""}`}
+        description={
+          previewAttachment
+            ? `তারিখ: ${previewAttachment.entryDate} • পরিমাণ: ${formatBDT(previewAttachment.amount)}`
+            : undefined
+        }
+        maxWidthClass="max-w-2xl"
+      >
+        {previewAttachment && (
+          <div className="space-y-3">
+            <div className="overflow-hidden rounded-lg border bg-muted/20 p-2 text-center">
+              {/* biome-ignore lint/performance/noImgElement: direct preview of uploaded bill image */}
+              <img
+                src={previewAttachment.url}
+                alt="Bill voucher attachment"
+                className="mx-auto max-h-[65vh] rounded object-contain"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <a
+                href={previewAttachment.url}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex h-9 items-center gap-1.5 rounded-md border px-3 text-xs font-medium hover:bg-muted"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                নতুন ট্যাবে খুলুন
+              </a>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setPreviewAttachment(null)}
+              >
+                বন্ধ করুন
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Delete / Archive Sheet Confirmation Modal (Admin Only) */}
       <Modal
         open={Boolean(deleteSheetTarget)}
         onClose={() => setDeleteSheetTarget(null)}
-        title={`শিট মুছুন / আর্কাইভ — ${deleteSheetTarget?.name ?? ""}`}
-        description="আর্কাইভ করলে শিটটি তালিকা থেকে সরে যাবে কিন্তু ডেটা সংরক্ষিত থাকবে। স্থায়ীভাবে মুছলে এই শিটের সব এন্ট্রিও মুছে যাবে।"
+        title={`শিট আর্কাইভ / মুছুন — ${deleteSheetTarget?.name ?? ""}`}
+        description="আর্কাইভ করলে শিটটি সাধারণ তালিকা থেকে সরে যাবে কিন্তু পূর্বের হিসাব সংরক্ষিত থাকবে (পরে পুনরুদ্ধার করা যাবে)। স্থায়ীভাবে মুছলে এই শিটের সব এন্ট্রিও মুছে যাবে।"
       >
         <div className="flex flex-wrap justify-end gap-2">
           <Button
@@ -1269,12 +1773,12 @@ export function CustomExpensesWorkspace() {
         </div>
       </Modal>
 
-      {/* Delete Entry Confirmation Modal */}
+      {/* Delete Entry Confirmation Modal (Admin Only) */}
       <Modal
         open={Boolean(deleteEntryTarget)}
         onClose={() => setDeleteEntryTarget(null)}
         title="এন্ট্রি মুছে ফেলুন"
-        description={`আপনি কি ${deleteEntryTarget?.entryDate ?? ""} তারিখের ${formatBDT(deleteEntryTarget?.amount ?? 0)} এন্ট্রিটি মুছে ফেলতে চান?`}
+        description={`আপনি কি ${deleteEntryTarget?.entryDate ?? ""} তারিখের ${formatBDT(deleteEntryTarget?.amount ?? 0)} (${deleteEntryTarget?.voucherNo ?? ""}) এন্ট্রিটি মুছে ফেলতে চান?`}
       >
         <div className="flex justify-end gap-2">
           <Button
@@ -1295,5 +1799,15 @@ export function CustomExpensesWorkspace() {
         </div>
       </Modal>
     </div>
+  );
+}
+
+export function CustomExpensesWorkspace() {
+  return (
+    <Suspense
+      fallback={<LoadingState message="কাস্টম বিল ও খরচের শিট লোড হচ্ছে..." />}
+    >
+      <CustomExpensesWorkspaceInner />
+    </Suspense>
   );
 }

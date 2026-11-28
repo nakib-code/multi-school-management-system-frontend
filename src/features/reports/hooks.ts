@@ -118,9 +118,15 @@ export interface FeeChartReport {
     title: string;
     billingMonth: string | null;
     examName: string | null;
+    grossAmount?: number | null;
+    concessionAmount?: number;
+    concessionType?: string | null;
     billed: number;
     paid: number;
+    waived?: number;
+    waiverReason?: string | null;
     due: number;
+    isOverdue?: boolean;
     status: string;
     dueDate: string;
   }>;
@@ -133,9 +139,49 @@ export interface FeeChartReport {
     paidCount: number;
     partialCount: number;
     pendingCount: number;
+    overdueCount?: number;
     waivedCount: number;
     byFeeType: FeeTypeSummaryBucket[];
   };
+}
+
+export interface DefaulterListRow {
+  serial: number;
+  studentId: number;
+  studentCode: string;
+  rollNumber: number | null;
+  studentName: string;
+  nameBangla: string | null;
+  className: string;
+  sectionName: string | null;
+  academicYear: string;
+  guardianName: string | null;
+  guardianPhone: string | null;
+  unpaidFeeCount: number;
+  overdueFeeCount: number;
+  partialFeeCount: number;
+  totalBilled: number;
+  totalPaid: number;
+  totalWaived: number;
+  totalDue: number;
+  overdueDue: number;
+  oldestDueDate: string | null;
+  lastPaymentDate: string | null;
+  feeTitles: string[];
+  isOverdue: boolean;
+}
+
+export interface DefaulterListReport {
+  school: ChartSchoolHeader | null;
+  filters: Record<string, unknown>;
+  summary: {
+    totalDefaulters: number;
+    overdueStudentsCount: number;
+    totalUnpaidInvoices: number;
+    totalDueAmount: number;
+    totalOverdueAmount: number;
+  };
+  rows: DefaulterListRow[];
 }
 
 export interface RosterChartReport {
@@ -174,8 +220,12 @@ export interface MonthlyNetReport {
   school: ChartSchoolHeader;
   billingMonth: string;
   trendMonths: number;
+  includePayroll: boolean;
   summary: {
     totalIncome: number;
+    customExpenseTotal: number;
+    payrollExpenseTotal: number;
+    payrollPaymentCount: number;
     totalExpense: number;
     netBalance: number;
     status: "SURPLUS" | "DEFICIT";
@@ -200,6 +250,7 @@ export interface MonthlyNetReport {
   };
   expenseBreakdown: Array<{
     sheetId: number;
+    sourceType?: "CUSTOM_SHEET" | "TEACHER_PAYROLL";
     sheetName: string;
     totalAmount: number;
     entryCount: number;
@@ -215,6 +266,8 @@ export interface MonthlyNetReport {
   trend: Array<{
     billingMonth: string;
     totalIncome: number;
+    customExpense?: number;
+    payrollExpense?: number;
     totalExpense: number;
     netBalance: number;
     status: "SURPLUS" | "DEFICIT";
@@ -248,6 +301,8 @@ export const reportKeys = {
     ] as const,
   monthlyNet: (schoolId: number, params?: Record<string, unknown>) =>
     [...reportKeys.all, "school", schoolId, "monthly-net", params] as const,
+  defaulters: (schoolId: number, params?: Record<string, unknown>) =>
+    [...reportKeys.all, "school", schoolId, "defaulters", params] as const,
 };
 
 export const useReportOverview = () => {
@@ -348,6 +403,7 @@ export const useMonthlyNetReport = (
   params?: {
     billingMonth?: string;
     trendMonths?: number;
+    includePayroll?: boolean;
   },
   enabled = true,
 ) => {
@@ -357,6 +413,41 @@ export const useMonthlyNetReport = (
     queryFn: async () => {
       const res = await api.get<{ data: MonthlyNetReport }>(
         `/schools/${schoolId}/reports/monthly-net`,
+        {
+          params: {
+            ...(params?.billingMonth
+              ? { billingMonth: params.billingMonth }
+              : {}),
+            ...(params?.trendMonths ? { trendMonths: params.trendMonths } : {}),
+            ...(params?.includePayroll !== undefined
+              ? { includePayroll: String(params.includePayroll) }
+              : {}),
+          },
+        },
+      );
+      return res.data.data;
+    },
+  });
+};
+
+export const useDefaulterListReport = (
+  schoolId: number,
+  params?: {
+    classId?: number;
+    sectionId?: number;
+    academicYear?: string;
+    feeType?: "ALL" | FeeType;
+    status?: "ALL_DUE" | "OVERDUE" | "PENDING" | "PARTIAL";
+    search?: string;
+  },
+  enabled = true,
+) => {
+  return useQuery({
+    queryKey: reportKeys.defaulters(schoolId, params),
+    enabled: schoolId > 0 && enabled,
+    queryFn: async () => {
+      const res = await api.get<{ data: DefaulterListReport }>(
+        `/schools/${schoolId}/reports/defaulters`,
         { params },
       );
       return res.data.data;

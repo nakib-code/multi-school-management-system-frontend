@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 import { DashboardCard } from "@/components/layout/dashboard-card";
+import { DashboardFinanceSection } from "@/components/layout/dashboard-finance-section";
 import { useDashboard } from "@/features/dashboard/hooks";
 import type { SchoolDashboard } from "@/features/dashboard/types";
 
@@ -136,6 +137,9 @@ export default function AdminDashboardPage() {
           Overview of your school management system.
         </p>
       </div>
+
+      {/* Financial & Cash-in-Hand Summary */}
+      <DashboardFinanceSection userRole="ADMIN" finance={dashboard.finance} />
 
       {/* Statistics */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

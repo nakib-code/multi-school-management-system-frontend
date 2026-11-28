@@ -25,9 +25,19 @@ import type {
 } from "@/features/admissions/types";
 import { useUpdateStudent } from "@/features/students/hooks";
 import type {
+  DiscountMode,
+  StudentConcessionType,
   StudentRecord,
   UpdateStudentInput,
 } from "@/features/students/types";
+
+const CONCESSION_LABELS: Record<StudentConcessionType, string> = {
+  ORPHAN: "এতিম (Orphan)",
+  LILLAH: "লিল্লাহ (Lillah)",
+  SIBLING: "ভাই-বোন (Sibling)",
+  SCHOLARSHIP: "বৃত্তি (Scholarship)",
+  CUSTOM: "বিশেষ ছাড় (Custom)",
+};
 
 interface StudentProfileViewProps {
   schoolId: number;
@@ -109,6 +119,13 @@ export function StudentProfileView({
       guardianNidUrl: student.guardianNidUrl ?? "",
       previousTcUrl: student.previousTcUrl ?? "",
       marksheetUrl: student.marksheetUrl ?? "",
+      concessionType: student.concessionType ?? null,
+      concessionMode: student.concessionMode ?? null,
+      concessionValue:
+        student.concessionValue != null
+          ? Number(student.concessionValue)
+          : null,
+      concessionReason: student.concessionReason ?? "",
     });
   }, [student]);
 
@@ -122,7 +139,24 @@ export function StudentProfileView({
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canEdit) return;
-    await updateMut.mutateAsync({ id: student.id, payload: form });
+    const payload: UpdateStudentInput = {
+      ...form,
+      concessionType: form.concessionType || null,
+      concessionMode: form.concessionType
+        ? (form.concessionMode ?? "PERCENTAGE")
+        : null,
+      concessionValue:
+        form.concessionType &&
+        form.concessionValue !== null &&
+        form.concessionValue !== undefined &&
+        Number.isFinite(Number(form.concessionValue))
+          ? Number(form.concessionValue)
+          : null,
+      concessionReason: form.concessionType
+        ? form.concessionReason?.trim() || null
+        : null,
+    };
+    await updateMut.mutateAsync({ id: student.id, payload });
   };
 
   const activeEnrollment = student.enrollments?.[0];
@@ -193,6 +227,17 @@ export function StudentProfileView({
                 )}
               </span>
               {student.quranWing && <span>• {student.quranWing}</span>}
+              {student.concessionType && (
+                <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                  {CONCESSION_LABELS[student.concessionType]}
+                  {student.concessionValue != null &&
+                  Number(student.concessionValue) > 0
+                    ? student.concessionMode === "FIXED"
+                      ? ` · ৳${Number(student.concessionValue).toLocaleString("en-BD")}`
+                      : ` · ${Number(student.concessionValue)}%`
+                    : ""}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -363,6 +408,101 @@ export function StudentProfileView({
                 onChange={(e) => setField("nationality", e.target.value)}
               />
             </Field>
+
+            <div className="mt-2 rounded-xl border border-emerald-200/80 bg-emerald-50/40 p-4 sm:col-span-2 lg:col-span-3">
+              <div className="mb-3">
+                <h3 className="text-sm font-semibold text-emerald-900">
+                  বৃত্তি / এতিম / লিল্লাহ ছাড় (Fee Concession Profile)
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Set an automatic fee discount applied whenever new monthly or
+                  other fees are generated for this student.
+                </p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <Field label="Concession Category (ছাড়ের ধরন)">
+                  <select
+                    disabled={!canEdit}
+                    value={form.concessionType ?? ""}
+                    onChange={(e) => {
+                      const val = (e.target.value ||
+                        null) as StudentConcessionType | null;
+                      setForm((prev) => ({
+                        ...prev,
+                        concessionType: val,
+                        concessionMode: val
+                          ? (prev.concessionMode ?? "PERCENTAGE")
+                          : null,
+                        concessionValue: val
+                          ? (prev.concessionValue ??
+                            (val === "ORPHAN" || val === "LILLAH" ? 100 : 25))
+                          : null,
+                      }));
+                    }}
+                    className="h-9 w-full rounded-md border bg-background px-3 text-sm disabled:opacity-70"
+                  >
+                    <option value="">None (কোনো ছাড় নেই)</option>
+                    <option value="ORPHAN">এতিম (Orphan)</option>
+                    <option value="LILLAH">লিল্লাহ (Lillah)</option>
+                    <option value="SIBLING">ভাই-বোন (Sibling)</option>
+                    <option value="SCHOLARSHIP">বৃত্তি (Scholarship)</option>
+                    <option value="CUSTOM">বিশেষ ছাড় (Custom)</option>
+                  </select>
+                </Field>
+                <Field label="Discount Mode">
+                  <select
+                    disabled={!canEdit || !form.concessionType}
+                    value={form.concessionMode ?? "PERCENTAGE"}
+                    onChange={(e) =>
+                      setField("concessionMode", e.target.value as DiscountMode)
+                    }
+                    className="h-9 w-full rounded-md border bg-background px-3 text-sm disabled:opacity-60"
+                  >
+                    <option value="PERCENTAGE">Percentage (%)</option>
+                    <option value="FIXED">Fixed Amount (৳)</option>
+                  </select>
+                </Field>
+                <Field
+                  label={
+                    form.concessionMode === "FIXED"
+                      ? "Discount Amount (৳)"
+                      : "Discount Percent (%)"
+                  }
+                >
+                  <Input
+                    type="number"
+                    min={0}
+                    max={form.concessionMode === "FIXED" ? 999999 : 100}
+                    step="0.01"
+                    disabled={!canEdit || !form.concessionType}
+                    value={
+                      form.concessionValue != null
+                        ? String(form.concessionValue)
+                        : ""
+                    }
+                    onChange={(e) =>
+                      setField(
+                        "concessionValue",
+                        e.target.value === "" ? null : Number(e.target.value),
+                      )
+                    }
+                    placeholder={
+                      form.concessionMode === "FIXED" ? "e.g. 500" : "e.g. 50"
+                    }
+                  />
+                </Field>
+                <Field label="Approval / Reason Note">
+                  <Input
+                    disabled={!canEdit || !form.concessionType}
+                    value={form.concessionReason ?? ""}
+                    onChange={(e) =>
+                      setField("concessionReason", e.target.value)
+                    }
+                    placeholder="যেমন: মুহতামিম অনুমোদিত এতিম ছাড়"
+                  />
+                </Field>
+              </div>
+            </div>
           </div>
         )}
 

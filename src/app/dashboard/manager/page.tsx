@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { DashboardCard } from "@/components/layout/dashboard-card";
+import { DashboardFinanceSection } from "@/components/layout/dashboard-finance-section";
 import { ErrorState } from "@/components/shared/error-state";
 import { LoadingState } from "@/components/shared/loading";
 import { useDashboard } from "@/features/dashboard/hooks";
@@ -44,15 +45,19 @@ export default function ManagerDashboardPage() {
           totalSubjects: 0,
         };
 
+  const finance = data && "finance" in data ? data.finance : undefined;
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Manager Dashboard</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Manage daily admissions, academics, attendance, exams, fees, and Hefz
-          operations.
+          Manage daily admissions, academics, attendance, exams, fees, accounts,
+          and Hefz operations.
         </p>
       </div>
+
+      <DashboardFinanceSection userRole="MANAGER" finance={finance} />
 
       <div className="grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-3">
         <DashboardCard

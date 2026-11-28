@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { dashboardKeys } from "@/features/dashboard/hooks";
 import { reportKeys } from "@/features/reports/hooks";
 import { api, getApiErrorMessage } from "@/lib/api";
 import type {
@@ -16,19 +17,44 @@ import type {
 
 export const customExpenseKeys = {
   all: (schoolId: number) => ["custom-expenses", schoolId] as const,
-  sheets: (schoolId: number) =>
-    ["custom-expenses", schoolId, "sheets"] as const,
-  chart: (schoolId: number, sheetId: number, billingMonth: string) =>
-    ["custom-expenses", schoolId, "chart", sheetId, billingMonth] as const,
+  sheets: (
+    schoolId: number,
+    options?: { includeInactive?: boolean; billingMonth?: string },
+  ) => ["custom-expenses", schoolId, "sheets", options ?? {}] as const,
+  chart: (
+    schoolId: number,
+    sheetId: number,
+    billingMonth: string,
+    filters?: { startDate?: string; endDate?: string; search?: string },
+  ) =>
+    [
+      "custom-expenses",
+      schoolId,
+      "chart",
+      sheetId,
+      billingMonth,
+      filters ?? {},
+    ] as const,
 };
 
-export function useCustomExpenseSheets(schoolId: number) {
+export function useCustomExpenseSheets(
+  schoolId: number,
+  options?: { includeInactive?: boolean; billingMonth?: string },
+) {
   return useQuery({
-    queryKey: customExpenseKeys.sheets(schoolId),
+    queryKey: customExpenseKeys.sheets(schoolId, options),
     enabled: schoolId > 0,
     queryFn: async () => {
       const res = await api.get<{ data: CustomExpenseSheet[] }>(
         `/schools/${schoolId}/custom-expenses/sheets`,
+        {
+          params: {
+            ...(options?.includeInactive ? { includeInactive: "true" } : {}),
+            ...(options?.billingMonth
+              ? { billingMonth: options.billingMonth }
+              : {}),
+          },
+        },
       );
       return res.data.data;
     },
@@ -39,9 +65,10 @@ export function useCustomExpenseMonthlyChart(
   schoolId: number,
   sheetId: number,
   billingMonth: string,
+  filters?: { startDate?: string; endDate?: string; search?: string },
 ) {
   return useQuery({
-    queryKey: customExpenseKeys.chart(schoolId, sheetId, billingMonth),
+    queryKey: customExpenseKeys.chart(schoolId, sheetId, billingMonth, filters),
     enabled:
       schoolId > 0 &&
       sheetId > 0 &&
@@ -49,7 +76,14 @@ export function useCustomExpenseMonthlyChart(
     queryFn: async () => {
       const res = await api.get<{ data: CustomExpenseMonthlyChart }>(
         `/schools/${schoolId}/custom-expenses/sheets/${sheetId}/chart`,
-        { params: { billingMonth } },
+        {
+          params: {
+            billingMonth,
+            ...(filters?.startDate ? { startDate: filters.startDate } : {}),
+            ...(filters?.endDate ? { endDate: filters.endDate } : {}),
+            ...(filters?.search ? { search: filters.search } : {}),
+          },
+        },
       );
       return res.data.data;
     },
@@ -68,6 +102,8 @@ export function useCreateCustomExpenseSheet(schoolId: number) {
     },
     onSuccess: (sheet) => {
       qc.invalidateQueries({ queryKey: customExpenseKeys.all(schoolId) });
+      qc.invalidateQueries({ queryKey: reportKeys.all });
+      qc.invalidateQueries({ queryKey: dashboardKeys.all });
       toast.success(`"${sheet.name}" তৈরি হয়েছে`);
     },
     onError: (err) => {
@@ -94,6 +130,8 @@ export function useUpdateCustomExpenseSheetFields(schoolId: number) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: customExpenseKeys.all(schoolId) });
+      qc.invalidateQueries({ queryKey: reportKeys.all });
+      qc.invalidateQueries({ queryKey: dashboardKeys.all });
       toast.success("কলাম ও শিট তথ্য আপডেট হয়েছে");
     },
     onError: (err) => {
@@ -121,6 +159,8 @@ export function useDeleteCustomExpenseSheet(schoolId: number) {
     },
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: customExpenseKeys.all(schoolId) });
+      qc.invalidateQueries({ queryKey: reportKeys.all });
+      qc.invalidateQueries({ queryKey: dashboardKeys.all });
       toast.success(
         res.archived
           ? `"${res.name}" আর্কাইভ করা হয়েছে`
@@ -129,6 +169,27 @@ export function useDeleteCustomExpenseSheet(schoolId: number) {
     },
     onError: (err) => {
       toast.error(getApiErrorMessage(err, "Failed to delete sheet"));
+    },
+  });
+}
+
+export function useRestoreCustomExpenseSheet(schoolId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (sheetId: number) => {
+      const res = await api.patch<{ data: CustomExpenseSheet }>(
+        `/schools/${schoolId}/custom-expenses/sheets/${sheetId}/restore`,
+      );
+      return res.data.data;
+    },
+    onSuccess: (sheet) => {
+      qc.invalidateQueries({ queryKey: customExpenseKeys.all(schoolId) });
+      qc.invalidateQueries({ queryKey: reportKeys.all });
+      qc.invalidateQueries({ queryKey: dashboardKeys.all });
+      toast.success(`"${sheet.name}" পুনরুদ্ধার করা হয়েছে`);
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err, "Failed to restore sheet"));
     },
   });
 }
@@ -152,6 +213,7 @@ export function useCreateCustomExpenseEntry(schoolId: number) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: customExpenseKeys.all(schoolId) });
       qc.invalidateQueries({ queryKey: reportKeys.all });
+      qc.invalidateQueries({ queryKey: dashboardKeys.all });
       toast.success("খরচ / বিল এন্ট্রি যুক্ত হয়েছে");
     },
     onError: (err) => {
@@ -181,6 +243,7 @@ export function useUpdateCustomExpenseEntry(schoolId: number) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: customExpenseKeys.all(schoolId) });
       qc.invalidateQueries({ queryKey: reportKeys.all });
+      qc.invalidateQueries({ queryKey: dashboardKeys.all });
       toast.success("এন্ট্রি আপডেট হয়েছে");
     },
     onError: (err) => {
@@ -207,6 +270,7 @@ export function useDeleteCustomExpenseEntry(schoolId: number) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: customExpenseKeys.all(schoolId) });
       qc.invalidateQueries({ queryKey: reportKeys.all });
+      qc.invalidateQueries({ queryKey: dashboardKeys.all });
       toast.success("এন্ট্রি মুছে ফেলা হয়েছে");
     },
     onError: (err) => {

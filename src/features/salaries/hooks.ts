@@ -2,6 +2,8 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { dashboardKeys } from "@/features/dashboard/hooks";
+import { reportKeys } from "@/features/reports/hooks";
 import { getApiErrorMessage } from "@/lib/api";
 import {
   createSalaryPayment,
@@ -42,6 +44,8 @@ export const useCreateTeacherSalary = (schoolId: number) => {
     onSuccess: () => {
       toast.success("Teacher salary sheet created");
       qc.invalidateQueries({ queryKey: salaryKeys.all });
+      qc.invalidateQueries({ queryKey: reportKeys.all });
+      qc.invalidateQueries({ queryKey: dashboardKeys.all });
     },
     onError: (err) =>
       toast.error(getApiErrorMessage(err, "Failed to create salary")),
@@ -56,6 +60,8 @@ export const useCreateSalaryPayment = (schoolId: number) => {
     onSuccess: () => {
       toast.success("Salary payment recorded");
       qc.invalidateQueries({ queryKey: salaryKeys.all });
+      qc.invalidateQueries({ queryKey: reportKeys.all });
+      qc.invalidateQueries({ queryKey: dashboardKeys.all });
     },
     onError: (err) =>
       toast.error(getApiErrorMessage(err, "Failed to record salary payment")),
@@ -87,6 +93,8 @@ export const useUpdateTeacherSalary = (schoolId: number) => {
     onSuccess: () => {
       toast.success("Salary record updated");
       qc.invalidateQueries({ queryKey: salaryKeys.all });
+      qc.invalidateQueries({ queryKey: reportKeys.all });
+      qc.invalidateQueries({ queryKey: dashboardKeys.all });
     },
     onError: (err) =>
       toast.error(getApiErrorMessage(err, "Failed to update salary record")),

@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { dashboardKeys } from "@/features/dashboard/hooks";
 import { reportKeys } from "@/features/reports/hooks";
 import { api, getApiErrorMessage } from "@/lib/api";
 import type {
@@ -28,7 +29,16 @@ export const incomeKeys = {
     schoolId: number,
     billingMonth: string,
     category: IncomeCategoryFilter,
-  ) => ["income", schoolId, "chart", billingMonth, category] as const,
+    filters?: { startDate?: string; endDate?: string; search?: string },
+  ) =>
+    [
+      "income",
+      schoolId,
+      "chart",
+      billingMonth,
+      category,
+      filters ?? {},
+    ] as const,
 };
 
 export function useIncomeSummary(
@@ -59,9 +69,10 @@ export function useIncomeMonthlyChart(
   schoolId: number,
   billingMonth: string,
   category: IncomeCategoryFilter = "ALL",
+  filters?: { startDate?: string; endDate?: string; search?: string },
 ) {
   return useQuery({
-    queryKey: incomeKeys.chart(schoolId, billingMonth, category),
+    queryKey: incomeKeys.chart(schoolId, billingMonth, category, filters),
     enabled: schoolId > 0 && /^\d{4}-(0[1-9]|1[0-2])$/.test(billingMonth),
     queryFn: async () => {
       const res = await api.get<{ data: IncomeMonthlyChartResponse }>(
@@ -70,6 +81,9 @@ export function useIncomeMonthlyChart(
           params: {
             billingMonth,
             category,
+            ...(filters?.startDate ? { startDate: filters.startDate } : {}),
+            ...(filters?.endDate ? { endDate: filters.endDate } : {}),
+            ...(filters?.search ? { search: filters.search } : {}),
           },
         },
       );
@@ -83,13 +97,14 @@ export function useCreateOtherIncome(schoolId: number) {
   return useMutation({
     mutationFn: async (payload: CreateOtherIncomeInput) => {
       const res = await api.post<{
-        data: { id: number; billingMonth: string };
+        data: { id: number; billingMonth: string; receiptNo?: string | null };
       }>(`/schools/${schoolId}/income/other`, payload);
       return res.data.data;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: incomeKeys.all(schoolId) });
       qc.invalidateQueries({ queryKey: reportKeys.all });
+      qc.invalidateQueries({ queryKey: dashboardKeys.all });
       toast.success("অন্যান্য আয় যুক্ত হয়েছে");
     },
     onError: (err) => {
@@ -116,6 +131,7 @@ export function useUpdateOtherIncome(schoolId: number) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: incomeKeys.all(schoolId) });
       qc.invalidateQueries({ queryKey: reportKeys.all });
+      qc.invalidateQueries({ queryKey: dashboardKeys.all });
       toast.success("অন্যান্য আয় আপডেট হয়েছে");
     },
     onError: (err) => {
@@ -136,6 +152,7 @@ export function useDeleteOtherIncome(schoolId: number) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: incomeKeys.all(schoolId) });
       qc.invalidateQueries({ queryKey: reportKeys.all });
+      qc.invalidateQueries({ queryKey: dashboardKeys.all });
       toast.success("আয়ের এন্ট্রি মুছে ফেলা হয়েছে");
     },
     onError: (err) => {

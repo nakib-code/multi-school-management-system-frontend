@@ -20,9 +20,26 @@ export interface SchoolDashboardStats {
   totalSubjects: number;
 }
 
+export interface SchoolDashboardFinance {
+  billingMonth: string;
+  todayDate: string;
+  monthlyIncome: number;
+  monthlyCustomExpense: number;
+  monthlyPayrollExpense: number;
+  monthlyTotalExpense: number;
+  monthlyNetBalance: number;
+  monthlyStatus: "SURPLUS" | "DEFICIT";
+  todayCashCollected: number;
+  todayCashSpent: number;
+  todayCashInHand: number;
+  pendingPaymentVerifications: number;
+  overdueFeesCount: number;
+}
+
 export interface SchoolDashboard {
   role: "ADMIN" | "MANAGER";
   stats: SchoolDashboardStats;
+  finance?: SchoolDashboardFinance;
 }
 
 export type DashboardResponse = SuperAdminDashboard | SchoolDashboard;

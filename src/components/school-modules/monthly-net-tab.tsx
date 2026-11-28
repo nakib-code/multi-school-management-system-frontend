@@ -8,6 +8,7 @@ import {
   TrendingDown,
   TrendingUp,
 } from "lucide-react";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ErrorState } from "@/components/shared/error-state";
 import { LoadingState } from "@/components/shared/loading";
@@ -16,48 +17,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useMonthlyNetReport } from "@/features/reports/hooks";
 import { getApiErrorMessage } from "@/lib/api";
-
-const formatBDT = (amount: number) =>
-  `৳${Number(amount || 0).toLocaleString("en-BD", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  })}`;
-
-const formatSignedBDT = (amount: number) => {
-  const abs = formatBDT(Math.abs(amount));
-  if (amount > 0) return `+${abs}`;
-  if (amount < 0) return `-${abs}`;
-  return abs;
-};
-
-const getCurrentMonth = (): string => {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, "0");
-  return `${y}-${m}`;
-};
-
-const shiftBillingMonth = (billingMonth: string, delta: number): string => {
-  const [yStr, mStr] = billingMonth.split("-");
-  const date = new Date(Number(yStr), Number(mStr) - 1 + delta, 1);
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  return `${y}-${m}`;
-};
-
-const formatMonthShort = (billingMonth: string): string => {
-  const [yStr, mStr] = billingMonth.split("-");
-  const date = new Date(Number(yStr), Number(mStr) - 1, 1);
-  if (Number.isNaN(date.getTime())) return billingMonth;
-  return date.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
-};
-
-const formatMonthLong = (billingMonth: string): string => {
-  const [yStr, mStr] = billingMonth.split("-");
-  const date = new Date(Number(yStr), Number(mStr) - 1, 1);
-  if (Number.isNaN(date.getTime())) return billingMonth;
-  return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-};
+import {
+  formatBDT,
+  formatMonthLong,
+  formatMonthShort,
+  formatSignedBDT,
+  getCurrentDhakaMonth,
+  shiftBillingMonth,
+} from "@/lib/dhaka-date";
+import { useAuth } from "@/providers/auth-provider";
 
 export function MonthlyNetTab({
   schoolId,
@@ -66,12 +34,16 @@ export function MonthlyNetTab({
   schoolId: number;
   generatedBy?: string | null;
 }) {
-  const [billingMonth, setBillingMonth] = useState<string>(getCurrentMonth);
+  const { user } = useAuth();
+  const [billingMonth, setBillingMonth] =
+    useState<string>(getCurrentDhakaMonth);
   const [trendMonths, setTrendMonths] = useState<number>(6);
+  const [includePayroll, setIncludePayroll] = useState<boolean>(true);
 
   const query = useMonthlyNetReport(schoolId, {
     billingMonth,
     trendMonths,
+    includePayroll,
   });
 
   const data = query.data;
@@ -104,10 +76,14 @@ export function MonthlyNetTab({
   }, [data]);
 
   const isSurplus = (data?.summary.netBalance ?? 0) >= 0;
+  const customExpensesBase =
+    user?.role === "MANAGER"
+      ? "/dashboard/manager/custom-expenses"
+      : "/dashboard/admin/custom-expenses";
 
   return (
     <div className="space-y-4">
-      {/* Month & Trend Range Filter Bar */}
+      {/* Month, Payroll Toggle & Trend Range Filter Bar */}
       <div className="no-print flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card p-4">
         <div className="flex items-center gap-2">
           <Scale className="h-4 w-4 text-primary" />
@@ -116,12 +92,23 @@ export function MonthlyNetTab({
               মাসিক আয় বনাম খরচ (নিট উদ্বৃত্ত / ঘাটতি)
             </p>
             <p className="text-xs text-muted-foreground">
-              ভেরিফায়েড আয় এবং কাস্টম খরচের শিটের সমন্বিত মাসিক নিট হিসাব ও ট্রেন্ড।
+              ভেরিফায়েড আয়, কাস্টম খরচের শিট ও পরিশোধিত শিক্ষক বেতনের সমন্বিত মাসিক
+              নিট হিসাব।
             </p>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <label className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-md border bg-background px-3 text-xs font-medium">
+            <input
+              type="checkbox"
+              checked={includePayroll}
+              onChange={(e) => setIncludePayroll(e.target.checked)}
+              className="h-3.5 w-3.5 rounded border"
+            />
+            <span>শিক্ষক বেতন (Payroll) অন্তর্ভুক্ত</span>
+          </label>
+
           <div className="flex items-center gap-1">
             <Button
               type="button"
@@ -210,7 +197,12 @@ export function MonthlyNetTab({
                 {formatBDT(data.summary.totalExpense)}
               </p>
               <p className="mt-0.5 text-[11px] text-rose-700">
-                {data.expenseBreakdown.length}টি খরচের শিট
+                কাস্টম: {formatBDT(data.summary.customExpenseTotal)}
+                {data.includePayroll
+                  ? ` • বেতন: ${formatBDT(data.summary.payrollExpenseTotal)}`
+                  : data.summary.payrollExpenseTotal > 0
+                    ? ` (বেতন বাদ: ${formatBDT(data.summary.payrollExpenseTotal)})`
+                    : ""}
               </p>
             </div>
 
@@ -263,60 +255,81 @@ export function MonthlyNetTab({
           <PrintableReportSheet
             school={data.school}
             title={`মাসিক আয় বনাম খরচ (নিট হিসাব) — ${formatMonthLong(data.billingMonth)}`}
-            subtitle="সমন্বিত আয় (ছাত্র ফি ও অন্যান্য আয়) বনাম কাস্টম খরচের শিট প্রতিবেদন"
+            subtitle={
+              data.includePayroll
+                ? "সমন্বিত আয় বনাম কাস্টম খরচের শিট ও শিক্ষক বেতন (Payroll) প্রতিবেদন"
+                : "সমন্বিত আয় বনাম কাস্টম খরচের শিট প্রতিবেদন (শিক্ষক বেতন ব্যতীত)"
+            }
             filterSummary={[
               `মাস: ${formatMonthLong(data.billingMonth)} (${data.billingMonth})`,
               `ট্রেন্ড: সর্বশেষ ${data.trendMonths} মাস`,
+              `বেতন অন্তর্ভুক্ত: ${data.includePayroll ? "হ্যাঁ" : "না"}`,
               `অবস্থা: ${isSurplus ? "উদ্বৃত্ত (SURPLUS)" : "ঘাটতি (DEFICIT)"}`,
             ]}
             generatedBy={generatedBy}
             csvExport={{
               filename: `monthly-net-${data.billingMonth}-${data.trendMonths}m`,
               headers: [
-                "Section",
-                "Period / Item",
-                "Income (BDT)",
-                "Expense (BDT)",
+                "Month",
+                "Total Income (BDT)",
+                "Custom Expense (BDT)",
+                "Teacher Payroll (BDT)",
+                "Total Expense (BDT)",
                 "Net Balance (BDT)",
-                "Status / Share",
+                "Status",
               ],
               rows: [
-                ...data.incomeBreakdown.byCategory.map((c) => [
-                  "Income Category",
-                  c.label,
-                  c.amount,
-                  0,
-                  c.amount,
-                  `${c.percentage}% (${c.count} entries)`,
-                ]),
-                ...data.expenseBreakdown.map((e) => [
-                  "Expense Sheet",
-                  e.sheetName,
-                  0,
-                  e.totalAmount,
-                  -e.totalAmount,
-                  `${e.percentage}% (${e.entryCount} entries)`,
-                ]),
+                // Non-overlapping monthly trend rows so spreadsheet SUM() is always exact
                 ...data.trend.map((t) => [
-                  `${data.trendMonths}-Month Trend`,
                   t.billingMonth,
                   t.totalIncome,
+                  t.customExpense ?? 0,
+                  data.includePayroll ? (t.payrollExpense ?? 0) : 0,
                   t.totalExpense,
                   t.netBalance,
                   t.status,
                 ]),
                 [
-                  "TOTAL / NET",
-                  `Selected Month (${data.billingMonth})`,
-                  data.summary.totalIncome,
-                  data.summary.totalExpense,
-                  data.summary.netBalance,
-                  `${data.summary.status} (${data.summary.expenseSharePercent}% expense ratio)`,
+                  `TREND TOTAL (${data.trendMonths}M)`,
+                  trendTotals.income,
+                  "",
+                  "",
+                  trendTotals.expense,
+                  trendTotals.net,
+                  trendTotals.net >= 0 ? "SURPLUS" : "DEFICIT",
                 ],
+                ["", "", "", "", "", "", ""],
+                [
+                  `--- SELECTED MONTH (${data.billingMonth}) BREAKDOWN (REFERENCE ONLY) ---`,
+                  "",
+                  "",
+                  "",
+                  "",
+                  "",
+                  "",
+                ],
+                ...data.incomeBreakdown.byCategory.map((c) => [
+                  `Income: ${c.label}`,
+                  `${c.amount} BDT (${c.percentage}%)`,
+                  "",
+                  "",
+                  "",
+                  "",
+                  `${c.count} entries`,
+                ]),
+                ...data.expenseBreakdown.map((e) => [
+                  `Expense: ${e.sheetName}`,
+                  "",
+                  "",
+                  "",
+                  `${e.totalAmount} BDT (${e.percentage}%)`,
+                  "",
+                  `${e.entryCount} entries`,
+                ]),
               ],
             }}
             footerTotals={
-              <div className="grid gap-3 text-xs sm:grid-cols-4">
+              <div className="grid gap-3 text-xs sm:grid-cols-5">
                 <div>
                   <span className="text-muted-foreground">মোট আয়</span>
                   <p className="text-sm font-bold text-emerald-700">
@@ -324,9 +337,19 @@ export function MonthlyNetTab({
                   </p>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">মোট খরচ</span>
+                  <span className="text-muted-foreground">কাস্টম খরচ</span>
                   <p className="text-sm font-bold text-rose-700">
-                    {formatBDT(data.summary.totalExpense)}
+                    {formatBDT(data.summary.customExpenseTotal)}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">শিক্ষক বেতন</span>
+                  <p className="text-sm font-bold text-rose-700">
+                    {formatBDT(
+                      data.includePayroll
+                        ? data.summary.payrollExpenseTotal
+                        : 0,
+                    )}
                   </p>
                 </div>
                 <div>
@@ -393,11 +416,11 @@ export function MonthlyNetTab({
                   </div>
                 </div>
 
-                {/* Sheet-Wise Expense Breakdown */}
+                {/* Sheet-Wise + Payroll Expense Breakdown */}
                 <div className="rounded-xl border bg-muted/10 p-4">
                   <div className="mb-3 flex items-center justify-between">
                     <h4 className="text-xs font-semibold uppercase tracking-wide text-rose-800">
-                      খরচের শিটভিত্তিক হিসাব (Expense Breakdown)
+                      খরচের খাতভিত্তিক হিসাব (Expense Breakdown)
                     </h4>
                     <span className="text-xs font-bold text-rose-700">
                       {formatBDT(data.summary.totalExpense)}
@@ -405,36 +428,58 @@ export function MonthlyNetTab({
                   </div>
                   {data.expenseBreakdown.length === 0 ? (
                     <p className="py-6 text-center text-xs text-muted-foreground">
-                      এই মাসে ({data.billingMonth}) কোনো কাস্টম খরচের এন্ট্রি নেই।
+                      এই মাসে ({data.billingMonth}) কোনো খরচের রেকর্ড নেই।
                     </p>
                   ) : (
                     <div className="space-y-2.5">
-                      {data.expenseBreakdown.map((sheet) => (
-                        <div key={sheet.sheetId} className="space-y-1">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="font-medium">
-                              {sheet.sheetName}{" "}
-                              <span className="text-[10px] text-muted-foreground">
-                                ({sheet.entryCount} এন্ট্রি)
+                      {data.expenseBreakdown.map((item) => {
+                        const isPayroll = item.sourceType === "TEACHER_PAYROLL";
+                        return (
+                          <div
+                            key={`${item.sourceType ?? "SHEET"}-${item.sheetId}`}
+                            className="space-y-1"
+                          >
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="font-medium">
+                                {isPayroll ? (
+                                  <span className="inline-flex items-center gap-1.5">
+                                    <span>{item.sheetName}</span>
+                                    <span className="rounded bg-rose-100 px-1.5 py-0.5 text-[9px] font-semibold text-rose-800">
+                                      PAYROLL
+                                    </span>
+                                  </span>
+                                ) : (
+                                  <Link
+                                    href={`${customExpensesBase}?sheetId=${item.sheetId}&month=${data.billingMonth}`}
+                                    className="hover:text-primary hover:underline"
+                                  >
+                                    {item.sheetName}
+                                  </Link>
+                                )}{" "}
+                                <span className="text-[10px] text-muted-foreground">
+                                  ({item.entryCount} এন্ট্রি)
+                                </span>
                               </span>
-                            </span>
-                            <span className="font-semibold">
-                              {formatBDT(sheet.totalAmount)}{" "}
-                              <span className="text-[10px] font-normal text-muted-foreground">
-                                ({sheet.percentage}%)
+                              <span className="font-semibold">
+                                {formatBDT(item.totalAmount)}{" "}
+                                <span className="text-[10px] font-normal text-muted-foreground">
+                                  ({item.percentage}%)
+                                </span>
                               </span>
-                            </span>
+                            </div>
+                            <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                              <div
+                                className={`h-full rounded-full ${
+                                  isPayroll ? "bg-amber-600" : "bg-rose-500"
+                                }`}
+                                style={{
+                                  width: `${Math.min(100, item.percentage)}%`,
+                                }}
+                              />
+                            </div>
                           </div>
-                          <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                            <div
-                              className="h-full rounded-full bg-rose-500"
-                              style={{
-                                width: `${Math.min(100, sheet.percentage)}%`,
-                              }}
-                            />
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -448,7 +493,8 @@ export function MonthlyNetTab({
                       দৈনিক আয় বনাম খরচ — {formatMonthLong(data.billingMonth)}
                     </h4>
                     <p className="text-[11px] text-muted-foreground">
-                      প্রতিদিনের আয় ও খরচের তুলনামূলক চিত্র
+                      প্রতিদিনের আয় ও খরচের তুলনামূলক চিত্র (সর্বোচ্চ স্কেল:{" "}
+                      {formatBDT(maxDailyValue)})
                     </p>
                   </div>
                   <div className="flex items-center gap-3 text-[11px]">
@@ -522,7 +568,7 @@ export function MonthlyNetTab({
                 )}
               </div>
 
-              {/* 6-Month (or N-Month) Trend Chart + Summary Table */}
+              {/* N-Month Trend Chart + Summary Table */}
               <div className="space-y-4 rounded-xl border bg-muted/10 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
@@ -545,7 +591,7 @@ export function MonthlyNetTab({
 
                 {maxTrendValue > 0 && (
                   <div className="overflow-x-auto pb-1">
-                    <div className="flex h-40 min-w-[420px] items-end gap-4 border-b border-l px-4 pt-4">
+                    <div className="flex h-44 min-w-[420px] items-end gap-4 border-b border-l px-4 pt-6">
                       {data.trend.map((t) => {
                         const incPct =
                           t.totalIncome > 0
@@ -569,34 +615,50 @@ export function MonthlyNetTab({
                         return (
                           <div
                             key={t.billingMonth}
-                            className={`flex h-full flex-1 flex-col items-center justify-end rounded-t px-1 ${
+                            className={`group flex h-full flex-1 flex-col items-center justify-end rounded-t px-1 ${
                               isSelected ? "bg-primary/5" : ""
                             }`}
                             title={`${t.billingMonth} | আয়: ${formatBDT(t.totalIncome)} | খরচ: ${formatBDT(t.totalExpense)} | নিট: ${formatSignedBDT(t.netBalance)}`}
                           >
                             <div className="flex h-full items-end gap-1.5">
-                              <div
-                                className={`w-5 rounded-t ${
-                                  t.totalIncome > 0
-                                    ? "bg-emerald-500"
-                                    : "bg-muted/40"
-                                }`}
-                                style={{
-                                  height:
-                                    t.totalIncome > 0 ? `${incPct}%` : "3px",
-                                }}
-                              />
-                              <div
-                                className={`w-5 rounded-t ${
-                                  t.totalExpense > 0
-                                    ? "bg-rose-500"
-                                    : "bg-muted/40"
-                                }`}
-                                style={{
-                                  height:
-                                    t.totalExpense > 0 ? `${expPct}%` : "3px",
-                                }}
-                              />
+                              <div className="flex h-full flex-col items-center justify-end">
+                                {t.totalIncome > 0 && (
+                                  <span className="print-show-value mb-0.5 text-[8px] font-semibold text-emerald-700">
+                                    {Math.round(t.totalIncome).toLocaleString()}
+                                  </span>
+                                )}
+                                <div
+                                  className={`w-5 rounded-t ${
+                                    t.totalIncome > 0
+                                      ? "bg-emerald-500"
+                                      : "bg-muted/40"
+                                  }`}
+                                  style={{
+                                    height:
+                                      t.totalIncome > 0 ? `${incPct}%` : "3px",
+                                  }}
+                                />
+                              </div>
+                              <div className="flex h-full flex-col items-center justify-end">
+                                {t.totalExpense > 0 && (
+                                  <span className="print-show-value mb-0.5 text-[8px] font-semibold text-rose-700">
+                                    {Math.round(
+                                      t.totalExpense,
+                                    ).toLocaleString()}
+                                  </span>
+                                )}
+                                <div
+                                  className={`w-5 rounded-t ${
+                                    t.totalExpense > 0
+                                      ? "bg-rose-500"
+                                      : "bg-muted/40"
+                                  }`}
+                                  style={{
+                                    height:
+                                      t.totalExpense > 0 ? `${expPct}%` : "3px",
+                                  }}
+                                />
+                              </div>
                             </div>
                             <span
                               className={`mt-1.5 text-[10px] ${
@@ -621,6 +683,8 @@ export function MonthlyNetTab({
                       <tr>
                         <th className="px-3 py-2">মাস (Month)</th>
                         <th className="px-3 py-2 text-right">মোট আয় (BDT)</th>
+                        <th className="px-3 py-2 text-right">কাস্টম খরচ</th>
+                        <th className="px-3 py-2 text-right">শিক্ষক বেতন</th>
                         <th className="px-3 py-2 text-right">মোট খরচ (BDT)</th>
                         <th className="px-3 py-2 text-right">নিট ব্যালেন্স</th>
                         <th className="px-3 py-2 text-right">অবস্থা</th>
@@ -641,6 +705,14 @@ export function MonthlyNetTab({
                           </td>
                           <td className="px-3 py-2 text-right text-emerald-700">
                             {formatBDT(t.totalIncome)}
+                          </td>
+                          <td className="px-3 py-2 text-right text-muted-foreground">
+                            {formatBDT(t.customExpense ?? 0)}
+                          </td>
+                          <td className="px-3 py-2 text-right text-muted-foreground">
+                            {formatBDT(
+                              data.includePayroll ? (t.payrollExpense ?? 0) : 0,
+                            )}
                           </td>
                           <td className="px-3 py-2 text-right text-rose-700">
                             {formatBDT(t.totalExpense)}
@@ -678,6 +750,7 @@ export function MonthlyNetTab({
                         <td className="px-3 py-2.5 text-right text-emerald-700">
                           {formatBDT(trendTotals.income)}
                         </td>
+                        <td className="px-3 py-2.5 text-right" colSpan={2} />
                         <td className="px-3 py-2.5 text-right text-rose-700">
                           {formatBDT(trendTotals.expense)}
                         </td>

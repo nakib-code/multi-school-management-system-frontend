@@ -39,10 +39,22 @@ import {
   useResetStudentPassword,
   useStudents,
 } from "@/features/students/hooks";
+import type {
+  DiscountMode,
+  StudentConcessionType,
+} from "@/features/students/types";
 import { useTeachers } from "@/features/teachers/hooks";
 import { useDebounce } from "@/hooks/use-debounce";
 import { getApiErrorMessage } from "@/lib/api";
 import { useAuth } from "@/providers/auth-provider";
+
+const CONCESSION_SHORT: Record<StudentConcessionType, string> = {
+  ORPHAN: "এতিম",
+  LILLAH: "লিল্লাহ",
+  SIBLING: "ভাই-বোন",
+  SCHOLARSHIP: "বৃত্তি",
+  CUSTOM: "বিশেষ ছাড়",
+};
 
 const isSeniorClass = (name?: string, code?: string) => {
   const text = `${name ?? ""} ${code ?? ""}`.toLowerCase();
@@ -93,6 +105,10 @@ export function StudentsWorkspace() {
     quranWing: "" as "" | HefzWing,
     ustadId: "",
     rollNumber: "",
+    concessionType: "" as "" | StudentConcessionType,
+    concessionMode: "PERCENTAGE" as DiscountMode,
+    concessionValue: "",
+    concessionReason: "",
   });
 
   const { data, isLoading, isError, error, refetch } = useStudents(schoolId, {
@@ -149,6 +165,18 @@ export function StudentsWorkspace() {
         ...(admitForm.rollNumber
           ? { rollNumber: Number(admitForm.rollNumber) }
           : {}),
+        ...(admitForm.concessionType
+          ? {
+              concessionType: admitForm.concessionType,
+              concessionMode: admitForm.concessionMode,
+              ...(admitForm.concessionValue.trim() !== ""
+                ? { concessionValue: Number(admitForm.concessionValue) }
+                : {}),
+              ...(admitForm.concessionReason.trim()
+                ? { concessionReason: admitForm.concessionReason.trim() }
+                : {}),
+            }
+          : {}),
       });
 
       if (res.guardian?.isExistingGuardian) {
@@ -180,6 +208,10 @@ export function StudentsWorkspace() {
         quranWing: "",
         ustadId: "",
         rollNumber: "",
+        concessionType: "",
+        concessionMode: "PERCENTAGE",
+        concessionValue: "",
+        concessionReason: "",
       }));
     } catch {
       // Handled via mutation toast
@@ -301,6 +333,17 @@ export function StudentsWorkspace() {
                       <p className="font-mono text-[11px] text-muted-foreground">
                         {s.studentId}
                       </p>
+                      {s.concessionType && (
+                        <span className="mt-1 inline-block rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
+                          {CONCESSION_SHORT[s.concessionType]}
+                          {s.concessionValue != null &&
+                          Number(s.concessionValue) > 0
+                            ? s.concessionMode === "FIXED"
+                              ? ` · ৳${Number(s.concessionValue)}`
+                              : ` · ${Number(s.concessionValue)}%`
+                            : ""}
+                        </span>
+                      )}
                     </div>
                     <span
                       className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
@@ -432,6 +475,17 @@ export function StudentsWorkspace() {
                           <p className="text-xs text-muted-foreground">
                             {s.nameBangla}
                           </p>
+                        )}
+                        {s.concessionType && (
+                          <span className="mt-1 inline-block rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
+                            {CONCESSION_SHORT[s.concessionType]}
+                            {s.concessionValue != null &&
+                            Number(s.concessionValue) > 0
+                              ? s.concessionMode === "FIXED"
+                                ? ` · ৳${Number(s.concessionValue)}`
+                                : ` · ${Number(s.concessionValue)}%`
+                              : ""}
+                          </span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-xs">
@@ -829,6 +883,99 @@ export function StudentsWorkspace() {
                 placeholder="Auto / later"
               />
             </div>
+          </div>
+
+          <div className="rounded-lg border border-emerald-200/80 bg-emerald-50/40 p-3">
+            <p className="mb-2 text-xs font-semibold text-emerald-900">
+              বৃত্তি / এতিম / লিল্লাহ ছাড় (Optional Fee Concession)
+            </p>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Concession Type</Label>
+                <select
+                  value={admitForm.concessionType}
+                  onChange={(e) => {
+                    const val = e.target.value as "" | StudentConcessionType;
+                    setAdmitForm((prev) => ({
+                      ...prev,
+                      concessionType: val,
+                      concessionValue:
+                        val && !prev.concessionValue
+                          ? val === "ORPHAN" || val === "LILLAH"
+                            ? "100"
+                            : "25"
+                          : prev.concessionValue,
+                    }));
+                  }}
+                  className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+                >
+                  <option value="">None (কোনো ছাড় নেই)</option>
+                  <option value="ORPHAN">এতিম (Orphan)</option>
+                  <option value="LILLAH">লিল্লাহ (Lillah)</option>
+                  <option value="SIBLING">ভাই-বোন (Sibling)</option>
+                  <option value="SCHOLARSHIP">বৃত্তি (Scholarship)</option>
+                  <option value="CUSTOM">বিশেষ ছাড় (Custom)</option>
+                </select>
+              </div>
+              {admitForm.concessionType && (
+                <>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Mode</Label>
+                    <select
+                      value={admitForm.concessionMode}
+                      onChange={(e) =>
+                        setAdmitForm({
+                          ...admitForm,
+                          concessionMode: e.target.value as DiscountMode,
+                        })
+                      }
+                      className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+                    >
+                      <option value="PERCENTAGE">Percentage (%)</option>
+                      <option value="FIXED">Fixed (৳)</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">
+                      {admitForm.concessionMode === "FIXED"
+                        ? "Amount (৳)"
+                        : "Percent (%)"}
+                    </Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={admitForm.concessionMode === "FIXED" ? 999999 : 100}
+                      step="0.01"
+                      value={admitForm.concessionValue}
+                      onChange={(e) =>
+                        setAdmitForm({
+                          ...admitForm,
+                          concessionValue: e.target.value,
+                        })
+                      }
+                      placeholder={
+                        admitForm.concessionMode === "FIXED" ? "500" : "100"
+                      }
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+            {admitForm.concessionType && (
+              <div className="mt-2 space-y-1">
+                <Label className="text-xs">Concession Note (Optional)</Label>
+                <Input
+                  value={admitForm.concessionReason}
+                  onChange={(e) =>
+                    setAdmitForm({
+                      ...admitForm,
+                      concessionReason: e.target.value,
+                    })
+                  }
+                  placeholder="যেমন: এতিম শিক্ষার্থী — সম্পূর্ণ ফ্রি"
+                />
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end gap-2 pt-2">

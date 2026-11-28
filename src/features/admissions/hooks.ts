@@ -5,6 +5,7 @@ import { dashboardKeys } from "@/features/dashboard/hooks";
 import { enrollmentKeys } from "@/features/enrollments/hooks";
 import { feeKeys } from "@/features/fees/hooks";
 import { guardianKeys } from "@/features/guardians/hooks";
+import { incomeKeys } from "@/features/income/hooks";
 import { reportKeys } from "@/features/reports/hooks";
 import { studentKeys } from "@/features/students/hooks";
 
@@ -98,6 +99,10 @@ export function useApproveAdmission(schoolId: number) {
       queryClient.invalidateQueries({
         queryKey: reportKeys.all,
       });
+
+      queryClient.invalidateQueries({
+        queryKey: incomeKeys.all(schoolId),
+      });
     },
   });
 }
@@ -130,6 +135,10 @@ export function useRejectAdmission(schoolId: number) {
 
       queryClient.invalidateQueries({
         queryKey: dashboardKeys.all,
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: incomeKeys.all(schoolId),
       });
     },
   });
@@ -164,6 +173,10 @@ export function useConfirmCashPayment(schoolId: number) {
       queryClient.invalidateQueries({
         queryKey: dashboardKeys.all,
       });
+
+      queryClient.invalidateQueries({
+        queryKey: incomeKeys.all(schoolId),
+      });
     },
   });
 }
@@ -187,6 +200,7 @@ export function useVerifyOnlineAdmissionPayment(schoolId: number) {
       });
       queryClient.invalidateQueries({ queryKey: reportKeys.all });
       queryClient.invalidateQueries({ queryKey: dashboardKeys.all });
+      queryClient.invalidateQueries({ queryKey: incomeKeys.all(schoolId) });
     },
   });
 }
@@ -210,6 +224,7 @@ export function useRejectOnlineAdmissionPayment(schoolId: number) {
       });
       queryClient.invalidateQueries({ queryKey: reportKeys.all });
       queryClient.invalidateQueries({ queryKey: dashboardKeys.all });
+      queryClient.invalidateQueries({ queryKey: incomeKeys.all(schoolId) });
     },
   });
 }

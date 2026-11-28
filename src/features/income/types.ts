@@ -28,6 +28,8 @@ export interface UnifiedIncomeRow {
   entryId: number;
   date: string; // YYYY-MM-DD
   billingMonth: string; // YYYY-MM
+  feeBillingMonth: string | null;
+  receiptNo: string | null;
   category: UnifiedIncomeCategory;
   categoryLabel: string;
   sourceType: IncomeSourceType;
@@ -48,19 +50,35 @@ export interface IncomeDailyPoint {
   count: number;
 }
 
+export interface IncomeFilteredSummary {
+  monthlyFeeTotal: number;
+  admissionFeeTotal: number;
+  otherStudentFeeTotal: number;
+  otherIncomeTotal: number;
+  grandTotal: number;
+  byCategory: IncomeCategoryBreakdown[];
+  entryCount: number;
+}
+
 export interface IncomeSummaryResponse {
   billingMonth: string;
   category: IncomeCategoryFilter;
   startDate: string | null;
   endDate: string | null;
+  effectiveStartDate: string;
+  effectiveEndDate: string;
+  hasActiveFilters: boolean;
   monthlyFeeTotal: number;
   admissionFeeTotal: number;
   otherStudentFeeTotal: number;
   otherIncomeTotal: number;
   grandTotal: number;
   filteredTotal: number;
+  filteredSummary: IncomeFilteredSummary;
   entryCount: number;
+  activeDaysCount: number;
   byCategory: IncomeCategoryBreakdown[];
+  dailySeries: IncomeDailyPoint[];
   rows: UnifiedIncomeRow[];
 }
 
@@ -68,12 +86,19 @@ export interface IncomeMonthlyChartResponse {
   school: PrintableSchoolHeader & { id: number };
   billingMonth: string;
   category: IncomeCategoryFilter;
+  startDate?: string | null;
+  endDate?: string | null;
+  effectiveStartDate?: string;
+  effectiveEndDate?: string;
+  hasActiveFilters?: boolean;
   monthlyFeeTotal: number;
   admissionFeeTotal: number;
   otherStudentFeeTotal: number;
   otherIncomeTotal: number;
   grandTotal: number;
   displayedTotal: number;
+  filteredTotal?: number;
+  filteredSummary?: IncomeFilteredSummary;
   entryCount: number;
   activeDaysCount: number;
   byCategory: IncomeCategoryBreakdown[];

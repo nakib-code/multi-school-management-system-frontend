@@ -9,11 +9,13 @@ import {
   Scale,
   TrendingUp,
   Users,
+  UserX,
   Wallet,
 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+import { DefaultersTab } from "@/components/school-modules/defaulters-tab";
 import { MonthlyNetTab } from "@/components/school-modules/monthly-net-tab";
 import { ErrorState } from "@/components/shared/error-state";
 import { LoadingState } from "@/components/shared/loading";
@@ -42,11 +44,18 @@ const sanitizeFilenamePart = (value: string) =>
     .replace(/[^a-z0-9_-]+/g, "-")
     .replace(/^-+|-+$/g, "") || "all";
 
-type ReportTab = "overview" | "monthly-net" | "admissions" | "fees" | "roster";
+type ReportTab =
+  | "overview"
+  | "monthly-net"
+  | "defaulters"
+  | "admissions"
+  | "fees"
+  | "roster";
 
 const VALID_REPORT_TABS: ReportTab[] = [
   "overview",
   "monthly-net",
+  "defaulters",
   "admissions",
   "fees",
   "roster",
@@ -218,6 +227,11 @@ function SchoolReportsWorkspaceInner() {
               icon: Scale,
             },
             {
+              id: "defaulters",
+              label: "বকেয়া তালিকা (Defaulters)",
+              icon: UserX,
+            },
+            {
               id: "admissions",
               label: "Admission Chart & Accounting",
               icon: GraduationCap,
@@ -267,6 +281,11 @@ function SchoolReportsWorkspaceInner() {
       {/* TAB 1B: MONTHLY NET INCOME VS EXPENSE */}
       {activeTab === "monthly-net" && (
         <MonthlyNetTab schoolId={schoolId} generatedBy={user?.name} />
+      )}
+
+      {/* TAB 1C: STUDENT-WISE DEFAULTER LIST */}
+      {activeTab === "defaulters" && (
+        <DefaultersTab schoolId={schoolId} generatedBy={user?.name} />
       )}
 
       {/* TAB 2: ADMISSION CHART & ACCOUNTING */}
@@ -811,6 +830,11 @@ function SchoolReportsWorkspaceInner() {
                           </td>
                           <td className="px-3 py-2 text-right text-emerald-700">
                             {formatBDT(row.paid)}
+                            {(row.waived ?? 0) > 0 && (
+                              <div className="text-[10px] text-slate-600">
+                                Waived: {formatBDT(row.waived ?? 0)}
+                              </div>
+                            )}
                           </td>
                           <td className="px-3 py-2 text-right text-amber-700">
                             {formatBDT(row.due)}

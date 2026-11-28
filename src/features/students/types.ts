@@ -3,6 +3,12 @@ import type {
   HefzWing,
   ResidentialType,
 } from "@/features/admissions/types";
+import type {
+  DiscountMode,
+  StudentConcessionType,
+} from "@/features/fees/types";
+
+export type { DiscountMode, StudentConcessionType };
 
 export interface StudentEnrollmentSummary {
   id: number;
@@ -124,6 +130,12 @@ export interface StudentRecord {
   previousTcUrl?: string | null;
   marksheetUrl?: string | null;
 
+  // Fee Concession / Scholarship Profile
+  concessionType?: StudentConcessionType | null;
+  concessionMode?: DiscountMode | null;
+  concessionValue?: number | string | null;
+  concessionReason?: string | null;
+
   isActive: boolean;
 
   user?: {
@@ -174,6 +186,10 @@ export interface CreateStudentInput {
   quranWing?: HefzWing;
   ustadId?: number;
   studentPhotoUrl?: string;
+  concessionType?: StudentConcessionType;
+  concessionMode?: DiscountMode;
+  concessionValue?: number;
+  concessionReason?: string;
 }
 
 export interface CreateStudentResponse {
@@ -240,4 +256,8 @@ export interface UpdateStudentInput {
   guardianNidUrl?: string | null;
   previousTcUrl?: string | null;
   marksheetUrl?: string | null;
+  concessionType?: StudentConcessionType | null;
+  concessionMode?: DiscountMode | null;
+  concessionValue?: number | null;
+  concessionReason?: string | null;
 }

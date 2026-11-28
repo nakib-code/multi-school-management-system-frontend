@@ -843,6 +843,8 @@
     left: 0;
     top: 0;
     width: 100%;
+    height: auto !important;
+    overflow: visible !important;
     border: none !important;
     box-shadow: none !important;
     padding: 0 !important;
@@ -855,21 +857,27 @@
     border: none !important;
     box-shadow: none !important;
     padding: 0 !important;
+    overflow: visible !important;
     background: #ffffff !important;
+  }
+
+  #printable-sheet .overflow-x-auto {
+    overflow: visible !important;
   }
 
   #printable-sheet table {
     width: 100% !important;
     border-collapse: collapse !important;
-    font-size: 11px !important;
+    font-size: 10.5px !important;
   }
 
   #printable-sheet thead {
     display: table-header-group;
   }
 
+  /* Keep grand total footer once at end of table instead of repeating on every page */
   #printable-sheet tfoot {
-    display: table-footer-group;
+    display: table-row-group;
   }
 
   #printable-sheet tr {
@@ -880,6 +888,10 @@
   #printable-sheet th,
   #printable-sheet td {
     border: 1px solid #cbd5e1 !important;
-    padding: 5px 7px !important;
+    padding: 4px 6px !important;
+  }
+
+  .print-show-value {
+    display: block !important;
   }
 }

@@ -1,6 +1,27 @@
 import type { MobilePaymentMethod } from "@/features/payments/types";
 
-export type StudentPaymentMethod = "CASH" | MobilePaymentMethod;
+export type StudentPaymentMethod =
+  | "CASH"
+  | MobilePaymentMethod
+  | "BANK_TRANSFER"
+  | "CHEQUE";
+
+export type StudentConcessionType =
+  | "ORPHAN"
+  | "LILLAH"
+  | "SIBLING"
+  | "SCHOLARSHIP"
+  | "CUSTOM";
+
+export type DiscountMode = "PERCENTAGE" | "FIXED";
+
+export const CONCESSION_TYPE_LABELS: Record<StudentConcessionType, string> = {
+  ORPHAN: "এতিম (Orphan)",
+  LILLAH: "লিল্লাহ বোর্ডিং (Lillah)",
+  SIBLING: "ভাই-বোন ছাড় (Sibling)",
+  SCHOLARSHIP: "বৃত্তি (Scholarship)",
+  CUSTOM: "বিশেষ ছাড় (Custom)",
+};
 
 export type FeeType =
   | "ADMISSION"
@@ -34,6 +55,7 @@ export interface StudentPaymentRecord {
   senderNumber: string;
   receiverNumber: string | null;
   trxId: string;
+  receiptNo?: string | null;
   paidAmount: number | string;
   status: StudentPaymentStatus;
   paidAt: string;
@@ -62,17 +84,33 @@ export interface StudentFeeRecord {
   feeType: FeeType;
   title: string;
   amount: number | string;
+  grossAmount?: number | string | null;
+  concessionAmount?: number | string | null;
+  concessionType?: StudentConcessionType | null;
+  waivedAmount?: number | string | null;
+  waiverReason?: string | null;
+  waivedAt?: string | null;
+  waivedBy?: { id: number; name: string; role: string } | null;
   dueDate: string;
   academicYear?: string | null;
   billingMonth?: string | null;
   examId?: number | null;
   status: FeeStatus;
+  storedStatus?: FeeStatus;
+  isOverdue?: boolean;
+  computedPaid?: number;
+  computedWaived?: number;
+  computedDue?: number;
   description: string | null;
   student?: {
     id: number;
     firstName: string;
     lastName: string | null;
     studentId: string;
+    concessionType?: StudentConcessionType | null;
+    concessionMode?: DiscountMode | null;
+    concessionValue?: number | string | null;
+    concessionReason?: string | null;
   };
   enrollment?: {
     id: number;
@@ -94,6 +132,7 @@ export interface CreateStudentFeeInput {
   title: string;
   amount?: number;
   useClassDefaultAmount?: boolean;
+  applyStudentConcession?: boolean;
   dueDate: string;
   academicYear?: string;
   billingMonth?: string;
@@ -109,6 +148,7 @@ export interface BulkCreateStudentFeeInput {
   title: string;
   amount?: number;
   useClassDefaultAmount?: boolean;
+  applyStudentConcession?: boolean;
   dueDate: string;
   billingMonth?: string;
   examId?: number;
@@ -120,6 +160,7 @@ export interface BulkCreateStudentFeeResult {
   resolvedAmount?: number;
   createdCount: number;
   skippedCount: number;
+  concessionAppliedCount?: number;
 }
 
 export interface SubmitStudentPaymentInput {

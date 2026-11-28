@@ -16,6 +16,7 @@ import {
   Search,
   Smartphone,
   Trash2,
+  UserX,
   XCircle,
 } from "lucide-react";
 import Link from "next/link";
@@ -50,6 +51,7 @@ import {
 } from "@/features/fees/hooks";
 import {
   ALL_FEE_TYPES,
+  CONCESSION_TYPE_LABELS,
   type FeeStatus,
   type FeeType,
   type StudentFeeRecord,
@@ -142,6 +144,8 @@ export function FeesWorkspace() {
     amount: "",
     dueDate: "",
     status: "PENDING" as FeeStatus,
+    waivedAmount: "",
+    waiverReason: "",
     description: "",
   });
 
@@ -261,35 +265,57 @@ export function FeesWorkspace() {
     return d.getTime();
   }, []);
 
-  // Compute paid, remaining, pending & overdue metadata per fee
+  // Compute paid, waived, remaining, pending & overdue metadata per fee
+  // (never wipes out already-verified payments when a partial or full waiver is applied)
   const enrichedFees = useMemo(() => {
     return fees.map((f) => {
       const feeAmount = Number(f.amount);
       const feePayments = f.payments ?? [];
-      const verifiedPaid = feePayments
-        .filter((p) => p.status === "VERIFIED")
-        .reduce((sum, p) => sum + Number(p.paidAmount), 0);
+      const verifiedPaid =
+        f.computedPaid !== undefined
+          ? f.computedPaid
+          : feePayments
+              .filter((p) => p.status === "VERIFIED")
+              .reduce((sum, p) => sum + Number(p.paidAmount), 0);
       const effectivePaid =
-        f.status === "PAID"
-          ? Math.max(feeAmount, verifiedPaid)
+        f.status === "PAID" && verifiedPaid === 0
+          ? feeAmount
+          : Math.min(feeAmount, verifiedPaid);
+      const waivedAmount =
+        f.computedWaived !== undefined
+          ? f.computedWaived
           : f.status === "WAIVED"
-            ? 0
-            : Math.min(feeAmount, verifiedPaid);
+            ? Math.max(
+                Number(f.waivedAmount ?? 0),
+                Math.max(0, feeAmount - effectivePaid),
+              )
+            : Math.min(
+                Math.max(0, feeAmount - effectivePaid),
+                Number(f.waivedAmount ?? 0),
+              );
       const hasPendingPayment = feePayments.some((p) => p.status === "PENDING");
       const remaining =
-        f.status === "WAIVED" || f.status === "PAID"
-          ? 0
-          : Math.max(0, feeAmount - verifiedPaid);
+        f.computedDue !== undefined
+          ? f.computedDue
+          : Math.max(0, feeAmount - effectivePaid - waivedAmount);
       const isOverdue =
-        f.status !== "PAID" &&
-        f.status !== "WAIVED" &&
-        remaining > 0 &&
-        new Date(f.dueDate).getTime() < nowStart;
+        f.isOverdue !== undefined
+          ? f.isOverdue
+          : f.status !== "PAID" &&
+            f.status !== "WAIVED" &&
+            remaining > 0 &&
+            new Date(f.dueDate).getTime() < nowStart;
 
       return {
         ...f,
         feeAmount,
         verifiedPaid: effectivePaid,
+        waivedAmountNum: waivedAmount,
+        concessionAmountNum: Number(f.concessionAmount ?? 0),
+        grossAmountNum:
+          f.grossAmount !== null && f.grossAmount !== undefined
+            ? Number(f.grossAmount)
+            : null,
         remaining,
         hasPendingPayment,
         isOverdue,
@@ -317,7 +343,8 @@ export function FeesWorkspace() {
     let totalDue = 0;
     let overdueCount = 0;
     for (const f of enrichedFees) {
-      if (f.status !== "WAIVED") {
+      const fullyWaivedUnpaid = f.status === "WAIVED" && f.verifiedPaid === 0;
+      if (!fullyWaivedUnpaid) {
         totalBilled += f.feeAmount;
         totalPaid += Math.min(f.feeAmount, f.verifiedPaid);
         totalDue += f.remaining;
@@ -581,7 +608,10 @@ export function FeesWorkspace() {
       dueDate: fee.dueDate
         ? new Date(fee.dueDate).toISOString().slice(0, 10)
         : "",
-      status: fee.status,
+      status: fee.storedStatus ?? fee.status,
+      waivedAmount:
+        Number(fee.waivedAmount ?? 0) > 0 ? String(fee.waivedAmount) : "",
+      waiverReason: fee.waiverReason ?? "",
       description: fee.description ?? "",
     });
   };
@@ -589,6 +619,10 @@ export function FeesWorkspace() {
   const handleUpdateFee = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editFee) return;
+    const parsedWaived =
+      editFeeForm.waivedAmount.trim() !== ""
+        ? Number(editFeeForm.waivedAmount)
+        : undefined;
     try {
       await updateFeeMut.mutateAsync({
         id: editFee.id,
@@ -596,7 +630,15 @@ export function FeesWorkspace() {
           title: editFeeForm.title.trim(),
           amount: Number(editFeeForm.amount),
           dueDate: editFeeForm.dueDate,
-          status: editFeeForm.status,
+          ...(isAdmin
+            ? {
+                status: editFeeForm.status,
+                ...(parsedWaived !== undefined && Number.isFinite(parsedWaived)
+                  ? { waivedAmount: parsedWaived }
+                  : {}),
+                waiverReason: editFeeForm.waiverReason.trim() || null,
+              }
+            : {}),
           description: editFeeForm.description.trim() || null,
         },
       });
@@ -627,7 +669,9 @@ export function FeesWorkspace() {
         paymentMethod: payForm.paymentMethod,
         ...(!isCash
           ? {
-              senderNumber: payForm.senderNumber.trim(),
+              ...(payForm.senderNumber.trim()
+                ? { senderNumber: payForm.senderNumber.trim() }
+                : {}),
               trxId: payForm.trxId.trim().toUpperCase(),
             }
           : {}),
@@ -674,6 +718,13 @@ export function FeesWorkspace() {
         </div>
         {canManage && (
           <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href={`${user?.role === "MANAGER" ? "/dashboard/manager/reports" : "/dashboard/admin/reports"}?tab=defaulters`}
+              className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-background px-3 text-sm font-medium hover:bg-muted"
+            >
+              <UserX className="h-4 w-4 text-amber-600" />
+              বকেয়া তালিকা
+            </Link>
             <Link
               href={`${user?.role === "MANAGER" ? "/dashboard/manager/reports" : "/dashboard/admin/reports"}?tab=fees`}
               className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-background px-3 text-sm font-medium hover:bg-muted"
@@ -932,10 +983,28 @@ export function FeesWorkspace() {
                     <td className="px-4 py-3">
                       <p className="font-medium">
                         ৳{f.feeAmount.toLocaleString()}
+                        {f.concessionAmountNum > 0 && (
+                          <span className="ml-1.5 rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-semibold text-violet-800">
+                            {f.concessionType
+                              ? CONCESSION_TYPE_LABELS[f.concessionType]
+                              : "ছাড়"}{" "}
+                            −৳{f.concessionAmountNum.toLocaleString()}
+                          </span>
+                        )}
                       </p>
                       <p className="text-xs text-emerald-700">
                         Paid: ৳{f.verifiedPaid.toLocaleString()}
+                        {f.waivedAmountNum > 0 && (
+                          <span className="ml-1.5 text-slate-600">
+                            • Waived: ৳{f.waivedAmountNum.toLocaleString()}
+                          </span>
+                        )}
                       </p>
+                      {f.waiverReason && (
+                        <p className="text-[10px] text-muted-foreground">
+                          মওকুফ কারণ: {f.waiverReason}
+                        </p>
+                      )}
                     </td>
                     <td className="px-4 py-3 font-semibold">
                       {f.remaining > 0 ? (
@@ -1559,9 +1628,13 @@ export function FeesWorkspace() {
               className="h-9 w-full rounded-md border bg-background px-3 text-sm"
             >
               {canManage && (
-                <option value="CASH">
-                  Cash (Office Counter — Instant Verified)
-                </option>
+                <>
+                  <option value="CASH">
+                    Cash (Office Counter — Instant Verified)
+                  </option>
+                  <option value="BANK_TRANSFER">Bank Transfer</option>
+                  <option value="CHEQUE">Cheque</option>
+                </>
               )}
               {mfsProviders.map((item) => (
                 <option
@@ -1578,22 +1651,43 @@ export function FeesWorkspace() {
 
           {payForm.paymentMethod !== "CASH" && (
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1">
-                <Label>Sender Number</Label>
+              {(payForm.paymentMethod === "BKASH" ||
+                payForm.paymentMethod === "NAGAD" ||
+                payForm.paymentMethod === "ROCKET") && (
+                <div className="space-y-1">
+                  <Label>Sender Number</Label>
+                  <Input
+                    required
+                    placeholder="01XXXXXXXXX"
+                    value={payForm.senderNumber}
+                    onChange={(e) =>
+                      setPayForm({ ...payForm, senderNumber: e.target.value })
+                    }
+                  />
+                </div>
+              )}
+              <div
+                className={`space-y-1 ${
+                  payForm.paymentMethod === "BANK_TRANSFER" ||
+                  payForm.paymentMethod === "CHEQUE"
+                    ? "sm:col-span-2"
+                    : ""
+                }`}
+              >
+                <Label>
+                  {payForm.paymentMethod === "BANK_TRANSFER"
+                    ? "Bank Transfer Reference No"
+                    : payForm.paymentMethod === "CHEQUE"
+                      ? "Cheque Number"
+                      : "Transaction ID (TrxID)"}
+                </Label>
                 <Input
                   required
-                  placeholder="01XXXXXXXXX"
-                  value={payForm.senderNumber}
-                  onChange={(e) =>
-                    setPayForm({ ...payForm, senderNumber: e.target.value })
+                  placeholder={
+                    payForm.paymentMethod === "CHEQUE"
+                      ? "e.g. CHQ-40291"
+                      : "e.g. 9K2L8M4N"
                   }
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>Transaction ID (TrxID)</Label>
-                <Input
-                  required
-                  placeholder="e.g. 9K2L8M4N"
                   className="font-mono uppercase"
                   value={payForm.trxId}
                   onChange={(e) =>
@@ -1742,22 +1836,63 @@ export function FeesWorkspace() {
               <Label>Status</Label>
               <select
                 value={editFeeForm.status}
+                disabled={!isAdmin}
                 onChange={(e) =>
                   setEditFeeForm({
                     ...editFeeForm,
                     status: e.target.value as FeeStatus,
                   })
                 }
-                className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+                className="h-9 w-full rounded-md border bg-background px-3 text-sm disabled:opacity-60"
               >
                 <option value="PENDING">Pending</option>
                 <option value="PARTIAL">Partial</option>
                 <option value="OVERDUE">Overdue</option>
                 <option value="PAID">Paid</option>
-                <option value="WAIVED">Waived (Fee Forgiven)</option>
+                <option value="WAIVED">Waived (Remaining Forgiven)</option>
               </select>
             </div>
           </div>
+          {isAdmin ? (
+            <div className="grid gap-3 rounded-xl border bg-muted/20 p-3 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label>আংশিক / পূর্ণ মওকুফ (Waived Amount ৳)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  placeholder="0"
+                  value={editFeeForm.waivedAmount}
+                  onChange={(e) =>
+                    setEditFeeForm({
+                      ...editFeeForm,
+                      waivedAmount: e.target.value,
+                    })
+                  }
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  আগে পরিশোধিত টাকা অক্ষুণ্ণ রেখে বাকি টাকা মওকুফ করুন।
+                </p>
+              </div>
+              <div className="space-y-1">
+                <Label>মওকুফের কারণ (Waiver Reason)</Label>
+                <Input
+                  placeholder="যেমন: এতিম / আর্থিক অসচ্ছলতা / মুহতামিমের অনুমোদন"
+                  value={editFeeForm.waiverReason}
+                  onChange={(e) =>
+                    setEditFeeForm({
+                      ...editFeeForm,
+                      waiverReason: e.target.value,
+                    })
+                  }
+                />
+              </div>
+            </div>
+          ) : (
+            <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              আংশিক বা পূর্ণ ফি মওকুফ (Waiver) অনুমোদনের ক্ষমতা শুধু School Admin-এর।
+            </p>
+          )}
           <div className="space-y-1">
             <Label>Due Date</Label>
             <Input
@@ -1826,7 +1961,7 @@ export function FeesWorkspace() {
         open={Boolean(receiptPayment)}
         onClose={() => setReceiptPayment(null)}
         title="Fee Payment Receipt"
-        description={`Official receipt #FEE-${receiptPayment?.id ?? ""}`}
+        description={`Official receipt #${receiptPayment?.receiptNo ?? `FEE-${receiptPayment?.id ?? ""}`}`}
       >
         {receiptPayment && (
           <div className="space-y-4 text-sm">
@@ -1836,13 +1971,14 @@ export function FeesWorkspace() {
                   Official Fee Payment Receipt
                 </p>
                 <p className="font-mono text-xs text-muted-foreground">
-                  Receipt #FEE-{receiptPayment.id}
+                  Receipt #
+                  {receiptPayment.receiptNo ?? `FEE-${receiptPayment.id}`}
                 </p>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Receipt No</span>
                 <span className="font-mono font-semibold">
-                  FEE-{receiptPayment.id}
+                  {receiptPayment.receiptNo ?? `FEE-${receiptPayment.id}`}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -1916,7 +2052,7 @@ export function FeesWorkspace() {
           <div className="border-b pb-3 text-center">
             <p className="text-lg font-bold">Official Fee Payment Receipt</p>
             <p className="font-mono text-xs text-muted-foreground">
-              Receipt #FEE-{receiptPayment.id}
+              Receipt #{receiptPayment.receiptNo ?? `FEE-${receiptPayment.id}`}
             </p>
           </div>
           <div className="space-y-2">

@@ -7,6 +7,7 @@ import {
   ChevronRight,
   Pencil,
   Plus,
+  Printer,
   Scale,
   Search,
   Trash2,
@@ -19,7 +20,10 @@ import { toast } from "sonner";
 import { Modal } from "@/components/modals/modal";
 import { ErrorState } from "@/components/shared/error-state";
 import { LoadingState } from "@/components/shared/loading";
-import { PrintableReportSheet } from "@/components/shared/printable-report-sheet";
+import {
+  PrintableReportSheet,
+  triggerSheetPdfPrint,
+} from "@/components/shared/printable-report-sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,7 +33,6 @@ import {
   useCreateOtherIncome,
   useDeleteOtherIncome,
   useIncomeMonthlyChart,
-  useIncomeSummary,
   useUpdateOtherIncome,
 } from "@/features/income/hooks";
 import type {
@@ -39,38 +42,14 @@ import type {
 } from "@/features/income/types";
 import { useDebounce } from "@/hooks/use-debounce";
 import { getApiErrorMessage } from "@/lib/api";
+import {
+  formatBDT,
+  formatMonthLong,
+  getCurrentDhakaMonth,
+  getTodayDhakaDate,
+  shiftBillingMonth,
+} from "@/lib/dhaka-date";
 import { useAuth } from "@/providers/auth-provider";
-
-const formatBDT = (amount: number) =>
-  `৳${Number(amount || 0).toLocaleString("en-BD", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  })}`;
-
-const getTodayLocalDate = (): string => {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, "0");
-  const d = String(now.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-};
-
-const getCurrentMonth = (): string => getTodayLocalDate().slice(0, 7);
-
-const shiftBillingMonth = (billingMonth: string, delta: number): string => {
-  const [yStr, mStr] = billingMonth.split("-");
-  const date = new Date(Number(yStr), Number(mStr) - 1 + delta, 1);
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  return `${y}-${m}`;
-};
-
-const formatMonthLabel = (billingMonth: string): string => {
-  const [yStr, mStr] = billingMonth.split("-");
-  const date = new Date(Number(yStr), Number(mStr) - 1, 1);
-  if (Number.isNaN(date.getTime())) return billingMonth;
-  return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-};
 
 const CATEGORY_TABS: Array<{
   id: IncomeCategoryFilter;
@@ -88,6 +67,7 @@ const SOURCE_LABEL_SUGGESTIONS = [
   "বই/কাগজ বিক্রি",
   "ফরম বিক্রি",
   "ভাড়া / হলরুম",
+  "লিল্লাহ ফান্ড",
   "অন্যান্য আয়",
 ];
 
@@ -110,13 +90,26 @@ const PAYMENT_METHODS: StudentPaymentMethod[] = [
   "BKASH",
   "NAGAD",
   "ROCKET",
+  "BANK_TRANSFER",
+  "CHEQUE",
 ];
+
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  CASH: "Cash (নগদ)",
+  BKASH: "bKash",
+  NAGAD: "Nagad",
+  ROCKET: "Rocket",
+  BANK_TRANSFER: "Bank Transfer (ব্যাংক)",
+  CHEQUE: "Cheque (চেক)",
+};
 
 export function IncomeWorkspace() {
   const { user } = useAuth();
   const schoolId = user?.schoolId ?? 0;
+  const isAdmin = user?.role === "ADMIN";
 
-  const [billingMonth, setBillingMonth] = useState<string>(getCurrentMonth);
+  const [billingMonth, setBillingMonth] =
+    useState<string>(getCurrentDhakaMonth);
   const [category, setCategory] = useState<IncomeCategoryFilter>("ALL");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
@@ -129,7 +122,7 @@ export function IncomeWorkspace() {
   const [sourceLabel, setSourceLabel] = useState("");
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
-  const [incomeDate, setIncomeDate] = useState<string>(getTodayLocalDate);
+  const [incomeDate, setIncomeDate] = useState<string>(getTodayDhakaDate);
   const [paymentMethod, setPaymentMethod] =
     useState<StudentPaymentMethod>("CASH");
   const [referenceNo, setReferenceNo] = useState("");
@@ -140,58 +133,25 @@ export function IncomeWorkspace() {
     null,
   );
 
+  // Printable Money / Donation Receipt Modal state
+  const [receiptRow, setReceiptRow] = useState<UnifiedIncomeRow | null>(null);
+
   const hasSubFilters = Boolean(startDate || endDate || debouncedSearch);
 
-  const chartQuery = useIncomeMonthlyChart(schoolId, billingMonth, category);
-  const summaryQuery = useIncomeSummary(
-    schoolId,
-    {
-      billingMonth,
-      category,
-      ...(startDate ? { startDate } : {}),
-      ...(endDate ? { endDate } : {}),
-      ...(debouncedSearch ? { search: debouncedSearch } : {}),
-    },
-    hasSubFilters,
-  );
+  const chartQuery = useIncomeMonthlyChart(schoolId, billingMonth, category, {
+    ...(startDate ? { startDate } : {}),
+    ...(endDate ? { endDate } : {}),
+    ...(debouncedSearch ? { search: debouncedSearch } : {}),
+  });
 
   const createMut = useCreateOtherIncome(schoolId);
   const updateMut = useUpdateOtherIncome(schoolId);
   const deleteMut = useDeleteOtherIncome(schoolId);
 
   const chart = chartQuery.data;
-  const activeSummary = hasSubFilters ? summaryQuery.data : chart;
-
-  const rows = useMemo(() => activeSummary?.rows ?? [], [activeSummary]);
-  const displayedTotal = useMemo(() => {
-    if (!activeSummary) return 0;
-    return "filteredTotal" in activeSummary
-      ? activeSummary.filteredTotal
-      : activeSummary.displayedTotal;
-  }, [activeSummary]);
-
-  const dailySeries = useMemo(() => {
-    if (!chart) return [];
-    if (!hasSubFilters) return chart.dailySeries;
-    // Re-aggregate daily series from filtered summary rows so chart reflects date/search filters
-    const byDate = new Map<string, { totalAmount: number; count: number }>();
-    for (const row of rows) {
-      const prev = byDate.get(row.date) ?? { totalAmount: 0, count: 0 };
-      prev.totalAmount =
-        Math.round((prev.totalAmount + row.amount + Number.EPSILON) * 100) /
-        100;
-      prev.count += 1;
-      byDate.set(row.date, prev);
-    }
-    return chart.dailySeries.map((pt) => {
-      const hit = byDate.get(pt.date);
-      return {
-        ...pt,
-        totalAmount: hit?.totalAmount ?? 0,
-        count: hit?.count ?? 0,
-      };
-    });
-  }, [chart, hasSubFilters, rows]);
+  const rows = useMemo(() => chart?.rows ?? [], [chart]);
+  const displayedTotal = chart?.displayedTotal ?? 0;
+  const dailySeries = useMemo(() => chart?.dailySeries ?? [], [chart]);
 
   const maxDailyIncome = useMemo(
     () =>
@@ -205,12 +165,24 @@ export function IncomeWorkspace() {
   const activeCategoryLabel =
     CATEGORY_TABS.find((t) => t.id === category)?.label ?? "সব আয় (All)";
 
+  const isMultiMonthRange = Boolean(
+    chart?.effectiveStartDate &&
+      chart?.effectiveEndDate &&
+      chart.effectiveStartDate.slice(0, 7) !==
+        chart.effectiveEndDate.slice(0, 7),
+  );
+
+  const periodRangeLabel =
+    startDate || endDate
+      ? `${chart?.effectiveStartDate ?? startDate} থেকে ${chart?.effectiveEndDate ?? endDate}`
+      : formatMonthLong(billingMonth);
+
   const resetModalForm = () => {
     setEditingRow(null);
     setSourceLabel("");
     setTitle("");
     setAmount("");
-    const today = getTodayLocalDate();
+    const today = getTodayDhakaDate();
     setIncomeDate(
       today.startsWith(billingMonth) ? today : `${billingMonth}-01`,
     );
@@ -269,7 +241,7 @@ export function IncomeWorkspace() {
         sourceLabel: trimmedSource,
         title: trimmedTitle,
         amount: amountNum,
-        incomeDate: incomeDate.trim() || getTodayLocalDate(),
+        incomeDate: incomeDate.trim() || getTodayDhakaDate(),
         paymentMethod,
         referenceNo: referenceNo.trim() || null,
         notes: notes.trim() || null,
@@ -313,11 +285,6 @@ export function IncomeWorkspace() {
     );
   }
 
-  const isLoading =
-    chartQuery.isLoading || (hasSubFilters && summaryQuery.isLoading);
-  const isError = chartQuery.isError || (hasSubFilters && summaryQuery.isError);
-  const errorObj = chartQuery.error ?? summaryQuery.error;
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -328,7 +295,7 @@ export function IncomeWorkspace() {
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             ছাত্রদের মাসিক ফি, অ্যাডমিশন ফি, অন্যান্য ফি এবং আউট ইনকাম (দান / অনুদান /
-            বিক্রি) — এক জায়গায় মাসিক চার্ট ও এক ক্লিকে PDF/CSV এক্সপোর্ট।
+            বিক্রি) — এক জায়গায় মাসিক চার্ট, মানি রশিদ ও PDF/CSV এক্সপোর্ট।
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
@@ -349,7 +316,6 @@ export function IncomeWorkspace() {
       {/* Category Tabs + Month & Date/Search Controls */}
       <div className="no-print space-y-3 rounded-xl border bg-card p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          {/* Category Tabs */}
           <div className="flex flex-wrap gap-1.5">
             {CATEGORY_TABS.map((tab) => {
               const active = category === tab.id;
@@ -370,7 +336,6 @@ export function IncomeWorkspace() {
             })}
           </div>
 
-          {/* Month Selector */}
           <div className="flex items-center gap-1.5">
             <Button
               type="button"
@@ -426,7 +391,7 @@ export function IncomeWorkspace() {
             <Input
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="ছাত্রের নাম, উৎস, TrxID বা বিবরণ খুঁজুন..."
+              placeholder="ছাত্রের নাম, উৎস, রশিদ নং, TrxID বা বিবরণ খুঁজুন..."
               className="h-9 pl-8 text-sm"
             />
           </div>
@@ -435,7 +400,7 @@ export function IncomeWorkspace() {
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
             aria-label="Filter start date"
-            title="শুরুর তারিখ (ঐচ্ছিক)"
+            title="শুরুর তারিখ (যেকোনো তারিখ)"
             className="h-9 text-xs"
           />
           <div className="flex items-center gap-1.5">
@@ -444,7 +409,7 @@ export function IncomeWorkspace() {
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
               aria-label="Filter end date"
-              title="শেষ তারিখ (ঐচ্ছিক)"
+              title="শেষ তারিখ (যেকোনো তারিখ)"
               className="h-9 text-xs"
             />
             {hasSubFilters && (
@@ -468,382 +433,454 @@ export function IncomeWorkspace() {
       </div>
 
       {/* Main Content */}
-      {isLoading ? (
+      {chartQuery.isLoading ? (
         <LoadingState message="আয়ের হিসাব ও মাসিক চার্ট লোড হচ্ছে..." />
-      ) : isError || !chart || !activeSummary ? (
+      ) : chartQuery.isError || !chart ? (
         <ErrorState
           message={getApiErrorMessage(
-            errorObj,
+            chartQuery.error,
             "Failed to load unified income data",
           )}
-          onRetry={() => {
-            void chartQuery.refetch();
-            if (hasSubFilters) void summaryQuery.refetch();
-          }}
+          onRetry={() => void chartQuery.refetch()}
         />
       ) : (
         <>
-          {/* 5 KPI Summary Cards */}
-          <div className="no-print grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4">
-              <div className="flex items-center justify-between text-xs font-medium text-emerald-800">
-                <span>মোট আয় (Total Income)</span>
-                <TrendingUp className="h-4 w-4 text-emerald-600" />
+          {/* 5 KPI Summary Cards — Clearly distinguish Period Total vs Active Filter */}
+          <div className="no-print space-y-2">
+            {(debouncedSearch || category !== "ALL") && (
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50/70 px-3.5 py-2 text-xs text-amber-900">
+                <span>
+                  সক্রিয় ফিল্টার ({activeCategoryLabel}
+                  {debouncedSearch ? ` • খোঁজ: "${debouncedSearch}"` : ""}) —
+                  ফিল্টারকৃত মোট: <strong>{formatBDT(displayedTotal)}</strong> (
+                  {rows.length}টি রেকর্ড) | সম্পূর্ণ সময়কালের মোট:{" "}
+                  <strong>{formatBDT(chart.grandTotal)}</strong>
+                </span>
               </div>
-              <p className="mt-1.5 text-2xl font-bold text-emerald-900">
-                {formatBDT(activeSummary.grandTotal)}
-              </p>
-              <p className="mt-0.5 text-[11px] text-emerald-700">
-                {formatMonthLabel(billingMonth)}
-              </p>
-            </div>
-            <div className="rounded-xl border bg-card p-4">
-              <p className="text-xs font-medium text-muted-foreground">
-                ছাত্রদের মাসিক ফি
-              </p>
-              <p className="mt-1.5 text-xl font-bold">
-                {formatBDT(activeSummary.monthlyFeeTotal)}
-              </p>
-            </div>
-            <div className="rounded-xl border bg-card p-4">
-              <p className="text-xs font-medium text-muted-foreground">
-                ছাত্রদের অ্যাডমিশন ফি
-              </p>
-              <p className="mt-1.5 text-xl font-bold text-blue-700">
-                {formatBDT(activeSummary.admissionFeeTotal)}
-              </p>
-            </div>
-            <div className="rounded-xl border bg-card p-4">
-              <p className="text-xs font-medium text-muted-foreground">
-                অন্যান্য ছাত্র ফি
-              </p>
-              <p className="mt-1.5 text-xl font-bold text-violet-700">
-                {formatBDT(activeSummary.otherStudentFeeTotal)}
-              </p>
-            </div>
-            <div className="rounded-xl border bg-card p-4">
-              <p className="text-xs font-medium text-muted-foreground">
-                অন্যান্য আয় (Out Income)
-              </p>
-              <p className="mt-1.5 text-xl font-bold text-amber-700">
-                {formatBDT(activeSummary.otherIncomeTotal)}
-              </p>
+            )}
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4">
+                <div className="flex items-center justify-between text-xs font-medium text-emerald-800">
+                  <span>সময়কালের মোট আয়</span>
+                  <TrendingUp className="h-4 w-4 text-emerald-600" />
+                </div>
+                <p className="mt-1.5 text-2xl font-bold text-emerald-900">
+                  {formatBDT(chart.grandTotal)}
+                </p>
+                <p className="mt-0.5 text-[11px] text-emerald-700">
+                  {periodRangeLabel}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCategory("MONTHLY_FEE")}
+                className="rounded-xl border bg-card p-4 text-left transition hover:border-emerald-300"
+              >
+                <p className="text-xs font-medium text-muted-foreground">
+                  ছাত্রদের মাসিক ফি
+                </p>
+                <p className="mt-1.5 text-xl font-bold">
+                  {formatBDT(chart.monthlyFeeTotal)}
+                </p>
+              </button>
+              <button
+                type="button"
+                onClick={() => setCategory("ADMISSION_FEE")}
+                className="rounded-xl border bg-card p-4 text-left transition hover:border-blue-300"
+              >
+                <p className="text-xs font-medium text-muted-foreground">
+                  ছাত্রদের অ্যাডমিশন ফি
+                </p>
+                <p className="mt-1.5 text-xl font-bold text-blue-700">
+                  {formatBDT(chart.admissionFeeTotal)}
+                </p>
+              </button>
+              <button
+                type="button"
+                onClick={() => setCategory("OTHER_STUDENT_FEE")}
+                className="rounded-xl border bg-card p-4 text-left transition hover:border-violet-300"
+              >
+                <p className="text-xs font-medium text-muted-foreground">
+                  অন্যান্য ছাত্র ফি
+                </p>
+                <p className="mt-1.5 text-xl font-bold text-violet-700">
+                  {formatBDT(chart.otherStudentFeeTotal)}
+                </p>
+              </button>
+              <button
+                type="button"
+                onClick={() => setCategory("OTHER_INCOME")}
+                className="rounded-xl border bg-card p-4 text-left transition hover:border-amber-300"
+              >
+                <p className="text-xs font-medium text-muted-foreground">
+                  অন্যান্য আয় (Out Income)
+                </p>
+                <p className="mt-1.5 text-xl font-bold text-amber-700">
+                  {formatBDT(chart.otherIncomeTotal)}
+                </p>
+              </button>
             </div>
           </div>
 
           {/* Printable Monthly Income Report & Ledger */}
-          <PrintableReportSheet
-            school={chart.school}
-            title={`মাসিক আয়ের চার্ট ও হিসাব — ${activeCategoryLabel}`}
-            subtitle="ভেরিফায়েড ছাত্র ফি, অ্যাডমিশন ফি এবং অন্যান্য আয়ের সমন্বিত প্রতিবেদন"
-            filterSummary={[
-              `মাস: ${formatMonthLabel(billingMonth)} (${billingMonth})`,
-              `ক্যাটাগরি: ${activeCategoryLabel}`,
-              ...(startDate || endDate
-                ? [`তারিখ: ${startDate || "..."} থেকে ${endDate || "..."}`]
-                : []),
-              `মোট এন্ট্রি: ${rows.length}`,
-            ]}
-            generatedBy={user?.name}
-            toolbarExtra={
-              <span className="inline-flex items-center gap-1.5 rounded-lg border bg-muted/40 px-3 py-1.5 text-xs font-medium text-muted-foreground">
-                <BarChart3 className="h-3.5 w-3.5 text-emerald-600" />
-                প্রদর্শিত মোট:{" "}
-                <strong className="text-foreground">
-                  {formatBDT(displayedTotal)}
-                </strong>
-              </span>
-            }
-            csvExport={{
-              filename: `income-report-${category.toLowerCase()}-${billingMonth}`,
-              headers: [
-                "Serial",
-                "Date",
-                "Category",
-                "Source / Student",
-                "Title",
-                "Payment Method",
-                "Reference / TrxID",
-                "Amount (BDT)",
-              ],
-              rows: [
-                ...rows.map((r) => [
-                  r.serial,
-                  r.date,
-                  r.categoryLabel,
-                  r.sourceOrStudent,
-                  r.title,
-                  r.paymentMethod,
-                  r.referenceNo ?? "",
-                  r.amount,
-                ]),
-                [
-                  "TOTAL",
-                  `${rows.length} entries`,
-                  activeCategoryLabel,
-                  "",
-                  "",
-                  "",
-                  "",
-                  displayedTotal,
-                ],
-              ],
-            }}
-            footerTotals={
-              <div className="grid gap-3 text-xs sm:grid-cols-5">
-                <div>
-                  <span className="text-muted-foreground">মাসিক ফি</span>
-                  <p className="text-sm font-bold">
-                    {formatBDT(activeSummary.monthlyFeeTotal)}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">অ্যাডমিশন ফি</span>
-                  <p className="text-sm font-bold text-blue-700">
-                    {formatBDT(activeSummary.admissionFeeTotal)}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">অন্যান্য ছাত্র ফি</span>
-                  <p className="text-sm font-bold text-violet-700">
-                    {formatBDT(activeSummary.otherStudentFeeTotal)}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">অন্যান্য আয়</span>
-                  <p className="text-sm font-bold text-amber-700">
-                    {formatBDT(activeSummary.otherIncomeTotal)}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">
-                    {category === "ALL" && !hasSubFilters
-                      ? "সর্বমোট আয় (Grand Total)"
-                      : "ফিল্টারকৃত মোট"}
-                  </span>
-                  <p className="text-base font-bold text-emerald-700">
+          <div className={receiptRow ? "no-print" : undefined}>
+            <PrintableReportSheet
+              school={chart.school}
+              title={`আয়ের চার্ট ও হিসাব — ${activeCategoryLabel}`}
+              subtitle="ভেরিফায়েড ছাত্র ফি, অ্যাডমিশন ফি এবং অন্যান্য আয়ের সমন্বিত প্রতিবেদন"
+              filterSummary={[
+                `সময়কাল: ${periodRangeLabel}`,
+                `ক্যাটাগরি: ${activeCategoryLabel}`,
+                ...(debouncedSearch ? [`খোঁজ: ${debouncedSearch}`] : []),
+                `প্রদর্শিত রেকর্ড: ${rows.length}`,
+                `প্রদর্শিত মোট: ${formatBDT(displayedTotal)}`,
+              ]}
+              generatedBy={user?.name}
+              toolbarExtra={
+                <span className="inline-flex items-center gap-1.5 rounded-lg border bg-muted/40 px-3 py-1.5 text-xs font-medium text-muted-foreground">
+                  <BarChart3 className="h-3.5 w-3.5 text-emerald-600" />
+                  {chart.hasActiveFilters ? "ফিল্টারকৃত মোট:" : "সর্বমোট:"}{" "}
+                  <strong className="text-foreground">
                     {formatBDT(displayedTotal)}
-                  </p>
-                </div>
-              </div>
-            }
-          >
-            <div className="space-y-5">
-              {/* Visual Daily Income Bar Chart + Category Breakdown */}
-              <div className="grid gap-4 lg:grid-cols-3">
-                {/* Daily Bar Chart */}
-                <div className="rounded-xl border bg-muted/10 p-4 lg:col-span-2">
-                  <div className="mb-3 flex items-center justify-between gap-2">
-                    <div>
-                      <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        দৈনিক আয়ের চার্ট — {formatMonthLabel(billingMonth)}
-                      </h4>
-                      <p className="text-[11px] text-muted-foreground">
-                        প্রতিদিনের মোট আয় ({activeCategoryLabel})
-                      </p>
-                    </div>
-                    <span className="text-sm font-bold text-emerald-700">
-                      {formatBDT(displayedTotal)}
+                  </strong>
+                </span>
+              }
+              csvExport={{
+                filename: `income-report-${category.toLowerCase()}-${startDate || billingMonth}${endDate ? `-to-${endDate}` : ""}`,
+                headers: [
+                  "Serial",
+                  "Date",
+                  "Receipt No",
+                  "Category",
+                  "Source / Student",
+                  "Title",
+                  "Fee Billing Month",
+                  "Payment Method",
+                  "Reference / TrxID",
+                  "Notes",
+                  "Recorded By",
+                  "Amount (BDT)",
+                ],
+                rows: [
+                  ...rows.map((r) => [
+                    r.serial,
+                    r.date,
+                    r.receiptNo ?? "",
+                    r.categoryLabel,
+                    r.sourceOrStudent,
+                    r.title,
+                    r.feeBillingMonth ?? "",
+                    r.paymentMethod,
+                    r.referenceNo ?? "",
+                    r.notes ?? "",
+                    r.recordedBy ?? "",
+                    r.amount,
+                  ]),
+                  [
+                    "TOTAL",
+                    `${rows.length} entries`,
+                    "",
+                    activeCategoryLabel,
+                    "",
+                    "",
+                    "",
+                    "",
+                    "",
+                    "",
+                    "",
+                    displayedTotal,
+                  ],
+                ],
+              }}
+              footerTotals={
+                <div className="grid gap-3 text-xs sm:grid-cols-5">
+                  <div>
+                    <span className="text-muted-foreground">
+                      সময়কালের মাসিক ফি
                     </span>
+                    <p className="text-sm font-bold">
+                      {formatBDT(chart.monthlyFeeTotal)}
+                    </p>
                   </div>
-
-                  {maxDailyIncome <= 0 ? (
-                    <div className="flex h-32 items-center justify-center rounded-lg border border-dashed text-xs text-muted-foreground">
-                      এই সময়কালে কোনো আয় পাওয়া যায়নি।
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto pb-1">
-                      <div className="flex h-36 min-w-[480px] items-end gap-1 border-b border-l px-2 pt-4">
-                        {dailySeries.map((pt) => {
-                          const heightPct =
-                            pt.totalAmount > 0
-                              ? Math.max(
-                                  6,
-                                  Math.round(
-                                    (pt.totalAmount / maxDailyIncome) * 100,
-                                  ),
-                                )
-                              : 0;
-                          return (
-                            <div
-                              key={pt.date}
-                              className="group relative flex h-full flex-1 flex-col items-center justify-end"
-                              title={`${pt.date}: ${formatBDT(pt.totalAmount)} (${pt.count} এন্ট্রি)`}
-                            >
-                              {pt.totalAmount > 0 && (
-                                <span className="mb-1 hidden text-[9px] font-semibold text-emerald-700 group-hover:block">
-                                  {Math.round(pt.totalAmount)}
-                                </span>
-                              )}
-                              <div
-                                className={`w-full max-w-[16px] rounded-t transition-all ${
-                                  pt.totalAmount > 0
-                                    ? "bg-emerald-500/85 group-hover:bg-emerald-600"
-                                    : "bg-muted/40"
-                                }`}
-                                style={{
-                                  height:
-                                    pt.totalAmount > 0
-                                      ? `${heightPct}%`
-                                      : "2px",
-                                }}
-                              />
-                              <span className="mt-1 text-[9px] text-muted-foreground">
-                                {pt.day}
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Category Breakdown Bars */}
-                <div className="rounded-xl border bg-muted/10 p-4">
-                  <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    ক্যাটাগরি অনুযায়ী আয় (%)
-                  </h4>
-                  <div className="space-y-3">
-                    {activeSummary.byCategory.map((item) => (
-                      <div key={item.category} className="space-y-1">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-medium">{item.label}</span>
-                          <span className="font-semibold">
-                            {formatBDT(item.amount)}{" "}
-                            <span className="text-[11px] font-normal text-muted-foreground">
-                              ({item.percentage}%)
-                            </span>
-                          </span>
-                        </div>
-                        <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                          <div
-                            className={`h-full rounded-full ${CATEGORY_BAR_CLASS[item.category]}`}
-                            style={{
-                              width: `${Math.min(100, item.percentage)}%`,
-                            }}
-                          />
-                        </div>
-                      </div>
-                    ))}
+                  <div>
+                    <span className="text-muted-foreground">
+                      সময়কালের অ্যাডমিশন ফি
+                    </span>
+                    <p className="text-sm font-bold text-blue-700">
+                      {formatBDT(chart.admissionFeeTotal)}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">অন্যান্য ছাত্র ফি</span>
+                    <p className="text-sm font-bold text-violet-700">
+                      {formatBDT(chart.otherStudentFeeTotal)}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">অন্যান্য আয়</span>
+                    <p className="text-sm font-bold text-amber-700">
+                      {formatBDT(chart.otherIncomeTotal)}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">
+                      {chart.hasActiveFilters
+                        ? "ফিল্টারকৃত প্রদর্শিত মোট"
+                        : "সর্বমোট আয় (Grand Total)"}
+                    </span>
+                    <p className="text-base font-bold text-emerald-700">
+                      {formatBDT(displayedTotal)}
+                    </p>
                   </div>
                 </div>
-              </div>
+              }
+            >
+              <div className="space-y-5">
+                {/* Visual Daily Income Bar Chart + Category Breakdown */}
+                <div className="grid gap-4 lg:grid-cols-3">
+                  <div className="rounded-xl border bg-muted/10 p-4 lg:col-span-2">
+                    <div className="mb-3 flex items-center justify-between gap-2">
+                      <div>
+                        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          তারিখভিত্তিক আয়ের চার্ট — {periodRangeLabel}
+                        </h4>
+                        <p className="text-[11px] text-muted-foreground">
+                          প্রতিদিনের মোট আয় ({activeCategoryLabel}) • সর্বোচ্চ:{" "}
+                          {formatBDT(maxDailyIncome)}
+                        </p>
+                      </div>
+                      <span className="text-sm font-bold text-emerald-700">
+                        {formatBDT(displayedTotal)}
+                      </span>
+                    </div>
 
-              {/* Unified Income Ledger Table */}
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="border-b bg-muted/40 uppercase text-muted-foreground">
-                    <tr>
-                      <th className="px-3 py-2">#</th>
-                      <th className="px-3 py-2">তারিখ</th>
-                      <th className="px-3 py-2">ক্যাটাগরি</th>
-                      <th className="px-3 py-2">ছাত্র / উৎস</th>
-                      <th className="px-3 py-2">বিবরণ ও রেফারেন্স</th>
-                      <th className="px-3 py-2">মাধ্যম</th>
-                      <th className="px-3 py-2 text-right">টাকা (BDT)</th>
-                      <th className="no-print px-3 py-2 text-right">অ্যাকশন</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {rows.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan={8}
-                          className="px-3 py-8 text-center text-muted-foreground"
-                        >
-                          এই ফিল্টারে কোনো আয়ের রেকর্ড পাওয়া যায়নি।
-                        </td>
-                      </tr>
+                    {maxDailyIncome <= 0 ? (
+                      <div className="flex h-32 items-center justify-center rounded-lg border border-dashed text-xs text-muted-foreground">
+                        এই সময়কালে কোনো আয় পাওয়া যায়নি।
+                      </div>
                     ) : (
-                      rows.map((row) => (
-                        <tr key={row.id} className="hover:bg-muted/20">
-                          <td className="px-3 py-2 font-mono">{row.serial}</td>
-                          <td className="whitespace-nowrap px-3 py-2 font-mono">
-                            {row.date}
-                          </td>
-                          <td className="whitespace-nowrap px-3 py-2">
-                            <span
-                              className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${CATEGORY_BADGE_CLASS[row.category]}`}
-                            >
-                              {row.categoryLabel}
-                            </span>
-                          </td>
-                          <td className="px-3 py-2 font-medium">
-                            {row.sourceOrStudent}
-                          </td>
-                          <td className="px-3 py-2">
-                            <div className="font-medium">{row.title}</div>
-                            {(row.referenceNo || row.notes) && (
-                              <div className="text-[10px] text-muted-foreground">
-                                {row.referenceNo
-                                  ? `Ref: ${row.referenceNo}`
-                                  : ""}
-                                {row.referenceNo && row.notes ? " • " : ""}
-                                {row.notes ?? ""}
+                      <div className="overflow-x-auto pb-1">
+                        <div className="flex h-36 min-w-[480px] items-end gap-1 border-b border-l px-2 pt-5">
+                          {dailySeries.map((pt) => {
+                            const heightPct =
+                              pt.totalAmount > 0
+                                ? Math.max(
+                                    6,
+                                    Math.round(
+                                      (pt.totalAmount / maxDailyIncome) * 100,
+                                    ),
+                                  )
+                                : 0;
+                            return (
+                              <div
+                                key={pt.date}
+                                className="group relative flex h-full flex-1 flex-col items-center justify-end"
+                                title={`${pt.date}: ${formatBDT(pt.totalAmount)} (${pt.count} এন্ট্রি)`}
+                              >
+                                {pt.totalAmount > 0 && (
+                                  <span className="print-show-value mb-1 hidden text-[8px] font-semibold text-emerald-700 group-hover:block">
+                                    {Math.round(pt.totalAmount)}
+                                  </span>
+                                )}
+                                <div
+                                  className={`w-full max-w-[16px] rounded-t transition-all ${
+                                    pt.totalAmount > 0
+                                      ? "bg-emerald-500/85 group-hover:bg-emerald-600"
+                                      : "bg-muted/40"
+                                  }`}
+                                  style={{
+                                    height:
+                                      pt.totalAmount > 0
+                                        ? `${heightPct}%`
+                                        : "2px",
+                                  }}
+                                />
+                                <span className="mt-1 text-[8px] text-muted-foreground">
+                                  {isMultiMonthRange
+                                    ? pt.date.slice(5)
+                                    : pt.day}
+                                </span>
                               </div>
-                            )}
-                          </td>
-                          <td className="whitespace-nowrap px-3 py-2 font-medium">
-                            {row.paymentMethod}
-                          </td>
-                          <td className="whitespace-nowrap px-3 py-2 text-right font-semibold text-emerald-700">
-                            {formatBDT(row.amount)}
-                          </td>
-                          <td className="no-print whitespace-nowrap px-3 py-2 text-right">
-                            {row.sourceType === "MANUAL_INCOME" ? (
-                              <div className="inline-flex items-center gap-1">
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => openEditModal(row)}
-                                  className="h-7 w-7 p-0"
-                                  title="Edit manual income"
-                                >
-                                  <Pencil className="h-3.5 w-3.5" />
-                                </Button>
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => setDeleteTarget(row)}
-                                  className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                                  title="Delete manual income"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
-                              </div>
-                            ) : (
-                              <span className="text-[10px] text-muted-foreground">
-                                অটো সিঙ্ক
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Category Breakdown Bars */}
+                  <div className="rounded-xl border bg-muted/10 p-4">
+                    <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      ক্যাটাগরি অনুযায়ী আয় (সময়কাল %)
+                    </h4>
+                    <div className="space-y-3">
+                      {chart.byCategory.map((item) => (
+                        <div key={item.category} className="space-y-1">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-medium">{item.label}</span>
+                            <span className="font-semibold">
+                              {formatBDT(item.amount)}{" "}
+                              <span className="text-[11px] font-normal text-muted-foreground">
+                                ({item.percentage}%)
                               </span>
-                            )}
+                            </span>
+                          </div>
+                          <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                            <div
+                              className={`h-full rounded-full ${CATEGORY_BAR_CLASS[item.category]}`}
+                              style={{
+                                width: `${Math.min(100, item.percentage)}%`,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Unified Income Ledger Table */}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="border-b bg-muted/40 uppercase text-muted-foreground">
+                      <tr>
+                        <th className="px-3 py-2">#</th>
+                        <th className="px-3 py-2">তারিখ ও রশিদ</th>
+                        <th className="px-3 py-2">ক্যাটাগরি</th>
+                        <th className="px-3 py-2">ছাত্র / উৎস</th>
+                        <th className="px-3 py-2">বিবরণ ও রেফারেন্স</th>
+                        <th className="px-3 py-2">মাধ্যম</th>
+                        <th className="px-3 py-2 text-right">টাকা (BDT)</th>
+                        <th className="no-print px-3 py-2 text-right">অ্যাকশন</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {rows.length === 0 ? (
+                        <tr>
+                          <td
+                            colSpan={8}
+                            className="px-3 py-8 text-center text-muted-foreground"
+                          >
+                            এই ফিল্টারে কোনো আয়ের রেকর্ড পাওয়া যায়নি।
                           </td>
                         </tr>
-                      ))
+                      ) : (
+                        rows.map((row) => (
+                          <tr key={row.id} className="hover:bg-muted/20">
+                            <td className="px-3 py-2 font-mono">
+                              {row.serial}
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-2 font-mono">
+                              <div>{row.date}</div>
+                              {row.receiptNo && (
+                                <div className="text-[10px] font-semibold text-primary">
+                                  {row.receiptNo}
+                                </div>
+                              )}
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-2">
+                              <span
+                                className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${CATEGORY_BADGE_CLASS[row.category]}`}
+                              >
+                                {row.categoryLabel}
+                              </span>
+                            </td>
+                            <td className="px-3 py-2 font-medium">
+                              {row.sourceOrStudent}
+                            </td>
+                            <td className="px-3 py-2">
+                              <div className="flex flex-wrap items-center gap-1.5 font-medium">
+                                <span>{row.title}</span>
+                                {row.feeBillingMonth && (
+                                  <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                                    বিল মাস: {row.feeBillingMonth}
+                                  </span>
+                                )}
+                              </div>
+                              {(row.referenceNo || row.notes) && (
+                                <div className="text-[10px] text-muted-foreground">
+                                  {row.referenceNo
+                                    ? `Ref: ${row.referenceNo}`
+                                    : ""}
+                                  {row.referenceNo && row.notes ? " • " : ""}
+                                  {row.notes ?? ""}
+                                </div>
+                              )}
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-2 font-medium">
+                              {PAYMENT_METHOD_LABELS[row.paymentMethod] ??
+                                row.paymentMethod}
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-2 text-right font-semibold text-emerald-700">
+                              {formatBDT(row.amount)}
+                            </td>
+                            <td className="no-print whitespace-nowrap px-3 py-2 text-right">
+                              {row.sourceType === "MANUAL_INCOME" ? (
+                                <div className="inline-flex items-center gap-1">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => setReceiptRow(row)}
+                                    className="h-7 w-7 p-0 text-emerald-700"
+                                    title="মানি / অনুদান রশিদ প্রিন্ট"
+                                  >
+                                    <Printer className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => openEditModal(row)}
+                                    className="h-7 w-7 p-0"
+                                    title="Edit manual income"
+                                  >
+                                    <Pencil className="h-3.5 w-3.5" />
+                                  </Button>
+                                  {isAdmin && (
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => setDeleteTarget(row)}
+                                      className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                                      title="Delete manual income (Admin only)"
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-[10px] text-muted-foreground">
+                                  অটো সিঙ্ক
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                    {rows.length > 0 && (
+                      <tfoot className="border-t-2 bg-muted/30 font-semibold">
+                        <tr>
+                          <td
+                            colSpan={6}
+                            className="px-3 py-2.5 text-right uppercase"
+                          >
+                            মোট ({rows.length}টি রেকর্ড)
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-2.5 text-right text-sm font-bold text-emerald-700">
+                            {formatBDT(displayedTotal)}
+                          </td>
+                          <td className="no-print px-3 py-2.5" />
+                        </tr>
+                      </tfoot>
                     )}
-                  </tbody>
-                  {rows.length > 0 && (
-                    <tfoot className="border-t-2 bg-muted/30 font-semibold">
-                      <tr>
-                        <td
-                          colSpan={6}
-                          className="px-3 py-2.5 text-right uppercase"
-                        >
-                          মোট ({rows.length}টি রেকর্ড)
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-2.5 text-right text-sm font-bold text-emerald-700">
-                          {formatBDT(displayedTotal)}
-                        </td>
-                        <td className="no-print px-3 py-2.5" />
-                      </tr>
-                    </tfoot>
-                  )}
-                </table>
+                  </table>
+                </div>
               </div>
-            </div>
-          </PrintableReportSheet>
+            </PrintableReportSheet>
+          </div>
         </>
       )}
 
@@ -854,7 +891,7 @@ export function IncomeWorkspace() {
         title={
           editingRow ? "অন্যান্য আয় এডিট করুন" : "অন্যান্য আয় যুক্ত করুন (Add Out Income)"
         }
-        description="দান/অনুদান, বই বা ফরম বিক্রি, অথবা অন্যান্য বাহ্যিক আয় লিপিবদ্ধ করুন।"
+        description="দান/অনুদান, বই বা ফরম বিক্রি, ব্যাংক ট্রান্সফার, চেক অথবা অন্যান্য বাহ্যিক আয় লিপিবদ্ধ করুন।"
       >
         <form onSubmit={handleSubmitOtherIncome} className="space-y-4">
           <div className="space-y-1.5">
@@ -926,21 +963,22 @@ export function IncomeWorkspace() {
                 }
                 className="h-9 w-full rounded-md border bg-background px-3 text-sm"
               >
-                <option value="CASH">Cash (নগদ)</option>
-                <option value="BKASH">bKash</option>
-                <option value="NAGAD">Nagad</option>
-                <option value="ROCKET">Rocket</option>
+                {PAYMENT_METHODS.map((pm) => (
+                  <option key={pm} value={pm}>
+                    {PAYMENT_METHOD_LABELS[pm]}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="income-ref">রশিদ / TrxID (ঐচ্ছিক)</Label>
+            <Label htmlFor="income-ref">রশিদ / TrxID / চেক নং (ঐচ্ছিক)</Label>
             <Input
               id="income-ref"
               value={referenceNo}
               onChange={(e) => setReferenceNo(e.target.value)}
-              placeholder="যেমন: RCPT-104 বা 9K2L8M4N"
+              placeholder="যেমন: CHQ-104 বা 9K2L8M4N"
             />
           </div>
 
@@ -951,7 +989,7 @@ export function IncomeWorkspace() {
               rows={2}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="প্রয়োজনীয় মন্তব্য..."
+              placeholder="দাতার নাম / প্রয়োজনীয় মন্তব্য..."
             />
           </div>
 
@@ -973,12 +1011,12 @@ export function IncomeWorkspace() {
         </form>
       </Modal>
 
-      {/* Delete Out-Income Confirmation Modal */}
+      {/* Delete Out-Income Confirmation Modal (Admin Only) */}
       <Modal
         open={Boolean(deleteTarget)}
         onClose={() => setDeleteTarget(null)}
         title="আয়ের এন্ট্রি মুছে ফেলুন"
-        description={`আপনি কি "${deleteTarget?.title ?? ""}" (${formatBDT(deleteTarget?.amount ?? 0)}) এন্ট্রিটি মুছে ফেলতে চান?`}
+        description={`আপনি কি "${deleteTarget?.title ?? ""}" (${formatBDT(deleteTarget?.amount ?? 0)}) এন্ট্রিটি স্থায়ীভাবে মুছে ফেলতে চান?`}
       >
         <div className="flex justify-end gap-2">
           <Button
@@ -998,6 +1036,164 @@ export function IncomeWorkspace() {
           </Button>
         </div>
       </Modal>
+
+      {/* Printable Money / Donation Receipt Modal */}
+      <Modal
+        open={Boolean(receiptRow)}
+        onClose={() => setReceiptRow(null)}
+        title="মানি / অনুদান রশিদ (Donation & Money Receipt)"
+        description={
+          receiptRow?.receiptNo
+            ? `রশিদ নং: ${receiptRow.receiptNo}`
+            : `এন্ট্রি #${receiptRow?.entryId ?? ""}`
+        }
+      >
+        {receiptRow && (
+          <div className="space-y-4 text-sm">
+            <div className="space-y-2 rounded-xl border bg-muted/20 p-4">
+              <div className="border-b pb-2 text-center">
+                <p className="text-base font-bold">
+                  {chart?.school.name ?? "প্রতিষ্ঠানের রশিদ"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  অফিসিয়াল মানি / অনুদান রশিদ (Money Receipt)
+                </p>
+                <p className="mt-0.5 font-mono text-xs font-semibold text-primary">
+                  {receiptRow.receiptNo ?? `DON-${receiptRow.entryId}`}
+                </p>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">তারিখ</span>
+                <span className="font-mono font-medium">{receiptRow.date}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">আয়ের উৎস / দাতা</span>
+                <span className="font-medium">
+                  {receiptRow.sourceOrStudent}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">বিবরণ</span>
+                <span className="font-medium">{receiptRow.title}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">পেমেন্ট মাধ্যম</span>
+                <span className="font-medium">
+                  {PAYMENT_METHOD_LABELS[receiptRow.paymentMethod] ??
+                    receiptRow.paymentMethod}
+                </span>
+              </div>
+              {receiptRow.referenceNo && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">রেফারেন্স / TrxID</span>
+                  <span className="font-mono font-semibold">
+                    {receiptRow.referenceNo}
+                  </span>
+                </div>
+              )}
+              {receiptRow.notes && (
+                <div className="flex justify-between gap-4">
+                  <span className="text-muted-foreground">মন্তব্য</span>
+                  <span className="text-right text-xs">{receiptRow.notes}</span>
+                </div>
+              )}
+              <div className="flex justify-between border-t pt-2 text-base font-bold text-emerald-700">
+                <span>মোট প্রাপ্ত টাকা</span>
+                <span>{formatBDT(receiptRow.amount)} BDT</span>
+              </div>
+            </div>
+            <div className="no-print flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setReceiptRow(null)}
+              >
+                বন্ধ করুন
+              </Button>
+              <Button
+                type="button"
+                onClick={() => triggerSheetPdfPrint("portrait")}
+                className="gap-1.5"
+              >
+                <Printer className="h-4 w-4" />
+                রশিদ প্রিন্ট / PDF
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Dedicated Modal-Free Print Target for Money / Donation Receipt */}
+      {receiptRow && (
+        <div
+          id="printable-sheet"
+          className="print-only space-y-4 rounded-xl border p-6 text-sm"
+        >
+          <div className="border-b pb-3 text-center">
+            <p className="text-lg font-bold">
+              {chart?.school.name ?? "Institution Money Receipt"}
+            </p>
+            {(chart?.school.address || chart?.school.phone) && (
+              <p className="text-xs text-muted-foreground">
+                {[chart.school.address, chart.school.phone]
+                  .filter(Boolean)
+                  .join(" • ")}
+              </p>
+            )}
+            <p className="mt-1 text-sm font-semibold">
+              অফিসিয়াল মানি / অনুদান রশিদ (Money / Donation Receipt)
+            </p>
+            <p className="font-mono text-xs font-semibold">
+              রশিদ নং: {receiptRow.receiptNo ?? `DON-${receiptRow.entryId}`}
+            </p>
+          </div>
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <span>তারিখ (Date)</span>
+              <span className="font-mono font-medium">{receiptRow.date}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>আয়ের উৎস / দাতা (Source)</span>
+              <span className="font-medium">{receiptRow.sourceOrStudent}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>বিবরণ (Description)</span>
+              <span className="font-medium">{receiptRow.title}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>মাধ্যম (Method)</span>
+              <span className="font-medium">
+                {PAYMENT_METHOD_LABELS[receiptRow.paymentMethod] ??
+                  receiptRow.paymentMethod}
+              </span>
+            </div>
+            {receiptRow.referenceNo && (
+              <div className="flex justify-between">
+                <span>রেফারেন্স / TrxID</span>
+                <span className="font-mono">{receiptRow.referenceNo}</span>
+              </div>
+            )}
+            {receiptRow.notes && (
+              <div className="flex justify-between">
+                <span>নোট</span>
+                <span>{receiptRow.notes}</span>
+              </div>
+            )}
+            <div className="flex justify-between border-t pt-2 text-base font-bold">
+              <span>মোট প্রাপ্ত টাকা (Amount Received)</span>
+              <span>{formatBDT(receiptRow.amount)} BDT</span>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-8 pt-12 text-center text-xs">
+            <div className="mx-auto w-48 border-t border-slate-400 pt-1">
+              দাতা / জমাদানকারীর স্বাক্ষর
+            </div>
+            <div className="mx-auto w-48 border-t border-slate-400 pt-1">
+              হিসাবরক্ষক / মুহতামিমের স্বাক্ষর
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
