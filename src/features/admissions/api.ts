@@ -73,9 +73,16 @@ export interface InitiateAdmissionPaymentResponse {
   message: string;
 }
 
+export interface InitiateAdmissionPaymentInput {
+  applicationNo: string;
+  guardianPhone?: string;
+  studentEmail?: string;
+}
+
 export async function initiateAdmissionPayment(
   schoolId: number,
   admissionId: number,
+  input: InitiateAdmissionPaymentInput,
 ): Promise<InitiateAdmissionPaymentResponse> {
   const response = await fetch(
     `${API_URL}/schools/${schoolId}/admissions/${admissionId}/payment/online/initiate`,
@@ -85,6 +92,7 @@ export async function initiateAdmissionPayment(
         "Content-Type": "application/json",
       },
       credentials: "include",
+      body: JSON.stringify(input),
     },
   );
 

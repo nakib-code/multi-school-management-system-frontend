@@ -10,6 +10,7 @@ import {
   useUpsertClassFeeStructures,
 } from "@/features/admin/classes/hooks";
 import { ALL_FEE_TYPES, type FeeType } from "@/features/fees/types";
+import { useDebounce } from "@/hooks/use-debounce";
 import { getApiErrorMessage } from "@/lib/api";
 
 interface FeeStructureMatrixProps {
@@ -22,6 +23,9 @@ export function FeeStructureMatrix({
   isAdmin,
 }: FeeStructureMatrixProps) {
   const [academicYear, setAcademicYear] = useState("");
+  const debouncedAcademicYear = useDebounce(academicYear.trim(), 350);
+  const queryAcademicYear =
+    debouncedAcademicYear.length >= 4 ? debouncedAcademicYear : undefined;
   const [savingClassId, setSavingClassId] = useState<number | null>(null);
   const [drafts, setDrafts] = useState<Record<number, Record<FeeType, string>>>(
     {},
@@ -29,7 +33,7 @@ export function FeeStructureMatrix({
 
   const { data, isLoading } = useClassFeeStructures(
     schoolId,
-    academicYear.trim() ? { academicYear: academicYear.trim() } : undefined,
+    queryAcademicYear ? { academicYear: queryAcademicYear } : undefined,
   );
   const upsertMutation = useUpsertClassFeeStructures(schoolId);
 
@@ -38,7 +42,7 @@ export function FeeStructureMatrix({
 
   useEffect(() => {
     if (!data) return;
-    const targetYear = academicYear.trim() || null;
+    const targetYear = queryAcademicYear ?? null;
     const nextDrafts: Record<number, Record<FeeType, string>> = {};
     for (const cls of data.classes) {
       const rowMap: Record<FeeType, string> = {
@@ -68,12 +72,19 @@ export function FeeStructureMatrix({
       nextDrafts[cls.id] = rowMap;
     }
     setDrafts(nextDrafts);
-  }, [data, academicYear]);
+  }, [data, queryAcademicYear]);
 
   const handleSaveRow = async (classId: number, className: string) => {
     if (!isAdmin) return;
     const row = drafts[classId];
     if (!row) return;
+    const trimmedYear = academicYear.trim();
+    if (trimmedYear.length > 0 && trimmedYear.length < 4) {
+      toast.error(
+        "Academic year must be at least 4 characters (e.g. 2026) or left blank.",
+      );
+      return;
+    }
     setSavingClassId(classId);
     try {
       const items = ALL_FEE_TYPES.map((ft) => {
@@ -90,7 +101,7 @@ export function FeeStructureMatrix({
       await upsertMutation.mutateAsync({
         classId,
         payload: {
-          academicYear: academicYear.trim() || null,
+          academicYear: trimmedYear || null,
           items,
         },
       });

@@ -44,7 +44,7 @@ export function ExternalWebsiteSettings({
   );
   const { data: activeClasses = [] } = useActiveClasses(schoolId);
   const { data: admissionFeeData } = useQuery({
-    queryKey: ["schools", schoolId, "admission-fee"],
+    queryKey: ["school-settings", schoolId, "admission-fee"],
     enabled: schoolId > 0,
     queryFn: async () => {
       const res = await api.get<{ data: { admissionFee: number } }>(
@@ -258,12 +258,16 @@ export function ExternalWebsiteSettings({
               className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
                 data?.hasOnlineAdmission
                   ? "bg-emerald-50 text-emerald-700"
-                  : "bg-amber-50 text-amber-700"
+                  : data?.onlineAdmissionAllowedByPlatform === false
+                    ? "bg-red-50 text-red-700"
+                    : "bg-amber-50 text-amber-700"
               }`}
             >
               {data?.hasOnlineAdmission
                 ? "Online Admission Active"
-                : "Online Admission Paused"}
+                : data?.onlineAdmissionAllowedByPlatform === false
+                  ? "Disabled by Platform Admin"
+                  : "Online Admission Paused"}
             </span>
             {isAdmin && (
               <button
@@ -271,9 +275,17 @@ export function ExternalWebsiteSettings({
                 role="switch"
                 aria-checked={Boolean(data?.hasOnlineAdmission)}
                 aria-label="Toggle Online Admission"
-                disabled={updateMut.isPending}
+                disabled={
+                  updateMut.isPending ||
+                  data?.onlineAdmissionAllowedByPlatform === false
+                }
+                title={
+                  data?.onlineAdmissionAllowedByPlatform === false
+                    ? "Online admissions are currently disabled by the platform Super Admin"
+                    : "Pause or resume online admissions"
+                }
                 onClick={handleToggleOnlineAdmission}
-                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors disabled:opacity-50 ${
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                   data?.hasOnlineAdmission
                     ? "bg-primary"
                     : "bg-muted-foreground/30"

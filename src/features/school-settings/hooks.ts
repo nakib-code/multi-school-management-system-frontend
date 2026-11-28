@@ -178,6 +178,8 @@ export interface WebsiteConnectionSettings {
   hasLandingAdminPassword: boolean;
   apiBaseUrl: string;
   hasOnlineAdmission: boolean;
+  onlineAdmissionAllowedByPlatform?: boolean;
+  onlineAdmissionPaused?: boolean;
 }
 
 export interface RotateWebsiteKeyResponse extends WebsiteConnectionSettings {

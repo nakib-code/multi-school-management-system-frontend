@@ -20,6 +20,7 @@ import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { Modal } from "@/components/modals/modal";
 import { ErrorState } from "@/components/shared/error-state";
 import { LoadingState } from "@/components/shared/loading";
+import { triggerSheetPdfPrint } from "@/components/shared/printable-report-sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -113,6 +114,12 @@ export default function AdminSubscriptionPaymentPage() {
       </DashboardShell>
     );
   }
+
+  const hasConfiguredMethod = Boolean(
+    methods?.supportedMethods.some((m) =>
+      Boolean(methods.receiverNumbers?.[m]),
+    ),
+  );
 
   const payments = subscription?.payments ?? [];
   const pendingPayment = payments.find((p) => p.status === "PENDING") ?? null;
@@ -381,6 +388,26 @@ export default function AdminSubscriptionPaymentPage() {
                     </div>
                   </div>
 
+                  {methodsQuery.isError && (
+                    <div className="mb-4">
+                      <ErrorState
+                        message={getApiErrorMessage(
+                          methodsQuery.error,
+                          "Failed to load platform mobile banking numbers",
+                        )}
+                        onRetry={() => methodsQuery.refetch()}
+                      />
+                    </div>
+                  )}
+
+                  {!methodsQuery.isError && !hasConfiguredMethod && (
+                    <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                      Platform mobile banking payout numbers are not configured
+                      yet. Please contact platform billing support before
+                      submitting a payment.
+                    </div>
+                  )}
+
                   {methods && (
                     <div className="mb-6 space-y-3">
                       {methods.paymentInstruction && (
@@ -507,7 +534,14 @@ export default function AdminSubscriptionPaymentPage() {
                       />
                     </div>
 
-                    <Button type="submit" disabled={submitMutation.isPending}>
+                    <Button
+                      type="submit"
+                      disabled={
+                        submitMutation.isPending ||
+                        methodsQuery.isError ||
+                        !hasConfiguredMethod
+                      }
+                    >
                       {submitMutation.isPending
                         ? "Submitting Payment..."
                         : `Submit ${paymentMethod} Payment (৳${Number(targetSub.price).toLocaleString()})`}
@@ -654,7 +688,7 @@ export default function AdminSubscriptionPaymentPage() {
                 </span>
               </div>
             </div>
-            <div className="flex justify-end gap-2">
+            <div className="no-print flex justify-end gap-2">
               <Button
                 type="button"
                 variant="outline"
@@ -664,16 +698,79 @@ export default function AdminSubscriptionPaymentPage() {
               </Button>
               <Button
                 type="button"
-                onClick={() => window.print()}
+                onClick={triggerSheetPdfPrint}
                 className="gap-1.5"
               >
                 <Printer className="h-4 w-4" />
-                Print Receipt
+                Print / Save PDF
               </Button>
             </div>
           </div>
         )}
       </Modal>
+
+      {/* Dedicated Modal-Free Print Target for Subscription Receipt */}
+      {receiptPayment && (
+        <div
+          id="printable-sheet"
+          className="print-only space-y-3 rounded-xl border p-6 text-sm"
+        >
+          <div className="border-b pb-3 text-center">
+            <p className="text-lg font-bold">
+              Official Subscription Payment Receipt
+            </p>
+            <p className="font-mono text-xs text-muted-foreground">
+              Receipt #SUB-{receiptPayment.id}
+            </p>
+          </div>
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <span>Package</span>
+              <span className="font-medium">
+                {receiptPayment.package?.name ?? subscription?.package?.name}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span>Payment Method</span>
+              <span className="font-medium">
+                {receiptPayment.paymentMethod}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span>Transaction ID</span>
+              <span className="font-mono font-semibold">
+                {receiptPayment.trxId}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span>Sender Number</span>
+              <span className="font-mono">{receiptPayment.senderNumber}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Verified At</span>
+              <span>
+                {receiptPayment.verifiedAt
+                  ? new Date(receiptPayment.verifiedAt).toLocaleString()
+                  : "—"}
+              </span>
+            </div>
+            <div className="flex justify-between border-t pt-2 text-base font-bold">
+              <span>Total Paid</span>
+              <span>
+                ৳{Number(receiptPayment.paidAmount).toLocaleString()} BDT
+              </span>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-8 pt-10 text-center text-xs">
+            <div className="mx-auto w-44 border-t border-slate-400 pt-1">
+              Institution Representative
+            </div>
+            <div className="mx-auto w-44 border-t border-slate-400 pt-1">
+              Platform Billing Desk
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardShell>
   );
 }

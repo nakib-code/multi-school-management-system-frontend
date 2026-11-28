@@ -162,6 +162,7 @@ export interface RosterChartReport {
     totalStudents: number;
     activeCount: number;
     completedCount: number;
+    transferredCount?: number;
     droppedCount: number;
     residentialCount: number;
     nonResidentialCount: number;

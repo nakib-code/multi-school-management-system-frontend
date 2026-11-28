@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { dashboardKeys } from "@/features/dashboard/hooks";
+import { reportKeys } from "@/features/reports/hooks";
 import { subscriptionKeys } from "@/features/subscriptions/hooks";
 import { subscriptionKeys as superAdminSubscriptionKeys } from "@/features/super-admin/subscriptions/use-subscriptions";
 import { getApiErrorMessage } from "@/lib/api";
@@ -78,6 +79,7 @@ export const useVerifySubscriptionPayment = () => {
       });
       queryClient.invalidateQueries({ queryKey: subscriptionKeys.all });
       queryClient.invalidateQueries({ queryKey: dashboardKeys.all });
+      queryClient.invalidateQueries({ queryKey: reportKeys.all });
     },
     onError: (err) => {
       toast.error(getApiErrorMessage(err, "Failed to verify payment"));
@@ -101,7 +103,9 @@ export const useRejectSubscriptionPayment = () => {
       queryClient.invalidateQueries({
         queryKey: superAdminSubscriptionKeys.all,
       });
+      queryClient.invalidateQueries({ queryKey: subscriptionKeys.all });
       queryClient.invalidateQueries({ queryKey: dashboardKeys.all });
+      queryClient.invalidateQueries({ queryKey: reportKeys.all });
     },
     onError: (err) => {
       toast.error(getApiErrorMessage(err, "Failed to reject payment"));

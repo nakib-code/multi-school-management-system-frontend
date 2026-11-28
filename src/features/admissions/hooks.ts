@@ -3,7 +3,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { dashboardKeys } from "@/features/dashboard/hooks";
 import { enrollmentKeys } from "@/features/enrollments/hooks";
+import { feeKeys } from "@/features/fees/hooks";
 import { guardianKeys } from "@/features/guardians/hooks";
+import { reportKeys } from "@/features/reports/hooks";
 import { studentKeys } from "@/features/students/hooks";
 
 import {
@@ -88,6 +90,14 @@ export function useApproveAdmission(schoolId: number) {
       queryClient.invalidateQueries({
         queryKey: dashboardKeys.all,
       });
+
+      queryClient.invalidateQueries({
+        queryKey: feeKeys.all,
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: reportKeys.all,
+      });
     },
   });
 }
@@ -112,6 +122,14 @@ export function useRejectAdmission(schoolId: number) {
 
       queryClient.invalidateQueries({
         queryKey: admissionKeys.details(schoolId, variables.admissionId),
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: reportKeys.all,
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: dashboardKeys.all,
       });
     },
   });
@@ -138,6 +156,14 @@ export function useConfirmCashPayment(schoolId: number) {
       queryClient.invalidateQueries({
         queryKey: admissionKeys.details(schoolId, variables.admissionId),
       });
+
+      queryClient.invalidateQueries({
+        queryKey: reportKeys.all,
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: dashboardKeys.all,
+      });
     },
   });
 }
@@ -159,6 +185,8 @@ export function useVerifyOnlineAdmissionPayment(schoolId: number) {
       queryClient.invalidateQueries({
         queryKey: admissionKeys.details(schoolId, variables.admissionId),
       });
+      queryClient.invalidateQueries({ queryKey: reportKeys.all });
+      queryClient.invalidateQueries({ queryKey: dashboardKeys.all });
     },
   });
 }
@@ -180,6 +208,8 @@ export function useRejectOnlineAdmissionPayment(schoolId: number) {
       queryClient.invalidateQueries({
         queryKey: admissionKeys.details(schoolId, variables.admissionId),
       });
+      queryClient.invalidateQueries({ queryKey: reportKeys.all });
+      queryClient.invalidateQueries({ queryKey: dashboardKeys.all });
     },
   });
 }

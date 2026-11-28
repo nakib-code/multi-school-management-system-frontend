@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  AlertCircle,
   ArrowLeft,
   CheckCircle2,
   Clock3,
@@ -10,7 +9,8 @@ import {
   XCircle,
 } from "lucide-react";
 import Link from "next/link";
-import { type FormEvent, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { type FormEvent, Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import {
@@ -19,9 +19,13 @@ import {
 } from "@/features/admissions/api";
 import type { TrackAdmissionResponse } from "@/features/admissions/types";
 
-export default function TrackAdmissionPage() {
-  const [applicationNo, setApplicationNo] = useState("");
+function TrackAdmissionContent() {
+  const searchParams = useSearchParams();
+  const initialAppNo = searchParams.get("applicationNo") ?? "";
+
+  const [applicationNo, setApplicationNo] = useState(initialAppNo);
   const [guardianPhone, setGuardianPhone] = useState("");
+  const [verifiedContact, setVerifiedContact] = useState("");
   const [result, setResult] = useState<TrackAdmissionResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -32,6 +36,19 @@ export default function TrackAdmissionPage() {
   const [senderPhone, setSenderPhone] = useState("");
   const [isSubmittingTrx, setIsSubmittingTrx] = useState(false);
 
+  useEffect(() => {
+    if (initialAppNo) {
+      setApplicationNo(initialAppNo);
+    }
+  }, [initialAppNo]);
+
+  useEffect(() => {
+    const method = result?.payment?.paymentMethod;
+    if (method === "BKASH" || method === "NAGAD" || method === "ROCKET") {
+      setTrxMethod(method);
+    }
+  }, [result?.payment?.paymentMethod]);
+
   const handleSubmitTrx = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!result) return;
@@ -40,7 +57,7 @@ export default function TrackAdmissionPage() {
       return;
     }
 
-    const contact = guardianPhone.trim();
+    const contact = (verifiedContact || guardianPhone).trim();
     const isEmail = contact.includes("@");
 
     try {
@@ -49,7 +66,7 @@ export default function TrackAdmissionPage() {
         applicationNo: result.applicationNo,
         ...(isEmail ? { studentEmail: contact } : { guardianPhone: contact }),
         paymentMethod: trxMethod,
-        transactionId: trxId.trim(),
+        transactionId: trxId.trim().toUpperCase(),
         ...(senderPhone.trim() ? { senderPhone: senderPhone.trim() } : {}),
       });
       toast.success("Transaction ID submitted for verification");
@@ -97,6 +114,7 @@ export default function TrackAdmissionPage() {
       });
 
       setResult(data);
+      setVerifiedContact(contact);
       toast.success("Application found successfully");
     } catch (error) {
       toast.error(
@@ -127,8 +145,8 @@ export default function TrackAdmissionPage() {
           </h1>
 
           <p className="mt-2 text-slate-600">
-            Enter your application number and student email to check your
-            admission status.
+            Enter your application number and guardian phone (or student email)
+            to check your admission status.
           </p>
         </div>
 
@@ -207,6 +225,48 @@ export default function TrackAdmissionPage() {
                 <StatusBadge status={status} />
               </div>
             </div>
+
+            {/* Approved Student Enrollment Details */}
+            {result.status === "APPROVED" && result.approvedStudent && (
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-6 shadow-sm">
+                <div className="mb-4 flex items-center gap-2 text-emerald-800">
+                  <CheckCircle2 className="h-5 w-5" />
+                  <h2 className="text-lg font-semibold">
+                    Student Enrolled Successfully
+                  </h2>
+                </div>
+                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                  <InfoItem
+                    label="Student ID"
+                    value={result.approvedStudent.studentId}
+                  />
+                  <InfoItem
+                    label="Roll Number"
+                    value={
+                      result.approvedStudent.rollNumber !== null
+                        ? String(result.approvedStudent.rollNumber)
+                        : "Assigned by office"
+                    }
+                  />
+                  <InfoItem
+                    label="Enrolled Class"
+                    value={
+                      result.approvedStudent.className ??
+                      result.academic.class?.name ??
+                      "—"
+                    }
+                  />
+                  <InfoItem
+                    label="Section"
+                    value={
+                      result.approvedStudent.sectionName ??
+                      result.academic.section?.name ??
+                      "—"
+                    }
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Application Information */}
             <div className="rounded-2xl border bg-white p-6 shadow-sm">
@@ -447,4 +507,18 @@ function InfoItem({ label, value }: { label: string; value: string }) {
 
 function formatDate(value: string) {
   return new Date(value).toLocaleString();
+}
+
+export default function TrackAdmissionPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center bg-slate-50">
+          <Loader2 className="h-7 w-7 animate-spin text-[#00a99d]" />
+        </main>
+      }
+    >
+      <TrackAdmissionContent />
+    </Suspense>
+  );
 }

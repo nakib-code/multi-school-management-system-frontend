@@ -45,6 +45,8 @@ export const classKeys = {
 };
 
 export const sectionKeys = {
+  root: (schoolId: number) => ["admin", "sections", schoolId] as const,
+
   all: (schoolId: number, classId?: number) =>
     ["admin", "sections", schoolId, classId ?? "all"] as const,
 
@@ -200,7 +202,7 @@ export const useDeleteClass = (schoolId: number) => {
       });
 
       queryClient.invalidateQueries({
-        queryKey: sectionKeys.all(schoolId),
+        queryKey: sectionKeys.root(schoolId),
       });
     },
   });
@@ -253,7 +255,7 @@ export const useCreateSection = (schoolId: number) => {
 
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: sectionKeys.all(schoolId),
+        queryKey: sectionKeys.root(schoolId),
       });
 
       queryClient.invalidateQueries({
@@ -285,7 +287,7 @@ export const useUpdateSection = (schoolId: number) => {
 
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: sectionKeys.all(schoolId),
+        queryKey: sectionKeys.root(schoolId),
       });
 
       queryClient.invalidateQueries({
@@ -303,7 +305,7 @@ export const useToggleSectionStatus = (schoolId: number) => {
 
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: sectionKeys.all(schoolId),
+        queryKey: sectionKeys.root(schoolId),
       });
 
       queryClient.invalidateQueries({
@@ -321,7 +323,7 @@ export const useDeleteSection = (schoolId: number) => {
 
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: sectionKeys.all(schoolId),
+        queryKey: sectionKeys.root(schoolId),
       });
 
       queryClient.invalidateQueries({

@@ -22,7 +22,7 @@ export const ALL_FEE_TYPES: Array<{ value: FeeType; label: string }> = [
   { value: "LAB", label: "Lab Fee" },
   { value: "OTHER", label: "Other / Custom" },
 ];
-export type FeeStatus = "PENDING" | "PARTIAL" | "PAID" | "WAIVED";
+export type FeeStatus = "PENDING" | "PARTIAL" | "OVERDUE" | "PAID" | "WAIVED";
 export type StudentPaymentStatus = "PENDING" | "VERIFIED" | "REJECTED";
 
 export interface StudentPaymentRecord {

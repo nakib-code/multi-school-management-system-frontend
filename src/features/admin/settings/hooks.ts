@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { classKeys } from "@/features/admin/classes/hooks";
 
 import { getAdmissionFee, updateAdmissionFee } from "./api";
 
@@ -43,6 +44,14 @@ export function useUpdateAdmissionFee(schoolId: number | null) {
         ["school-settings", schoolId, "admission-fee"],
         data,
       );
+      if (schoolId) {
+        queryClient.invalidateQueries({
+          queryKey: ["admin", "classes", schoolId, "fee-structures"],
+        });
+        queryClient.invalidateQueries({
+          queryKey: classKeys.active(schoolId),
+        });
+      }
     },
   });
 }

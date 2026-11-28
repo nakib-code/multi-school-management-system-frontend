@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2, Save, Wallet } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Modal } from "@/components/modals/modal";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import {
 } from "@/features/admin/classes/hooks";
 import type { SchoolClass } from "@/features/admin/classes/types";
 import { ALL_FEE_TYPES, type FeeType } from "@/features/fees/types";
+import { useDebounce } from "@/hooks/use-debounce";
 import { getApiErrorMessage } from "@/lib/api";
 
 interface ClassFeeStructureModalProps {
@@ -29,6 +30,9 @@ export function ClassFeeStructureModal({
   onClose,
 }: ClassFeeStructureModalProps) {
   const [academicYear, setAcademicYear] = useState("");
+  const debouncedAcademicYear = useDebounce(academicYear.trim(), 350);
+  const queryAcademicYear =
+    debouncedAcademicYear.length >= 4 ? debouncedAcademicYear : undefined;
   const [amounts, setAmounts] = useState<Record<FeeType, string>>({
     ADMISSION: "",
     MONTHLY: "",
@@ -41,12 +45,21 @@ export function ClassFeeStructureModal({
   });
   const [otherTitle, setOtherTitle] = useState("");
 
+  const prevClassIdRef = useRef<number | null>(null);
+  useEffect(() => {
+    const nextId = schoolClass?.id ?? null;
+    if (prevClassIdRef.current !== nextId) {
+      prevClassIdRef.current = nextId;
+      setAcademicYear("");
+    }
+  }, [schoolClass?.id]);
+
   const { data, isLoading } = useClassFeeStructures(
     schoolClass ? schoolId : 0,
     schoolClass
       ? {
           classId: schoolClass.id,
-          ...(academicYear.trim() ? { academicYear: academicYear.trim() } : {}),
+          ...(queryAcademicYear ? { academicYear: queryAcademicYear } : {}),
         }
       : undefined,
   );
@@ -57,7 +70,7 @@ export function ClassFeeStructureModal({
 
   useEffect(() => {
     if (!classData) return;
-    const targetYear = academicYear.trim() || null;
+    const targetYear = queryAcademicYear ?? null;
     const next: Record<FeeType, string> = {
       ADMISSION: "",
       MONTHLY: "",
@@ -88,11 +101,19 @@ export function ClassFeeStructureModal({
     }
     setAmounts(next);
     setOtherTitle(nextOtherTitle);
-  }, [classData, academicYear]);
+  }, [classData, queryAcademicYear]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!schoolClass || !isAdmin) return;
+
+    const trimmedYear = academicYear.trim();
+    if (trimmedYear.length > 0 && trimmedYear.length < 4) {
+      toast.error(
+        "Academic year must be at least 4 characters (e.g. 2026) or left blank.",
+      );
+      return;
+    }
 
     const items = ALL_FEE_TYPES.map((ft) => {
       const raw = amounts[ft.value].trim();
@@ -112,7 +133,7 @@ export function ClassFeeStructureModal({
       await upsertMutation.mutateAsync({
         classId: schoolClass.id,
         payload: {
-          academicYear: academicYear.trim() || null,
+          academicYear: trimmedYear || null,
           items,
         },
       });

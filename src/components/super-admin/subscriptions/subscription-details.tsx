@@ -161,7 +161,10 @@ export default function SubscriptionDetails({ id }: SubscriptionDetailsProps) {
 
             <InfoItem label="Billing Cycle" value={data.package.billingCycle} />
 
-            <InfoItem label="Price" value={`${data.price}`} />
+            <InfoItem
+              label="Price"
+              value={`৳${Number(data.price).toLocaleString()}`}
+            />
 
             <InfoItem
               label="Student Limit"
@@ -233,7 +236,10 @@ export default function SubscriptionDetails({ id }: SubscriptionDetailsProps) {
             value={data.package.studentLimit.toLocaleString()}
           />
 
-          <SummaryCard label="Subscription Price" value={`${data.price}`} />
+          <SummaryCard
+            label="Subscription Price"
+            value={`৳${Number(data.price).toLocaleString()}`}
+          />
 
           <SummaryCard label="Billing" value={data.package.billingCycle} />
         </div>

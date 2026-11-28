@@ -121,79 +121,87 @@ export function StudentsWorkspace() {
 
   const handleQuickAdmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await createMutation.mutateAsync({
-      academicYear: admitForm.academicYear.trim(),
-      classId: Number(admitForm.classId),
-      ...(admitForm.sectionId
-        ? { sectionId: Number(admitForm.sectionId) }
-        : {}),
-      shift: admitForm.shift,
-      residentialType: admitForm.residentialType,
-      studentName: admitForm.studentName.trim(),
-      dateOfBirth: admitForm.dateOfBirth,
-      gender: admitForm.gender,
-      guardianName: admitForm.guardianName.trim(),
-      guardianPhone: admitForm.guardianPhone.trim(),
-      guardianRelation: admitForm.guardianRelation,
-      ...(admitForm.guardianEmail.trim()
-        ? { guardianEmail: admitForm.guardianEmail.trim() }
-        : {}),
-      ...(showAcademicGroup && admitForm.academicGroup
-        ? { academicGroup: admitForm.academicGroup }
-        : {}),
-      ...(admitForm.quranWing ? { quranWing: admitForm.quranWing } : {}),
-      ...(admitForm.quranWing && admitForm.ustadId
-        ? { ustadId: Number(admitForm.ustadId) }
-        : {}),
-      ...(admitForm.rollNumber
-        ? { rollNumber: Number(admitForm.rollNumber) }
-        : {}),
-    });
-
-    if (res.guardian?.isExistingGuardian) {
-      toast.info(
-        `Linked to existing guardian ${res.guardian.name} (${res.guardian.phone})`,
-      );
-    } else if (
-      res.guardian &&
-      (res.guardian.temporaryPassword || res.guardian.defaultPassword)
-    ) {
-      setGuardianCredentials({
-        name: res.guardian.name,
-        phone: res.guardian.phone,
-        temporaryPassword:
-          res.guardian.temporaryPassword ?? res.guardian.defaultPassword!,
+    try {
+      const res = await createMutation.mutateAsync({
+        academicYear: admitForm.academicYear.trim(),
+        classId: Number(admitForm.classId),
+        ...(admitForm.sectionId
+          ? { sectionId: Number(admitForm.sectionId) }
+          : {}),
+        shift: admitForm.shift,
+        residentialType: admitForm.residentialType,
         studentName: admitForm.studentName.trim(),
+        dateOfBirth: admitForm.dateOfBirth,
+        gender: admitForm.gender,
+        guardianName: admitForm.guardianName.trim(),
+        guardianPhone: admitForm.guardianPhone.trim(),
+        guardianRelation: admitForm.guardianRelation,
+        ...(admitForm.guardianEmail.trim()
+          ? { guardianEmail: admitForm.guardianEmail.trim() }
+          : {}),
+        ...(showAcademicGroup && admitForm.academicGroup
+          ? { academicGroup: admitForm.academicGroup }
+          : {}),
+        ...(admitForm.quranWing ? { quranWing: admitForm.quranWing } : {}),
+        ...(admitForm.quranWing && admitForm.ustadId
+          ? { ustadId: Number(admitForm.ustadId) }
+          : {}),
+        ...(admitForm.rollNumber
+          ? { rollNumber: Number(admitForm.rollNumber) }
+          : {}),
       });
-    }
 
-    setQuickAdmitOpen(false);
-    setAdmitForm((prev) => ({
-      ...prev,
-      studentName: "",
-      dateOfBirth: "",
-      guardianName: "",
-      guardianPhone: "",
-      guardianEmail: "",
-      academicGroup: "",
-      quranWing: "",
-      ustadId: "",
-      rollNumber: "",
-    }));
+      if (res.guardian?.isExistingGuardian) {
+        toast.info(
+          `Linked to existing guardian ${res.guardian.name} (${res.guardian.phone})`,
+        );
+      } else if (
+        res.guardian &&
+        (res.guardian.temporaryPassword || res.guardian.defaultPassword)
+      ) {
+        setGuardianCredentials({
+          name: res.guardian.name,
+          phone: res.guardian.phone,
+          temporaryPassword:
+            res.guardian.temporaryPassword ?? res.guardian.defaultPassword!,
+          studentName: admitForm.studentName.trim(),
+        });
+      }
+
+      setQuickAdmitOpen(false);
+      setAdmitForm((prev) => ({
+        ...prev,
+        studentName: "",
+        dateOfBirth: "",
+        guardianName: "",
+        guardianPhone: "",
+        guardianEmail: "",
+        academicGroup: "",
+        quranWing: "",
+        ustadId: "",
+        rollNumber: "",
+      }));
+    } catch {
+      // Handled via mutation toast
+    }
   };
 
   const handleResetStudentPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!resetTarget) return;
-    const res = await resetPasswordMutation.mutateAsync({
-      studentId: resetTarget.id,
-      ...(resetPasswordVal.trim()
-        ? { newPassword: resetPasswordVal.trim() }
-        : {}),
-    });
-    setResetTarget(null);
-    setResetPasswordVal("");
-    setResetResult(res);
+    try {
+      const res = await resetPasswordMutation.mutateAsync({
+        studentId: resetTarget.id,
+        ...(resetPasswordVal.trim()
+          ? { newPassword: resetPasswordVal.trim() }
+          : {}),
+      });
+      setResetTarget(null);
+      setResetPasswordVal("");
+      setResetResult(res);
+    } catch {
+      // Handled via mutation toast
+    }
   };
 
   const copyText = async (text: string, label: string) => {

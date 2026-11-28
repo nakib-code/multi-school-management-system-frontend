@@ -13,6 +13,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { FeeStructureMatrix } from "@/components/admin/classes/fee-structure-matrix";
 import { ExternalWebsiteSettings } from "@/components/school-modules/external-website-settings";
+import { ErrorState } from "@/components/shared/error-state";
 import { FileUpload } from "@/components/shared/file-upload";
 import { LoadingState } from "@/components/shared/loading";
 import { SelfProfileForm } from "@/components/shared/self-profile-form";
@@ -45,9 +46,20 @@ export function SchoolSettingsView() {
     "general" | "payments" | "fee-structure" | "website" | "profile"
   >("payments");
 
-  const { data: setting, isLoading } = useAdmissionFee(schoolId);
-  const { data: paymentMethods, isLoading: pmLoading } =
-    useSchoolPaymentMethods(schoolId > 0 ? schoolId : undefined);
+  const {
+    data: setting,
+    isLoading,
+    isError: feeError,
+    error: feeQueryError,
+    refetch: refetchFee,
+  } = useAdmissionFee(schoolId);
+  const {
+    data: paymentMethods,
+    isLoading: pmLoading,
+    isError: pmError,
+    error: pmQueryError,
+    refetch: refetchPaymentMethods,
+  } = useSchoolPaymentMethods(schoolId > 0 ? schoolId : undefined);
   const { data: schoolProfile } = useSchoolProfile(schoolId);
   const updateFeeMutation = useUpdateAdmissionFee(schoolId);
   const updatePaymentsMutation = useUpdateSchoolPaymentMethods(schoolId);
@@ -100,12 +112,16 @@ export function SchoolSettingsView() {
       toast.error("Institution name must be at least 2 characters");
       return;
     }
-    await updateProfileMutation.mutateAsync({
-      name: trimmedName,
-      phone: schoolPhone.trim() || null,
-      email: schoolEmail.trim() || null,
-      address: schoolAddress.trim() || null,
-    });
+    try {
+      await updateProfileMutation.mutateAsync({
+        name: trimmedName,
+        phone: schoolPhone.trim() || null,
+        email: schoolEmail.trim() || null,
+        address: schoolAddress.trim() || null,
+      });
+    } catch {
+      // Handled via mutation toast
+    }
   };
 
   const handleSaveGeneral = async (e: React.FormEvent) => {
@@ -127,19 +143,38 @@ export function SchoolSettingsView() {
 
   const handleSavePaymentMethods = async (e: React.FormEvent) => {
     e.preventDefault();
-    await updatePaymentsMutation.mutateAsync({
-      bkashNumber: bkashNumber.trim() || null,
-      bkashType,
-      nagadNumber: nagadNumber.trim() || null,
-      nagadType,
-      rocketNumber: rocketNumber.trim() || null,
-      rocketType,
-      feePaymentInstruction: feePaymentInstruction.trim() || null,
-    });
+    try {
+      await updatePaymentsMutation.mutateAsync({
+        bkashNumber: bkashNumber.trim() || null,
+        bkashType,
+        nagadNumber: nagadNumber.trim() || null,
+        nagadType,
+        rocketNumber: rocketNumber.trim() || null,
+        rocketType,
+        feePaymentInstruction: feePaymentInstruction.trim() || null,
+      });
+    } catch {
+      // Handled via mutation toast
+    }
   };
 
   if (isLoading || pmLoading) {
     return <LoadingState message="Loading settings..." />;
+  }
+
+  if (feeError || pmError) {
+    return (
+      <ErrorState
+        message={getApiErrorMessage(
+          feeQueryError ?? pmQueryError,
+          "Failed to load institution settings",
+        )}
+        onRetry={() => {
+          if (feeError) void refetchFee();
+          if (pmError) void refetchPaymentMethods();
+        }}
+      />
+    );
   }
 
   return (
@@ -157,7 +192,7 @@ export function SchoolSettingsView() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b">
+      <div className="flex gap-2 overflow-x-auto border-b">
         <button
           type="button"
           onClick={() => setActiveTab("payments")}

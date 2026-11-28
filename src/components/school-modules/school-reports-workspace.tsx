@@ -24,11 +24,19 @@ import {
   useSchoolReportOverview,
   useStudentRosterChartReport,
 } from "@/features/reports/hooks";
+import { useDebounce } from "@/hooks/use-debounce";
 import { getApiErrorMessage } from "@/lib/api";
 import { useAuth } from "@/providers/auth-provider";
 
 const formatBDT = (amount: number) =>
   `৳${Number(amount || 0).toLocaleString("en-BD")}`;
+
+const sanitizeFilenamePart = (value: string) =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "all";
 
 type ReportTab = "overview" | "admissions" | "fees" | "roster";
 
@@ -94,6 +102,17 @@ function SchoolReportsWorkspaceInner() {
     rosterClassId ? Number(rosterClassId) : undefined,
   );
 
+  const debouncedAdmYear = useDebounce(admYear.trim(), 350);
+  const debouncedFeeYear = useDebounce(feeYear.trim(), 350);
+  const debouncedRosterYear = useDebounce(rosterYear.trim(), 350);
+
+  const queryAdmYear =
+    debouncedAdmYear.length >= 4 ? debouncedAdmYear : undefined;
+  const queryFeeYear =
+    debouncedFeeYear.length >= 4 ? debouncedFeeYear : undefined;
+  const queryRosterYear =
+    debouncedRosterYear.length >= 4 ? debouncedRosterYear : undefined;
+
   // Queries
   const overviewQuery = useSchoolReportOverview(schoolId);
   const admissionChartQuery = useAdmissionChartReport(
@@ -101,7 +120,7 @@ function SchoolReportsWorkspaceInner() {
     {
       ...(admClassId ? { classId: Number(admClassId) } : {}),
       ...(admSectionId ? { sectionId: Number(admSectionId) } : {}),
-      ...(admYear.trim() ? { academicYear: admYear.trim() } : {}),
+      ...(queryAdmYear ? { academicYear: queryAdmYear } : {}),
       ...(admStatus ? { status: admStatus } : {}),
       ...(admPayStatus ? { paymentStatus: admPayStatus } : {}),
     },
@@ -113,7 +132,7 @@ function SchoolReportsWorkspaceInner() {
       feeType,
       ...(feeClassId ? { classId: Number(feeClassId) } : {}),
       ...(feeSectionId ? { sectionId: Number(feeSectionId) } : {}),
-      ...(feeYear.trim() ? { academicYear: feeYear.trim() } : {}),
+      ...(queryFeeYear ? { academicYear: queryFeeYear } : {}),
       ...(feeMonth ? { billingMonth: feeMonth } : {}),
       ...(feeExamId ? { examId: Number(feeExamId) } : {}),
       ...(feeStatus ? { status: feeStatus } : {}),
@@ -125,7 +144,7 @@ function SchoolReportsWorkspaceInner() {
     {
       ...(rosterClassId ? { classId: Number(rosterClassId) } : {}),
       ...(rosterSectionId ? { sectionId: Number(rosterSectionId) } : {}),
-      ...(rosterYear.trim() ? { academicYear: rosterYear.trim() } : {}),
+      ...(queryRosterYear ? { academicYear: queryRosterYear } : {}),
       ...(rosterStatus ? { status: rosterStatus } : {}),
     },
     activeTab === "roster",
@@ -134,11 +153,23 @@ function SchoolReportsWorkspaceInner() {
   const selectedAdmClassName = classes.find(
     (c) => String(c.id) === admClassId,
   )?.name;
+  const selectedAdmSectionName = admSections.find(
+    (s) => String(s.id) === admSectionId,
+  )?.name;
   const selectedFeeClassName = classes.find(
     (c) => String(c.id) === feeClassId,
   )?.name;
+  const selectedFeeSectionName = feeSections.find(
+    (s) => String(s.id) === feeSectionId,
+  )?.name;
+  const selectedFeeExamName = exams.find(
+    (ex) => String(ex.id) === feeExamId,
+  )?.name;
   const selectedRosterClassName = classes.find(
     (c) => String(c.id) === rosterClassId,
+  )?.name;
+  const selectedRosterSectionName = rosterSections.find(
+    (s) => String(s.id) === rosterSectionId,
   )?.name;
 
   return (
@@ -281,7 +312,7 @@ function SchoolReportsWorkspaceInner() {
               school={admissionChartQuery.data.school}
               title="Class-Wise Admission Chart & Accounting Sheet"
               csvExport={{
-                filename: `admission-chart-${selectedAdmClassName || "all"}-${admYear.trim() || "all"}`,
+                filename: `admission-chart-${sanitizeFilenamePart(selectedAdmClassName || "all")}-${sanitizeFilenamePart(queryAdmYear || "all")}`,
                 headers: [
                   "Serial",
                   "Application No",
@@ -298,28 +329,49 @@ function SchoolReportsWorkspaceInner() {
                   "Payment Status",
                   "Admission Status",
                 ],
-                rows: admissionChartQuery.data.rows.map((r) => [
-                  r.serial,
-                  r.applicationNo,
-                  r.studentName,
-                  r.nameBangla,
-                  r.guardianName,
-                  r.guardianPhone,
-                  r.className,
-                  r.sectionName,
-                  r.academicYear,
-                  r.admissionFee,
-                  r.paymentMethod,
-                  r.trxId,
-                  r.paymentStatus,
-                  r.admissionStatus,
-                ]),
+                rows: [
+                  ...admissionChartQuery.data.rows.map((r) => [
+                    r.serial,
+                    r.applicationNo,
+                    r.studentName,
+                    r.nameBangla,
+                    r.guardianName,
+                    r.guardianPhone,
+                    r.className,
+                    r.sectionName,
+                    r.academicYear,
+                    r.admissionFee,
+                    r.paymentMethod,
+                    r.trxId,
+                    r.paymentStatus,
+                    r.admissionStatus,
+                  ]),
+                  [
+                    "TOTAL",
+                    `${admissionChartQuery.data.summary.totalApplicants} applicants`,
+                    `Approved: ${admissionChartQuery.data.summary.approvedCount}`,
+                    `Pending: ${admissionChartQuery.data.summary.pendingCount}`,
+                    `Rejected: ${admissionChartQuery.data.summary.rejectedCount}`,
+                    "",
+                    "",
+                    "",
+                    "",
+                    admissionChartQuery.data.summary.totalExpected,
+                    `Collected: ${admissionChartQuery.data.summary.totalCollected}`,
+                    `Pending: ${admissionChartQuery.data.summary.totalPending}`,
+                    "",
+                    "",
+                  ],
+                ],
               }}
               filterSummary={[
                 selectedAdmClassName
                   ? `Class: ${selectedAdmClassName}`
                   : "Class: All",
-                admYear.trim() ? `Year: ${admYear.trim()}` : "Year: All",
+                ...(selectedAdmSectionName
+                  ? [`Section: ${selectedAdmSectionName}`]
+                  : []),
+                queryAdmYear ? `Year: ${queryAdmYear}` : "Year: All",
                 admStatus ? `Status: ${admStatus}` : "Status: All",
                 admPayStatus ? `Payment: ${admPayStatus}` : "Payment: All",
               ]}
@@ -524,6 +576,7 @@ function SchoolReportsWorkspaceInner() {
               <option value="">All Statuses</option>
               <option value="PENDING">Pending</option>
               <option value="PARTIAL">Partial</option>
+              <option value="OVERDUE">Overdue</option>
               <option value="PAID">Paid</option>
               <option value="WAIVED">Waived</option>
             </select>
@@ -544,7 +597,7 @@ function SchoolReportsWorkspaceInner() {
               school={feeChartQuery.data.school}
               title={`Class-Wise ${feeType === "ALL" ? "All Student Fees" : (FEE_TYPE_LABELS[feeType] ?? feeType)} Accounting Sheet`}
               csvExport={{
-                filename: `fee-chart-${feeType.toLowerCase()}-${selectedFeeClassName || "all"}`,
+                filename: `fee-chart-${sanitizeFilenamePart(feeType)}-${sanitizeFilenamePart(selectedFeeClassName || "all")}`,
                 headers: [
                   "Serial",
                   "Roll",
@@ -562,31 +615,56 @@ function SchoolReportsWorkspaceInner() {
                   "Due (BDT)",
                   "Status",
                 ],
-                rows: feeChartQuery.data.rows.map((r) => [
-                  r.serial,
-                  r.rollNumber,
-                  r.studentCode,
-                  r.studentName,
-                  r.className,
-                  r.sectionName,
-                  r.academicYear,
-                  r.feeType,
-                  r.title,
-                  r.billingMonth,
-                  r.examName,
-                  r.billed,
-                  r.paid,
-                  r.due,
-                  r.status,
-                ]),
+                rows: [
+                  ...feeChartQuery.data.rows.map((r) => [
+                    r.serial,
+                    r.rollNumber,
+                    r.studentCode,
+                    r.studentName,
+                    r.className,
+                    r.sectionName,
+                    r.academicYear,
+                    r.feeType,
+                    r.title,
+                    r.billingMonth,
+                    r.examName,
+                    r.billed,
+                    r.paid,
+                    r.due,
+                    r.status,
+                  ]),
+                  [
+                    "TOTAL",
+                    "",
+                    "",
+                    `${feeChartQuery.data.summary.totalInvoices} invoices`,
+                    "",
+                    "",
+                    "",
+                    "",
+                    "",
+                    "",
+                    `Waived: ${feeChartQuery.data.summary.totalWaived}`,
+                    feeChartQuery.data.summary.totalBilled,
+                    feeChartQuery.data.summary.totalCollected,
+                    feeChartQuery.data.summary.totalDue,
+                    "",
+                  ],
+                ],
               }}
               filterSummary={[
                 `Fee Type: ${feeType === "ALL" ? "All" : (FEE_TYPE_LABELS[feeType] ?? feeType)}`,
                 selectedFeeClassName
                   ? `Class: ${selectedFeeClassName}`
                   : "Class: All",
-                feeYear.trim() ? `Year: ${feeYear.trim()}` : "Year: All",
+                ...(selectedFeeSectionName
+                  ? [`Section: ${selectedFeeSectionName}`]
+                  : []),
+                queryFeeYear ? `Year: ${queryFeeYear}` : "Year: All",
                 ...(feeMonth ? [`Month: ${feeMonth}`] : []),
+                ...(selectedFeeExamName
+                  ? [`Exam: ${selectedFeeExamName}`]
+                  : []),
                 ...(feeStatus ? [`Status: ${feeStatus}`] : []),
               ]}
               generatedBy={user?.name}
@@ -601,7 +679,9 @@ function SchoolReportsWorkspaceInner() {
                     </div>
                     <div>
                       <span className="text-muted-foreground">
-                        Total Billed
+                        {feeChartQuery.data.summary.totalWaived > 0
+                          ? "Total Billed (excl. waived)"
+                          : "Total Billed"}
                       </span>
                       <p className="text-sm font-bold">
                         {formatBDT(feeChartQuery.data.summary.totalBilled)}
@@ -782,7 +862,7 @@ function SchoolReportsWorkspaceInner() {
               school={rosterChartQuery.data.school}
               title="Class-Wise Student Roll / Roster Chart"
               csvExport={{
-                filename: `student-roster-${selectedRosterClassName || "all"}-${rosterYear.trim() || "all"}`,
+                filename: `student-roster-${sanitizeFilenamePart(selectedRosterClassName || "all")}-${sanitizeFilenamePart(queryRosterYear || "all")}`,
                 headers: [
                   "Serial",
                   "Roll",
@@ -797,31 +877,50 @@ function SchoolReportsWorkspaceInner() {
                   "Guardian Phone",
                   "Status",
                 ],
-                rows: rosterChartQuery.data.rows.map((r) => [
-                  r.serial,
-                  r.rollNumber,
-                  r.studentId,
-                  r.studentName,
-                  r.nameBangla,
-                  r.className,
-                  r.sectionName,
-                  r.academicYear,
-                  r.residentialType,
-                  r.guardianName,
-                  r.guardianPhone,
-                  r.status,
-                ]),
+                rows: [
+                  ...rosterChartQuery.data.rows.map((r) => [
+                    r.serial,
+                    r.rollNumber,
+                    r.studentId,
+                    r.studentName,
+                    r.nameBangla,
+                    r.className,
+                    r.sectionName,
+                    r.academicYear,
+                    r.residentialType,
+                    r.guardianName,
+                    r.guardianPhone,
+                    r.status,
+                  ]),
+                  [
+                    "TOTAL",
+                    "",
+                    `${rosterChartQuery.data.summary.totalStudents} students`,
+                    `Active: ${rosterChartQuery.data.summary.activeCount}`,
+                    `Residential: ${rosterChartQuery.data.summary.residentialCount}`,
+                    `Non-Residential: ${rosterChartQuery.data.summary.nonResidentialCount}`,
+                    `Day-Care: ${rosterChartQuery.data.summary.dayCareCount}`,
+                    "",
+                    "",
+                    "",
+                    "",
+                    "",
+                  ],
+                ],
               }}
               filterSummary={[
                 selectedRosterClassName
                   ? `Class: ${selectedRosterClassName}`
                   : "Class: All",
-                rosterYear.trim() ? `Year: ${rosterYear.trim()}` : "Year: All",
+                ...(selectedRosterSectionName
+                  ? [`Section: ${selectedRosterSectionName}`]
+                  : []),
+                queryRosterYear ? `Year: ${queryRosterYear}` : "Year: All",
                 rosterStatus ? `Status: ${rosterStatus}` : "Status: All",
               ]}
               generatedBy={user?.name}
               footerTotals={
-                <div className="grid gap-3 text-xs sm:grid-cols-5">
+                <div className="grid gap-3 text-xs sm:grid-cols-5 lg:grid-cols-6">
                   <div>
                     <span className="text-muted-foreground">
                       Total Students
@@ -856,6 +955,15 @@ function SchoolReportsWorkspaceInner() {
                       {rosterChartQuery.data.summary.dayCareCount}
                     </p>
                   </div>
+                  {(rosterChartQuery.data.summary.transferredCount ?? 0) >
+                    0 && (
+                    <div>
+                      <span className="text-muted-foreground">Transferred</span>
+                      <p className="text-sm font-bold text-amber-700">
+                        {rosterChartQuery.data.summary.transferredCount}
+                      </p>
+                    </div>
+                  )}
                 </div>
               }
             >

@@ -269,9 +269,17 @@ export function FeesWorkspace() {
       const verifiedPaid = feePayments
         .filter((p) => p.status === "VERIFIED")
         .reduce((sum, p) => sum + Number(p.paidAmount), 0);
+      const effectivePaid =
+        f.status === "PAID"
+          ? Math.max(feeAmount, verifiedPaid)
+          : f.status === "WAIVED"
+            ? 0
+            : Math.min(feeAmount, verifiedPaid);
       const hasPendingPayment = feePayments.some((p) => p.status === "PENDING");
       const remaining =
-        f.status === "WAIVED" ? 0 : Math.max(0, feeAmount - verifiedPaid);
+        f.status === "WAIVED" || f.status === "PAID"
+          ? 0
+          : Math.max(0, feeAmount - verifiedPaid);
       const isOverdue =
         f.status !== "PAID" &&
         f.status !== "WAIVED" &&
@@ -281,7 +289,7 @@ export function FeesWorkspace() {
       return {
         ...f,
         feeAmount,
-        verifiedPaid,
+        verifiedPaid: effectivePaid,
         remaining,
         hasPendingPayment,
         isOverdue,
@@ -463,6 +471,46 @@ export function FeesWorkspace() {
     });
   };
 
+  const hasConfiguredMfs = mfsProviders.some((p) => Boolean(p.number));
+
+  const resetFeeForm = () => {
+    setFeeForm({
+      enrollmentId: "",
+      feeType: "MONTHLY",
+      title: "",
+      amount: "",
+      dueDate: "",
+      billingMonth: "",
+      examId: "",
+      description: "",
+    });
+  };
+
+  const resetBulkForm = () => {
+    setBulkForm({
+      classId: "",
+      sectionId: "",
+      academicYear: String(new Date().getFullYear()),
+      feeType: "MONTHLY",
+      title: "",
+      amount: "",
+      dueDate: "",
+      billingMonth: "",
+      examId: "",
+      description: "",
+    });
+  };
+
+  const closeCreateModal = () => {
+    setCreateOpen(false);
+    resetFeeForm();
+  };
+
+  const closeBulkModal = () => {
+    setBulkOpen(false);
+    resetBulkForm();
+  };
+
   const handleCreateFee = async (e: React.FormEvent) => {
     e.preventDefault();
     const en = enrollments.find(
@@ -477,23 +525,17 @@ export function FeesWorkspace() {
         title: feeForm.title.trim(),
         amount: Number(feeForm.amount),
         dueDate: feeForm.dueDate,
-        ...(feeForm.billingMonth ? { billingMonth: feeForm.billingMonth } : {}),
-        ...(feeForm.examId ? { examId: Number(feeForm.examId) } : {}),
+        ...(feeForm.feeType === "MONTHLY" && feeForm.billingMonth
+          ? { billingMonth: feeForm.billingMonth }
+          : {}),
+        ...(feeForm.feeType === "EXAM" && feeForm.examId
+          ? { examId: Number(feeForm.examId) }
+          : {}),
         ...(feeForm.description.trim()
           ? { description: feeForm.description.trim() }
           : {}),
       });
-      setCreateOpen(false);
-      setFeeForm({
-        enrollmentId: "",
-        feeType: "MONTHLY",
-        title: "",
-        amount: "",
-        dueDate: "",
-        billingMonth: "",
-        examId: "",
-        description: "",
-      });
+      closeCreateModal();
     } catch {
       // Handled by mutation toast
     }
@@ -515,27 +557,17 @@ export function FeesWorkspace() {
         title: bulkForm.title.trim(),
         amount: Number(bulkForm.amount),
         dueDate: bulkForm.dueDate,
-        ...(bulkForm.billingMonth
+        ...(bulkForm.feeType === "MONTHLY" && bulkForm.billingMonth
           ? { billingMonth: bulkForm.billingMonth }
           : {}),
-        ...(bulkForm.examId ? { examId: Number(bulkForm.examId) } : {}),
+        ...(bulkForm.feeType === "EXAM" && bulkForm.examId
+          ? { examId: Number(bulkForm.examId) }
+          : {}),
         ...(bulkForm.description.trim()
           ? { description: bulkForm.description.trim() }
           : {}),
       });
-      setBulkOpen(false);
-      setBulkForm({
-        classId: "",
-        sectionId: "",
-        academicYear: String(new Date().getFullYear()),
-        feeType: "MONTHLY",
-        title: "",
-        amount: "",
-        dueDate: "",
-        billingMonth: "",
-        examId: "",
-        description: "",
-      });
+      closeBulkModal();
     } catch {
       // Handled by mutation toast
     }
@@ -696,17 +728,39 @@ export function FeesWorkspace() {
             {canManage ? "Pending Reviews / Overdue" : "Overdue / Pending"}
           </p>
           <p className="mt-1 text-2xl font-bold">
-            <span
-              className={kpis.pendingPaymentsCount > 0 ? "text-amber-600" : ""}
-            >
-              {kpis.pendingPaymentsCount}
-            </span>
-            <span className="mx-1.5 text-sm font-normal text-muted-foreground">
-              /
-            </span>
-            <span className={kpis.overdueCount > 0 ? "text-red-600" : ""}>
-              {kpis.overdueCount}
-            </span>
+            {canManage ? (
+              <>
+                <span
+                  className={
+                    kpis.pendingPaymentsCount > 0 ? "text-amber-600" : ""
+                  }
+                >
+                  {kpis.pendingPaymentsCount}
+                </span>
+                <span className="mx-1.5 text-sm font-normal text-muted-foreground">
+                  /
+                </span>
+                <span className={kpis.overdueCount > 0 ? "text-red-600" : ""}>
+                  {kpis.overdueCount}
+                </span>
+              </>
+            ) : (
+              <>
+                <span className={kpis.overdueCount > 0 ? "text-red-600" : ""}>
+                  {kpis.overdueCount}
+                </span>
+                <span className="mx-1.5 text-sm font-normal text-muted-foreground">
+                  /
+                </span>
+                <span
+                  className={
+                    kpis.pendingPaymentsCount > 0 ? "text-amber-600" : ""
+                  }
+                >
+                  {kpis.pendingPaymentsCount}
+                </span>
+              </>
+            )}
           </p>
         </div>
       </div>
@@ -1101,7 +1155,7 @@ export function FeesWorkspace() {
       {/* Single Fee Create Modal */}
       <Modal
         open={createOpen}
-        onClose={() => setCreateOpen(false)}
+        onClose={closeCreateModal}
         title="Create Student Fee Invoice"
       >
         <form onSubmit={handleCreateFee} className="space-y-4">
@@ -1130,9 +1184,16 @@ export function FeesWorkspace() {
               <Label>Fee Type</Label>
               <select
                 value={feeForm.feeType}
-                onChange={(e) =>
-                  setFeeForm({ ...feeForm, feeType: e.target.value as FeeType })
-                }
+                onChange={(e) => {
+                  const nextType = e.target.value as FeeType;
+                  setFeeForm({
+                    ...feeForm,
+                    feeType: nextType,
+                    billingMonth:
+                      nextType === "MONTHLY" ? feeForm.billingMonth : "",
+                    examId: nextType === "EXAM" ? feeForm.examId : "",
+                  });
+                }}
                 className="h-9 w-full rounded-md border bg-background px-3 text-sm"
               >
                 {ALL_FEE_TYPES.map((ft) => (
@@ -1147,6 +1208,7 @@ export function FeesWorkspace() {
               <Input
                 type="number"
                 min={1}
+                step="0.01"
                 required
                 value={feeForm.amount}
                 onChange={(e) =>
@@ -1225,11 +1287,7 @@ export function FeesWorkspace() {
             />
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setCreateOpen(false)}
-            >
+            <Button type="button" variant="outline" onClick={closeCreateModal}>
               Cancel
             </Button>
             <Button type="submit" disabled={createFeeMut.isPending}>
@@ -1242,7 +1300,7 @@ export function FeesWorkspace() {
       {/* Bulk Generate Class Fees Modal */}
       <Modal
         open={bulkOpen}
-        onClose={() => setBulkOpen(false)}
+        onClose={closeBulkModal}
         title="Bulk Generate Class Fees"
         description="Automatically issue invoices to all active enrolled students in a class (existing duplicates are skipped)."
       >
@@ -1304,12 +1362,16 @@ export function FeesWorkspace() {
               <Label>Fee Type</Label>
               <select
                 value={bulkForm.feeType}
-                onChange={(e) =>
+                onChange={(e) => {
+                  const nextType = e.target.value as FeeType;
                   setBulkForm({
                     ...bulkForm,
-                    feeType: e.target.value as FeeType,
-                  })
-                }
+                    feeType: nextType,
+                    billingMonth:
+                      nextType === "MONTHLY" ? bulkForm.billingMonth : "",
+                    examId: nextType === "EXAM" ? bulkForm.examId : "",
+                  });
+                }}
                 className="h-9 w-full rounded-md border bg-background px-3 text-sm"
               >
                 {ALL_FEE_TYPES.map((ft) => (
@@ -1324,6 +1386,7 @@ export function FeesWorkspace() {
               <Input
                 type="number"
                 min={1}
+                step="0.01"
                 required
                 value={bulkForm.amount}
                 onChange={(e) =>
@@ -1395,11 +1458,7 @@ export function FeesWorkspace() {
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setBulkOpen(false)}
-            >
+            <Button type="button" variant="outline" onClick={closeBulkModal}>
               Cancel
             </Button>
             <Button type="submit" disabled={bulkCreateFeeMut.isPending}>
@@ -1578,6 +1637,13 @@ export function FeesWorkspace() {
             />
           </div>
 
+          {!canManage && !hasConfiguredMfs && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+              No school mobile banking account is configured yet. Please contact
+              the school office before submitting an online payment.
+            </div>
+          )}
+
           <div className="flex justify-end gap-2 pt-2">
             <Button
               type="button"
@@ -1586,7 +1652,12 @@ export function FeesWorkspace() {
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={submitPayMut.isPending}>
+            <Button
+              type="submit"
+              disabled={
+                submitPayMut.isPending || (!canManage && !hasConfiguredMfs)
+              }
+            >
               {submitPayMut.isPending
                 ? "Processing..."
                 : payForm.paymentMethod === "CASH"
@@ -1659,6 +1730,7 @@ export function FeesWorkspace() {
               <Input
                 type="number"
                 min={1}
+                step="0.01"
                 required
                 value={editFeeForm.amount}
                 onChange={(e) =>
@@ -1680,6 +1752,7 @@ export function FeesWorkspace() {
               >
                 <option value="PENDING">Pending</option>
                 <option value="PARTIAL">Partial</option>
+                <option value="OVERDUE">Overdue</option>
                 <option value="PAID">Paid</option>
                 <option value="WAIVED">Waived (Fee Forgiven)</option>
               </select>

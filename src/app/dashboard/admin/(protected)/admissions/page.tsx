@@ -33,9 +33,14 @@ import type {
   AdmissionPaymentStatus,
   AdmissionStatus,
 } from "@/features/admissions/types";
+import { useDebounce } from "@/hooks/use-debounce";
 import { useAuth } from "@/providers/auth-provider";
 
 const PAGE_SIZE = 10;
+
+function isSafeHttpUrl(url?: string | null): url is string {
+  return Boolean(url && /^https?:\/\//i.test(url.trim()));
+}
 
 export default function AdminAdmissionsPage() {
   const { user } = useAuth();
@@ -66,6 +71,10 @@ export default function AdminAdmissionsPage() {
   const [guardianCredentials, setGuardianCredentials] =
     useState<GuardianCredentialsData | null>(null);
 
+  const debouncedAcademicYear = useDebounce(academicYearFilter.trim(), 350);
+  const queryAcademicYear =
+    debouncedAcademicYear.length >= 4 ? debouncedAcademicYear : undefined;
+
   const { data: classes = [] } = useClasses(schoolId);
 
   const { data, isLoading, isError, isFetching, refetch } = useAdmissions(
@@ -75,7 +84,7 @@ export default function AdminAdmissionsPage() {
       limit: PAGE_SIZE,
       search: search || undefined,
       classId: classIdFilter ? Number(classIdFilter) : undefined,
-      academicYear: academicYearFilter.trim() || undefined,
+      academicYear: queryAcademicYear,
       status: status || undefined,
       paymentStatus: paymentStatus || undefined,
     },
@@ -189,8 +198,8 @@ export default function AdminAdmissionsPage() {
     if (!rejectId) return;
 
     const reason = rejectionReason.trim();
-    if (!reason) {
-      toast.error("Please enter a rejection reason");
+    if (reason.length < 5) {
+      toast.error("Please enter a rejection reason of at least 5 characters");
       return;
     }
 
@@ -491,7 +500,7 @@ export default function AdminAdmissionsPage() {
                         !isCash &&
                         admission.payment &&
                         admission.payment.amount > 0 &&
-                        admission.payment.status !== "PAID" &&
+                        admission.payment.status === "PENDING" &&
                         admission.payment.transactionId && (
                           <>
                             <button
@@ -682,7 +691,8 @@ export default function AdminAdmissionsPage() {
                             {isPending &&
                               !isCash &&
                               admission.payment &&
-                              admission.payment.status !== "PAID" &&
+                              admission.payment.amount > 0 &&
+                              admission.payment.status === "PENDING" &&
                               Boolean(admission.payment.transactionId) && (
                                 <>
                                   <button
@@ -883,15 +893,17 @@ export default function AdminAdmissionsPage() {
                     className="flex items-center justify-between rounded-lg border px-3 py-2 text-xs"
                   >
                     <span className="font-medium">{doc.label}</span>
-                    {doc.url ? (
+                    {isSafeHttpUrl(doc.url) ? (
                       <a
-                        href={doc.url}
+                        href={doc.url.trim()}
                         target="_blank"
-                        rel="noreferrer"
+                        rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 text-primary hover:underline"
                       >
                         Preview <ExternalLink className="h-3 w-3" />
                       </a>
+                    ) : doc.url ? (
+                      <span className="text-amber-700">Invalid URL</span>
                     ) : (
                       <span className="text-muted-foreground">
                         Not uploaded
@@ -940,7 +952,8 @@ export default function AdminAdmissionsPage() {
                         >
                           Confirm Cash Payment
                         </button>
-                      ) : detail.payment.transactionId ? (
+                      ) : detail.payment.status === "PENDING" &&
+                        detail.payment.transactionId ? (
                         <>
                           <button
                             type="button"

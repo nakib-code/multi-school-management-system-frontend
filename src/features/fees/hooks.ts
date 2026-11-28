@@ -2,6 +2,8 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { dashboardKeys } from "@/features/dashboard/hooks";
+import { reportKeys } from "@/features/reports/hooks";
 import { getApiErrorMessage } from "@/lib/api";
 import {
   bulkCreateStudentFees,
@@ -55,6 +57,8 @@ export const useCreateStudentFee = (schoolId: number) => {
     onSuccess: () => {
       toast.success("Student fee invoice created");
       qc.invalidateQueries({ queryKey: feeKeys.all });
+      qc.invalidateQueries({ queryKey: reportKeys.all });
+      qc.invalidateQueries({ queryKey: dashboardKeys.all });
     },
     onError: (err) =>
       toast.error(getApiErrorMessage(err, "Failed to create fee")),
@@ -71,6 +75,8 @@ export const useBulkCreateStudentFees = (schoolId: number) => {
         `Generated ${data.createdCount} invoice(s) for ${data.className}${data.skippedCount > 0 ? ` (${data.skippedCount} skipped)` : ""}`,
       );
       qc.invalidateQueries({ queryKey: feeKeys.all });
+      qc.invalidateQueries({ queryKey: reportKeys.all });
+      qc.invalidateQueries({ queryKey: dashboardKeys.all });
     },
     onError: (err) =>
       toast.error(getApiErrorMessage(err, "Failed to generate class fees")),
@@ -84,6 +90,8 @@ export const useDeleteStudentFee = (schoolId: number) => {
     onSuccess: () => {
       toast.success("Fee invoice deleted");
       qc.invalidateQueries({ queryKey: feeKeys.all });
+      qc.invalidateQueries({ queryKey: reportKeys.all });
+      qc.invalidateQueries({ queryKey: dashboardKeys.all });
     },
     onError: (err) =>
       toast.error(getApiErrorMessage(err, "Failed to delete fee")),
@@ -112,6 +120,8 @@ export const useSubmitStudentPayment = (schoolId: number) => {
           : "Payment submitted and pending school verification",
       );
       qc.invalidateQueries({ queryKey: feeKeys.all });
+      qc.invalidateQueries({ queryKey: reportKeys.all });
+      qc.invalidateQueries({ queryKey: dashboardKeys.all });
     },
     onError: (err) =>
       toast.error(getApiErrorMessage(err, "Failed to submit payment")),
@@ -125,6 +135,8 @@ export const useVerifyStudentPayment = (schoolId: number) => {
     onSuccess: () => {
       toast.success("Student payment verified");
       qc.invalidateQueries({ queryKey: feeKeys.all });
+      qc.invalidateQueries({ queryKey: reportKeys.all });
+      qc.invalidateQueries({ queryKey: dashboardKeys.all });
     },
     onError: (err) =>
       toast.error(getApiErrorMessage(err, "Failed to verify payment")),
@@ -144,6 +156,8 @@ export const useRejectStudentPayment = (schoolId: number) => {
     onSuccess: () => {
       toast.success("Student payment rejected");
       qc.invalidateQueries({ queryKey: feeKeys.all });
+      qc.invalidateQueries({ queryKey: reportKeys.all });
+      qc.invalidateQueries({ queryKey: dashboardKeys.all });
     },
     onError: (err) =>
       toast.error(getApiErrorMessage(err, "Failed to reject payment")),
@@ -176,6 +190,8 @@ export const useUpdateStudentFee = (schoolId: number) => {
     onSuccess: () => {
       toast.success("Fee invoice updated");
       qc.invalidateQueries({ queryKey: feeKeys.all });
+      qc.invalidateQueries({ queryKey: reportKeys.all });
+      qc.invalidateQueries({ queryKey: dashboardKeys.all });
     },
     onError: (err) =>
       toast.error(getApiErrorMessage(err, "Failed to update fee invoice")),

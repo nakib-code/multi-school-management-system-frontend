@@ -126,12 +126,20 @@ export interface TrackAdmissionResponse {
   rejectionReason: string | null;
   reviewedAt: string | null;
 
+  approvedStudent?: {
+    studentId: string;
+    rollNumber: number | null;
+    className: string | null;
+    sectionName: string | null;
+  } | null;
+
   payment: {
     id: number;
     amount: number;
     paymentMethod: string;
     status: string;
     transactionId: string | null;
+    senderNumber?: string | null;
     paidAt: string | null;
     remarks: string | null;
   } | null;
@@ -298,6 +306,7 @@ export interface ApproveAdmissionResponse {
   studentName: string;
   studentEmail: string | null;
   enrollmentId: number;
+  rollNumber?: number | null;
   classId: number;
   sectionId: number | null;
   academicYear: string;

@@ -33,7 +33,11 @@ interface PrintableReportSheetProps {
 
 const escapeCsvCell = (value: string | number | null | undefined): string => {
   if (value === null || value === undefined) return "";
-  const str = String(value);
+  let str = String(value);
+  // Neutralize Excel/Sheets CSV formula injection (DDE / hyperlink / macro payloads)
+  if (/^[=+\-@\t\r]/.test(str)) {
+    str = `'${str}`;
+  }
   if (/[",\r\n]/.test(str)) {
     return `"${str.replace(/"/g, '""')}"`;
   }

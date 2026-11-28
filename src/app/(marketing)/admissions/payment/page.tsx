@@ -51,6 +51,7 @@ function PaymentContent() {
   const [paymentInfo, setPaymentInfo] =
     useState<InitiateAdmissionPaymentResponse | null>(null);
 
+  const [applicationNo, setApplicationNo] = useState(applicationNoParam);
   const [guardianPhone, setGuardianPhone] = useState(guardianPhoneParam);
   const [selectedMethod, setSelectedMethod] = useState<
     "BKASH" | "NAGAD" | "ROCKET"
@@ -62,51 +63,75 @@ function PaymentContent() {
 
   const startedRef = useRef(false);
 
-  const loadPaymentDetails = useCallback(async () => {
-    if (!isValid || isLoading) return;
+  const loadPaymentDetails = useCallback(
+    async (appNoInput?: string, contactInput?: string) => {
+      if (!isValid || isLoading) return;
 
-    setIsLoading(true);
-    setError("");
+      const resolvedAppNo = (appNoInput ?? applicationNo).trim();
+      const resolvedContact = (contactInput ?? guardianPhone).trim();
 
-    try {
-      const data = await initiateAdmissionPayment(schoolId, admissionId);
-      setPaymentInfo(data);
-      if (
-        data.paymentMethod === "BKASH" ||
-        data.paymentMethod === "NAGAD" ||
-        data.paymentMethod === "ROCKET"
-      ) {
-        setSelectedMethod(data.paymentMethod);
-      } else {
-        const firstConfigured = data.supportedMethods.find((m) =>
-          Boolean(data.receiverNumbers[m]),
-        );
-        if (firstConfigured) {
-          setSelectedMethod(firstConfigured);
-        }
+      if (!resolvedAppNo || !resolvedContact) {
+        return;
       }
-    } catch (err) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : "Unable to load mobile banking payment details.";
 
-      setError(message);
-      toast.error(message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [isValid, isLoading, schoolId, admissionId]);
+      const isEmail = resolvedContact.includes("@");
+
+      setIsLoading(true);
+      setError("");
+
+      try {
+        const data = await initiateAdmissionPayment(schoolId, admissionId, {
+          applicationNo: resolvedAppNo,
+          ...(isEmail
+            ? { studentEmail: resolvedContact }
+            : { guardianPhone: resolvedContact }),
+        });
+        setPaymentInfo(data);
+        if (
+          data.paymentMethod === "BKASH" ||
+          data.paymentMethod === "NAGAD" ||
+          data.paymentMethod === "ROCKET"
+        ) {
+          setSelectedMethod(data.paymentMethod);
+        } else {
+          const firstConfigured = data.supportedMethods.find((m) =>
+            Boolean(data.receiverNumbers[m]),
+          );
+          if (firstConfigured) {
+            setSelectedMethod(firstConfigured);
+          }
+        }
+      } catch (err) {
+        const message =
+          err instanceof Error
+            ? err.message
+            : "Unable to load mobile banking payment details.";
+
+        setError(message);
+        toast.error(message);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [isValid, isLoading, schoolId, admissionId, applicationNo, guardianPhone],
+  );
 
   useEffect(() => {
-    if (!isValid || startedRef.current) return;
+    if (
+      !isValid ||
+      startedRef.current ||
+      !applicationNoParam.trim() ||
+      !guardianPhoneParam.trim()
+    ) {
+      return;
+    }
 
     startedRef.current = true;
-    void loadPaymentDetails();
-  }, [isValid, loadPaymentDetails]);
+    void loadPaymentDetails(applicationNoParam, guardianPhoneParam);
+  }, [isValid, applicationNoParam, guardianPhoneParam, loadPaymentDetails]);
 
   const resolvedApplicationNo =
-    paymentInfo?.applicationNo || applicationNoParam;
+    paymentInfo?.applicationNo || applicationNo.trim();
 
   const handleCopy = async (value: string, label: string) => {
     try {
@@ -124,9 +149,10 @@ function PaymentContent() {
       toast.error("Application number is missing.");
       return;
     }
-    if (!guardianPhone.trim()) {
+    const contact = guardianPhone.trim();
+    if (!contact) {
       toast.error(
-        "Please enter the guardian phone number used in your application.",
+        "Please enter the guardian phone or student email used in your application.",
       );
       return;
     }
@@ -137,11 +163,12 @@ function PaymentContent() {
       return;
     }
 
+    const isEmail = contact.includes("@");
     setIsSubmittingTrx(true);
     try {
       const res = await submitOnlinePaymentTrx({
         applicationNo: resolvedApplicationNo,
-        guardianPhone: guardianPhone.trim(),
+        ...(isEmail ? { studentEmail: contact } : { guardianPhone: contact }),
         paymentMethod: selectedMethod,
         transactionId: transactionId.trim().toUpperCase(),
         ...(senderPhone.trim() ? { senderPhone: senderPhone.trim() } : {}),
@@ -203,25 +230,73 @@ function PaymentContent() {
           </p>
         </div>
 
-        {error ? (
-          <div className="mt-6 space-y-4">
-            <div
-              role="alert"
-              className="rounded-lg border border-red-200 bg-red-50 p-3 text-left text-sm text-red-700"
-            >
-              {error}
+        {!paymentInfo && !isLoading ? (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void loadPaymentDetails();
+            }}
+            className="mt-6 space-y-4"
+          >
+            {error && (
+              <div
+                role="alert"
+                className="rounded-lg border border-red-200 bg-red-50 p-3 text-left text-sm text-red-700"
+              >
+                {error}
+              </div>
+            )}
+
+            <p className="text-xs text-slate-600">
+              Verify your Application Number and Guardian Phone (or Student
+              Email) to view the school&apos;s payment instructions.
+            </p>
+
+            <div>
+              <label
+                htmlFor="verify-app-no"
+                className="mb-1 block text-xs font-medium text-slate-600"
+              >
+                Application Number
+              </label>
+              <input
+                id="verify-app-no"
+                type="text"
+                required
+                value={applicationNo}
+                onChange={(e) => setApplicationNo(e.target.value)}
+                placeholder="ADM-..."
+                className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 font-mono text-sm"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="verify-contact"
+                className="mb-1 block text-xs font-medium text-slate-600"
+              >
+                Guardian Phone (or Student Email)
+              </label>
+              <input
+                id="verify-contact"
+                type="text"
+                required
+                value={guardianPhone}
+                onChange={(e) => setGuardianPhone(e.target.value)}
+                placeholder="01XXXXXXXXX"
+                className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm"
+              />
             </div>
 
             <button
-              type="button"
-              onClick={() => void loadPaymentDetails()}
+              type="submit"
               disabled={isLoading}
               className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#008f87] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#00776f] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-              Retry
+              Load Payment Instructions
             </button>
-          </div>
+          </form>
         ) : isLoading || !paymentInfo ? (
           <div className="mt-7 flex items-center justify-center gap-2 text-sm text-slate-500">
             <Loader2 className="h-5 w-5 animate-spin text-[#008f87]" />
