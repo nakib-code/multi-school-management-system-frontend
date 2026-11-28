@@ -6,11 +6,15 @@ import {
   FileSpreadsheet,
   GraduationCap,
   LayoutDashboard,
+  Scale,
+  TrendingUp,
   Users,
   Wallet,
 } from "lucide-react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+import { MonthlyNetTab } from "@/components/school-modules/monthly-net-tab";
 import { ErrorState } from "@/components/shared/error-state";
 import { LoadingState } from "@/components/shared/loading";
 import { PrintableReportSheet } from "@/components/shared/printable-report-sheet";
@@ -38,7 +42,15 @@ const sanitizeFilenamePart = (value: string) =>
     .replace(/[^a-z0-9_-]+/g, "-")
     .replace(/^-+|-+$/g, "") || "all";
 
-type ReportTab = "overview" | "admissions" | "fees" | "roster";
+type ReportTab = "overview" | "monthly-net" | "admissions" | "fees" | "roster";
+
+const VALID_REPORT_TABS: ReportTab[] = [
+  "overview",
+  "monthly-net",
+  "admissions",
+  "fees",
+  "roster",
+];
 
 const FEE_TYPE_LABELS: Record<string, string> = Object.fromEntries(
   ALL_FEE_TYPES.map((t) => [t.value, t.label]),
@@ -51,14 +63,12 @@ function SchoolReportsWorkspaceInner() {
 
   const initialTab = (searchParams.get("tab") as ReportTab) || "overview";
   const [activeTab, setActiveTab] = useState<ReportTab>(
-    ["overview", "admissions", "fees", "roster"].includes(initialTab)
-      ? initialTab
-      : "overview",
+    VALID_REPORT_TABS.includes(initialTab) ? initialTab : "overview",
   );
 
   useEffect(() => {
     const t = searchParams.get("tab") as ReportTab | null;
-    if (t && ["overview", "admissions", "fees", "roster"].includes(t)) {
+    if (t && VALID_REPORT_TABS.includes(t)) {
       setActiveTab(t);
     }
   }, [searchParams]);
@@ -174,14 +184,27 @@ function SchoolReportsWorkspaceInner() {
 
   return (
     <div className="space-y-6">
-      <div className="no-print">
-        <h1 className="text-2xl font-bold tracking-tight">
-          Institution Reports &amp; Class-Wise Charts
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Accounting overview, class-wise admission &amp; fee charts, student
-          roll rosters, and one-click PDF export.
-        </p>
+      <div className="no-print flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">
+            Institution Reports &amp; Class-Wise Charts
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Accounting overview, class-wise admission &amp; fee charts, student
+            roll rosters, and one-click PDF export.
+          </p>
+        </div>
+        <Link
+          href={
+            user?.role === "MANAGER"
+              ? "/dashboard/manager/income"
+              : "/dashboard/admin/income"
+          }
+          className="inline-flex h-9 items-center gap-1.5 self-start rounded-lg border bg-background px-3.5 text-sm font-medium hover:bg-muted sm:self-auto"
+        >
+          <TrendingUp className="h-4 w-4 text-emerald-600" />
+          আয়ের হিসাব (Income Hub)
+        </Link>
       </div>
 
       {/* Tabs */}
@@ -189,6 +212,11 @@ function SchoolReportsWorkspaceInner() {
         {(
           [
             { id: "overview", label: "Overview", icon: LayoutDashboard },
+            {
+              id: "monthly-net",
+              label: "আয় বনাম খরচ (নিট হিসাব)",
+              icon: Scale,
+            },
             {
               id: "admissions",
               label: "Admission Chart & Accounting",
@@ -234,6 +262,11 @@ function SchoolReportsWorkspaceInner() {
           error={overviewQuery.error}
           onRetry={() => overviewQuery.refetch()}
         />
+      )}
+
+      {/* TAB 1B: MONTHLY NET INCOME VS EXPENSE */}
+      {activeTab === "monthly-net" && (
+        <MonthlyNetTab schoolId={schoolId} generatedBy={user?.name} />
       )}
 
       {/* TAB 2: ADMISSION CHART & ACCOUNTING */}

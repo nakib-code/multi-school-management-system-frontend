@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { reportKeys } from "@/features/reports/hooks";
 import { api, getApiErrorMessage } from "@/lib/api";
 import type {
   CreateCustomExpenseEntryInput,
@@ -150,6 +151,7 @@ export function useCreateCustomExpenseEntry(schoolId: number) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: customExpenseKeys.all(schoolId) });
+      qc.invalidateQueries({ queryKey: reportKeys.all });
       toast.success("খরচ / বিল এন্ট্রি যুক্ত হয়েছে");
     },
     onError: (err) => {
@@ -178,6 +180,7 @@ export function useUpdateCustomExpenseEntry(schoolId: number) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: customExpenseKeys.all(schoolId) });
+      qc.invalidateQueries({ queryKey: reportKeys.all });
       toast.success("এন্ট্রি আপডেট হয়েছে");
     },
     onError: (err) => {
@@ -203,6 +206,7 @@ export function useDeleteCustomExpenseEntry(schoolId: number) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: customExpenseKeys.all(schoolId) });
+      qc.invalidateQueries({ queryKey: reportKeys.all });
       toast.success("এন্ট্রি মুছে ফেলা হয়েছে");
     },
     onError: (err) => {

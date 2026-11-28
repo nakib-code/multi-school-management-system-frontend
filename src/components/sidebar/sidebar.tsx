@@ -20,6 +20,7 @@ import {
   ScrollText,
   Settings,
   ShieldCheck,
+  TrendingUp,
   UserCheck,
   UserPlus,
   Users,
@@ -162,6 +163,11 @@ const navigationByRole: Record<string, NavItem[]> = {
       icon: Wallet,
     },
     {
+      label: "আয়ের হিসাব",
+      href: "/dashboard/admin/income",
+      icon: TrendingUp,
+    },
+    {
       label: "কাস্টম বিল / খরচ",
       href: "/dashboard/admin/custom-expenses",
       icon: Receipt,
@@ -252,6 +258,11 @@ const navigationByRole: Record<string, NavItem[]> = {
       label: "Teacher Salaries",
       href: "/dashboard/manager/salaries",
       icon: Wallet,
+    },
+    {
+      label: "আয়ের হিসাব",
+      href: "/dashboard/manager/income",
+      icon: TrendingUp,
     },
     {
       label: "কাস্টম বিল / খরচ",

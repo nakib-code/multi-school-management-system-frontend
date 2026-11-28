@@ -170,6 +170,57 @@ export interface RosterChartReport {
   };
 }
 
+export interface MonthlyNetReport {
+  school: ChartSchoolHeader;
+  billingMonth: string;
+  trendMonths: number;
+  summary: {
+    totalIncome: number;
+    totalExpense: number;
+    netBalance: number;
+    status: "SURPLUS" | "DEFICIT";
+    expenseSharePercent: number;
+  };
+  incomeBreakdown: {
+    monthlyFeeTotal: number;
+    admissionFeeTotal: number;
+    otherStudentFeeTotal: number;
+    otherIncomeTotal: number;
+    byCategory: Array<{
+      category:
+        | "MONTHLY_FEE"
+        | "ADMISSION_FEE"
+        | "OTHER_STUDENT_FEE"
+        | "OTHER_INCOME";
+      label: string;
+      amount: number;
+      count: number;
+      percentage: number;
+    }>;
+  };
+  expenseBreakdown: Array<{
+    sheetId: number;
+    sheetName: string;
+    totalAmount: number;
+    entryCount: number;
+    percentage: number;
+  }>;
+  dailySeries: Array<{
+    date: string;
+    day: number;
+    income: number;
+    expense: number;
+    net: number;
+  }>;
+  trend: Array<{
+    billingMonth: string;
+    totalIncome: number;
+    totalExpense: number;
+    netBalance: number;
+    status: "SURPLUS" | "DEFICIT";
+  }>;
+}
+
 export const reportKeys = {
   all: ["reports"] as const,
   overview: () => [...reportKeys.all, "overview"] as const,
@@ -195,6 +246,8 @@ export const reportKeys = {
       "roster",
       params,
     ] as const,
+  monthlyNet: (schoolId: number, params?: Record<string, unknown>) =>
+    [...reportKeys.all, "school", schoolId, "monthly-net", params] as const,
 };
 
 export const useReportOverview = () => {
@@ -283,6 +336,27 @@ export const useStudentRosterChartReport = (
     queryFn: async () => {
       const res = await api.get<{ data: RosterChartReport }>(
         `/schools/${schoolId}/reports/charts/roster`,
+        { params },
+      );
+      return res.data.data;
+    },
+  });
+};
+
+export const useMonthlyNetReport = (
+  schoolId: number,
+  params?: {
+    billingMonth?: string;
+    trendMonths?: number;
+  },
+  enabled = true,
+) => {
+  return useQuery({
+    queryKey: reportKeys.monthlyNet(schoolId, params),
+    enabled: schoolId > 0 && enabled,
+    queryFn: async () => {
+      const res = await api.get<{ data: MonthlyNetReport }>(
+        `/schools/${schoolId}/reports/monthly-net`,
         { params },
       );
       return res.data.data;

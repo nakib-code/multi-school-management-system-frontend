@@ -12,9 +12,11 @@ import {
   Pencil,
   Plus,
   Receipt,
+  Scale,
   Settings2,
   Trash2,
 } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Modal } from "@/components/modals/modal";
@@ -466,14 +468,23 @@ export function CustomExpensesWorkspace() {
           </p>
         </div>
 
-        <Button
-          type="button"
-          onClick={openCreateSheetModal}
-          className="gap-1.5 self-start sm:self-auto"
-        >
-          <Plus className="h-4 w-4" />
-          নতুন চার্ট / বিল তৈরি করুন
-        </Button>
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+          <Link
+            href={`${user?.role === "MANAGER" ? "/dashboard/manager/reports" : "/dashboard/admin/reports"}?tab=monthly-net`}
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border bg-background px-3 text-sm font-medium hover:bg-muted"
+          >
+            <Scale className="h-4 w-4 text-primary" />
+            আয় বনাম খরচ (নিট)
+          </Link>
+          <Button
+            type="button"
+            onClick={openCreateSheetModal}
+            className="gap-1.5"
+          >
+            <Plus className="h-4 w-4" />
+            নতুন চার্ট / বিল তৈরি করুন
+          </Button>
+        </div>
       </div>
 
       {/* Sheet List Loading / Error / Empty */}
